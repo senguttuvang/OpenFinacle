@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Clock, Effect } from "effect";
 import {
   type Account,
   type Application,
@@ -206,7 +206,7 @@ const openAccount = (
           status: 503,
         }),
       );
-    const today = bankingDate();
+    const today = bankingDate(yield* Clock.currentTimeMillis);
     const client = yield* core.request<Created>(
       "POST",
       "clients",
@@ -356,7 +356,7 @@ export const dashboard = (session: Session) =>
       documents,
       requests,
       core: { engine: "Apache Fineract", version: "1.15.0", connected: true },
-      businessDate: bankingDate(),
+      businessDate: bankingDate(yield* Clock.currentTimeMillis),
     };
   });
 
@@ -840,7 +840,7 @@ export const executeCommand = (
       );
     const payload = JSON.parse(command.payload) as CommandInput;
     const posting = Effect.gen(function* () {
-      const today = bankingDate();
+      const today = bankingDate(yield* Clock.currentTimeMillis);
       const fields = dateFields();
       if (command.kind === "freeze" || command.kind === "unfreeze") {
         return yield* core.request<Created>(

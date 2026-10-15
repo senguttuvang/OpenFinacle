@@ -74,3 +74,5 @@ Rollback: use Cloudflare's previous Worker deployment/version. Container changes
 Specifications: [everyday banking](specs/001-everyday-banking/spec.md). Execution: Beads issue `of-mtw` (local coordination). Quality gates: strict TypeScript, Biome, Oxlint, Knip, dependency-cruiser, type-coverage, Bun behavioral tests, production build, Wrangler dry-run and live Playwright verification.
 
 Capability interpretation and extension boundaries: [Finacle capability map](docs/capabilities.md).
+
+Verified workflows, runtime evidence and screenshots: [live verification](docs/verification.md).

@@ -147,13 +147,13 @@ export interface DocumentRecord {
   created_at: string;
 }
 export const dateFields = () => ({ locale: "en", dateFormat: "yyyy-MM-dd" });
-export const bankingDate = () =>
+export const bankingDate = (instant: number) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(new Date(instant));
 export const formatMoney = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",

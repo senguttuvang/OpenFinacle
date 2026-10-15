@@ -11,6 +11,7 @@ import {
 } from "../src/application/banking";
 import {
   BankingError,
+  bankingDate,
   canApprove,
   moneyToMinor,
   type Session,
@@ -189,6 +190,11 @@ test("debit restrictions carry the required core reason and need an independent 
   expect(postings[0].body).toEqual({
     reasonForBlock: "Customer reported a lost phone",
   });
+});
+
+test("banking dates change at Indian midnight using an explicit clock instant", () => {
+  expect(bankingDate(Date.UTC(2026, 9, 15, 18, 29, 59))).toBe("2026-10-15");
+  expect(bankingDate(Date.UTC(2026, 9, 15, 18, 30))).toBe("2026-10-16");
 });
 
 describe("money boundaries", () => {
