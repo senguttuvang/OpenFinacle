@@ -2,9 +2,11 @@ import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
 import {
+  bootstrap,
   createCommand,
   executeCommand,
   rejectCommand,
+  startBank,
   submitApplication,
 } from "../src/application/banking";
 import {
@@ -37,6 +39,7 @@ beforeEach(async () => {
   db = new Database(":memory:");
   db.exec(await Bun.file("migrations/0001_workflows.sql").text());
   db.exec(await Bun.file("migrations/0002_reversal_guard.sql").text());
+  db.run("INSERT INTO settings(key,value) VALUES('cash_payment_type','1')");
   db.run(
     "INSERT INTO banks(id,status,customer_client,customer_account,recipient_client,recipient_account,employer_client,employer_account) VALUES('bank-one','ready',1,101,2,102,3,103)",
   );
@@ -69,6 +72,11 @@ const layers = () =>
       ) =>
         Effect.gen(function* () {
           if (coreFailure) return yield* Effect.fail(coreFailure);
+          if (
+            method === "GET" &&
+            ["glaccounts", "savingsproducts", "paymenttypes"].includes(path)
+          )
+            return [] as T;
           if (method !== "GET") {
             postings.push({ path, body, key });
             const transfer = body as {
@@ -97,6 +105,55 @@ const run = <A>(
 const failureOf = <A>(
   task: Effect.Effect<A, BankingError, CoreService | StoreService>,
 ) => Effect.runPromise(task.pipe(Effect.provide(layers()), Effect.flip));
+
+test("savings-product setup uses the product API contract without an unsupported date format", async () => {
+  await run(bootstrap);
+  const product = postings.find(
+    (posting) => posting.path === "savingsproducts",
+  );
+  expect(product?.body).toMatchObject({
+    currencyCode: "INR",
+    accountingRule: 2,
+    locale: "en",
+  });
+  expect(product?.body).not.toHaveProperty("dateFormat");
+});
+
+test("workspace setup identifies people and the employer using the core legal forms", async () => {
+  await run(bootstrap);
+  await run(startBank);
+  const clients = postings.filter((posting) => posting.path === "clients");
+  expect(clients[0].body).toMatchObject({
+    legalFormId: 1,
+    firstname: "Arjun",
+    lastname: "Raman",
+  });
+  expect(clients[1].body).toMatchObject({
+    legalFormId: 2,
+    fullname: "Northstar Studio",
+  });
+  expect(
+    postings
+      .filter((posting) =>
+        posting.path.endsWith("transactions?command=deposit"),
+      )
+      .every(
+        (posting) =>
+          (posting.body as { paymentTypeId?: number }).paymentTypeId === 1,
+      ),
+  ).toBe(true);
+});
+
+test("bootstrap configures a real cash payment channel when it is missing", async () => {
+  db.run("DELETE FROM settings WHERE key='cash_payment_type'");
+  await run(bootstrap);
+  expect(
+    postings.find((posting) => posting.path === "paymenttypes")?.body,
+  ).toMatchObject({ isCashPayment: true });
+  expect(
+    db.query("SELECT value FROM settings WHERE key='cash_payment_type'").get(),
+  ).toBeTruthy();
+});
 
 test("debit restrictions carry the required core reason and need an independent approver", async () => {
   const command = await run(
@@ -153,6 +210,7 @@ describe("financial command lifecycle", () => {
     expect(result.status).toBe("posted");
     expect(postings).toHaveLength(1);
     expect(postings[0].key).toBe(command.id);
+    expect(postings[0].body).toMatchObject({ paymentTypeId: 1 });
     await run(executeCommand(approver, command.id));
     expect(postings).toHaveLength(1);
   });

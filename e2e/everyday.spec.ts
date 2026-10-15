@@ -27,10 +27,20 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
     path: "test-results/welcome-desktop.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Start your banking story" }).click();
+  const [started] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/session" &&
+        response.request().method() === "POST",
+      { timeout: 120000 },
+    ),
+    page.getByRole("button", { name: "Start your banking story" }).click(),
+  ]);
+  expect(started.status(), await started.text()).toBe(200);
   await expect(
     page.getByRole("heading", { name: "Good things ahead, Mira." }),
   ).toBeVisible({ timeout: 120000 });
+  console.info("Live proof: core-backed workspace ready");
   await page
     .getByRole("button", { name: "Account opening", exact: true })
     .click();
@@ -68,6 +78,8 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   ).toBeVisible();
   expect((await snapshot(page)).account?.summary?.accountBalance).toBe(0);
 
+  console.info("Live proof: customer account activated");
+
   await changeRole(page, "officer");
   await page
     .getByRole("button", { name: "Cash & salary", exact: true })
@@ -88,6 +100,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
     page.getByText("Instruction posted. Account balances are updated."),
   ).toBeVisible();
   expect((await snapshot(page)).account?.summary?.accountBalance).toBe(10000);
+  console.info("Live proof: approved deposit posted");
 
   await changeRole(page, "customer");
   await page
@@ -119,6 +132,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   });
   expect(replay.status()).toBe(200);
   expect((await snapshot(page)).account?.summary?.accountBalance).toBe(7500);
+  console.info("Live proof: transfer and idempotent replay verified");
   const declined = await page.request.post("/api/commands", {
     headers: { "Idempotency-Key": crypto.randomUUID() },
     data: {
@@ -153,6 +167,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   const paid = await snapshot(page);
   expect(paid.account?.summary?.accountBalance).toBe(92500);
   expect(paid.employer?.summary?.accountBalance).toBe(415000);
+  console.info("Live proof: employer-funded salary verified");
   expect(
     paid.audit.some((event) => event.action === "Instruction posted"),
   ).toBe(true);
@@ -246,22 +261,33 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
     description: "Release debit restriction",
   });
   expect((await snapshot(page)).account?.subStatus?.blockDebit).toBe(false);
-  const initialDeposit = first.commands.find(
-    (command) => command.kind === "deposit",
+  const correctionId = await authorise({
+    kind: "deposit",
+    amount: 1000,
+    description: "Cash correction proof",
+  });
+  const correctionView = await snapshot(page);
+  expect(correctionView.account?.summary?.accountBalance).toBe(93500);
+  const correction = correctionView.commands.find(
+    (command) => command.id === correctionId,
   );
-  expect(initialDeposit).toBeDefined();
+  expect(correction?.core_id).toBeDefined();
   await authorise({
     kind: "reverse",
-    originalId: initialDeposit?.id,
-    description: "Correct initial cash deposit",
+    originalId: correctionId,
+    description: "Reverse the cash correction proof",
   });
   const corrected = await snapshot(page);
-  expect(corrected.account?.summary?.accountBalance).toBe(82500);
+  expect(corrected.account?.summary?.accountBalance).toBe(92500);
   expect(
-    corrected.account?.transactions?.find(
-      (t) => t.id === initialDeposit?.core_id,
-    )?.reversed,
+    (corrected.account?.summary?.accountBalance ?? 0) +
+      (corrected.recipient.summary?.accountBalance ?? 0) +
+      (corrected.employer?.summary?.accountBalance ?? 0),
+  ).toBe(512500);
+  expect(
+    corrected.account?.transactions?.find((t) => t.id === correction?.core_id)
+      ?.reversed,
   ).toBe(true);
   await page.reload();
-  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(82500);
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(92500);
 });

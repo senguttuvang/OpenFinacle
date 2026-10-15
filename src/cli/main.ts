@@ -8,6 +8,10 @@ import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect } from "effect";
 import postgres from "postgres";
 import { coreEnvironment } from "../adapters/core-environment";
+import {
+  bootstrapPasswordAcceptable,
+  createBootstrapPassword,
+} from "./bootstrap-password";
 
 const execute = (args: string[], stdin?: string) =>
   Effect.tryPromise({
@@ -96,7 +100,7 @@ const provision = Command.make(
             "Secrets already exist; preserve them and use deploy rather than provision",
           ),
         );
-      const password = `${crypto.randomUUID()}Aa9!`;
+      const password = createBootstrapPassword();
       const token = crypto.randomUUID() + crypto.randomUUID();
       const secrets = {
         CORE_DATABASE: databaseUrl,
@@ -198,26 +202,59 @@ const initialize = Command.make(
             "Core not ready yet. Inspect container logs, then run initialize again.",
           ),
         );
-      const authenticated = yield* call(
-        "GET",
-        "/api/admin/core/fineract-provider/api/v1/users/1",
-      );
+      const authenticated = bootstrapPasswordAcceptable(secrets.CORE_PASSWORD)
+        ? yield* call("GET", "/api/admin/core/fineract-provider/api/v1/users/1")
+        : { status: 401, text: "" };
       if (authenticated.status === 401) {
+        const password = bootstrapPasswordAcceptable(secrets.CORE_PASSWORD)
+          ? secrets.CORE_PASSWORD
+          : createBootstrapPassword();
         const rotated = yield* call(
           "PUT",
           "/api/admin/core/fineract-provider/api/v1/users/1",
           {
-            password: secrets.CORE_PASSWORD,
-            repeatPassword: secrets.CORE_PASSWORD,
+            password,
+            repeatPassword: password,
           },
           true,
         );
-        if (rotated.status !== 200)
+        if (rotated.status !== 200) {
+          const detail = JSON.parse(rotated.text) as {
+            errors?: {
+              parameterName?: string;
+              userMessageGlobalisationCode?: string;
+            }[];
+          };
+          yield* Console.log(
+            JSON.stringify(
+              detail.errors?.map((item) => ({
+                field: item.parameterName,
+                code: item.userMessageGlobalisationCode,
+              })),
+            ),
+          );
           return yield* Effect.fail(
             new Error(
               `Initial credential rotation failed (HTTP ${rotated.status}).`,
             ),
           );
+        }
+        if (password !== secrets.CORE_PASSWORD) {
+          secrets.CORE_PASSWORD = password;
+          yield* Effect.tryPromise(() =>
+            Bun.write(
+              ".dev.vars",
+              Object.entries(secrets)
+                .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+                .join("\n"),
+            ),
+          );
+          yield* execute(["chmod", "600", ".dev.vars"]);
+          yield* execute(
+            ["bunx", "wrangler", "secret", "bulk"],
+            JSON.stringify({ CORE_PASSWORD: password }),
+          );
+        }
         yield* Console.log(
           "Initial core credential rotated and stored privately.",
         );
@@ -273,6 +310,185 @@ const cli = Command.make("openfinacle").pipe(
     deploy,
     initialize,
     diagnosticEnvironment,
+    Command.make("stop-migration-runner", {}, () =>
+      execute([
+        "railway",
+        "down",
+        "--service",
+        "c613f963-b2dc-4a57-9dde-b4cb96bec023",
+        "--project",
+        "c959c9f7-9474-4b95-9f5f-deb2d4a325a5",
+        "--environment",
+        "production",
+        "--yes",
+      ]).pipe(
+        Effect.flatMap(() =>
+          Console.log(
+            "Migration runner stopped; PostgreSQL and the banking databases are preserved.",
+          ),
+        ),
+      ),
+    ),
+    Command.make("start-migration-runner", {}, () =>
+      Effect.gen(function* () {
+        const raw = yield* Effect.tryPromise(() =>
+          Bun.file(".dev.vars").text(),
+        );
+        const line = raw
+          .split("\n")
+          .find((l) => l.startsWith("CORE_DATABASE="));
+        if (!line)
+          return yield* Effect.fail(new Error("Database not configured"));
+        const sql = postgres(
+          JSON.parse(line.slice("CORE_DATABASE=".length)) as string,
+          { ssl: "require", max: 1 },
+        );
+        yield* Effect.acquireUseRelease(
+          Effect.succeed(sql),
+          (db) =>
+            Effect.tryPromise(async () => {
+              const active =
+                await db`SELECT pid FROM pg_stat_activity WHERE datname IN ('fineract_default','fineract_tenants','fineract_initialization_tenants') AND pid<>pg_backend_pid()`;
+              if (active.length)
+                throw new Error(
+                  "Stop the other core before starting the migration runner",
+                );
+            }),
+          (db) => Effect.promise(() => db.end()),
+        );
+        yield* execute([
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD",
+          "--",
+          "infrastructure/fineract/Dockerfile",
+        ]);
+        const sha = (yield* execute(["git", "rev-parse", "HEAD"])).trim();
+        yield* Console.log(
+          yield* execute([
+            "railway",
+            "up",
+            "infrastructure/fineract",
+            "--path-as-root",
+            "--service",
+            "schema-initializer",
+            "--project",
+            "c959c9f7-9474-4b95-9f5f-deb2d4a325a5",
+            "--environment",
+            "production",
+            "--detach",
+            "--message",
+            `Fineract schema initialization from ${sha}`,
+          ]),
+        );
+      }),
+    ),
+    Command.make("prepare-migration-runner", {}, () =>
+      Effect.gen(function* () {
+        const project = "c959c9f7-9474-4b95-9f5f-deb2d4a325a5";
+        const status = JSON.parse(
+          yield* execute(["railway", "status", "--json"]),
+        ) as {
+          id: string;
+          services: { edges: { node: { id: string; name: string } }[] };
+        };
+        if (status.id !== project)
+          return yield* Effect.fail(
+            new Error("Refusing to configure an unexpected Railway project"),
+          );
+        if (
+          !status.services.edges.some(
+            ({ node }) => node.name === "schema-initializer",
+          )
+        )
+          yield* execute([
+            "railway",
+            "add",
+            "--service",
+            "schema-initializer",
+            "--json",
+          ]);
+        const raw = yield* Effect.tryPromise(() =>
+          Bun.file(".dev.vars").text(),
+        );
+        const line = raw
+          .split("\n")
+          .find((l) => l.startsWith("CORE_DATABASE="));
+        if (!line)
+          return yield* Effect.fail(new Error("Database not configured"));
+        const database = JSON.parse(
+          line.slice("CORE_DATABASE=".length),
+        ) as string;
+        const sql = postgres(database, { ssl: "require", max: 1 });
+        yield* Effect.acquireUseRelease(
+          Effect.succeed(sql),
+          (db) =>
+            Effect.tryPromise(async () => {
+              const found =
+                await db`SELECT datname FROM pg_database WHERE datname='fineract_initialization_tenants'`;
+              if (!found.length)
+                await db.unsafe(
+                  "CREATE DATABASE fineract_initialization_tenants",
+                );
+            }),
+          (db) => Effect.promise(() => db.end()),
+        );
+        const vars = {
+          ...coreEnvironment(database),
+          FINERACT_HIKARI_JDBC_URL:
+            "jdbc:postgresql://postgres.railway.internal:5432/fineract_initialization_tenants?sslmode=require",
+          FINERACT_DEFAULT_TENANTDB_HOSTNAME: "postgres.railway.internal",
+          FINERACT_DEFAULT_TENANTDB_PORT: "5432",
+          FINERACT_MODE_WRITE_ENABLED: "true",
+          FINERACT_MODE_BATCH_WORKER_ENABLED: "false",
+          FINERACT_MODE_BATCH_MANAGER_ENABLED: "false",
+          FINERACT_NODE_ID: "2",
+        };
+        const current = JSON.parse(
+          yield* execute([
+            "railway",
+            "variable",
+            "list",
+            "--service",
+            "schema-initializer",
+            "--json",
+          ]),
+        ) as Record<string, string>;
+        for (const [key, value] of Object.entries(vars)) {
+          if (current[key] === value) continue;
+          yield* execute(
+            [
+              "railway",
+              "variable",
+              "set",
+              key,
+              "--stdin",
+              "--skip-deploys",
+              "--service",
+              "schema-initializer",
+              "--project",
+              project,
+              "--environment",
+              "production",
+            ],
+            value,
+          );
+        }
+        yield* execute([
+          "railway",
+          "service",
+          "scale",
+          "southeast-asia=1",
+          "--service",
+          "schema-initializer",
+          "--json",
+        ]);
+        yield* Console.log(
+          "Private migration runner prepared beside PostgreSQL; no deployment started or public domain created.",
+        );
+      }),
+    ),
     Command.make("diagnostic-core", {}, () =>
       Effect.gen(function* () {
         const raw = yield* Effect.tryPromise(() =>
@@ -319,8 +535,11 @@ const cli = Command.make("openfinacle").pipe(
         emptyBaseline: Options.boolean("empty-baseline").pipe(
           Options.withDefault(false),
         ),
+        confirmedStopped: Options.boolean("confirmed-stopped").pipe(
+          Options.withDefault(false),
+        ),
       },
-      ({ emptyBaseline }) =>
+      ({ emptyBaseline, confirmedStopped }) =>
         Effect.gen(function* () {
           const raw = yield* Effect.tryPromise(() =>
             Bun.file(".dev.vars").text(),
@@ -393,7 +612,19 @@ const cli = Command.make("openfinacle").pipe(
                       );
                     return;
                   }
-                  await tx`UPDATE databasechangeloglock SET locked=false,lockgranted=NULL,lockedby=NULL WHERE locked=true AND lockgranted < now() - interval '10 minutes'`;
+                  if (confirmedStopped)
+                    await tx`UPDATE databasechangeloglock SET locked=false,lockgranted=NULL,lockedby=NULL WHERE locked=true`;
+                  else {
+                    const changed =
+                      await tx`UPDATE databasechangeloglock SET locked=false,lockgranted=NULL,lockedby=NULL WHERE locked=true AND lockgranted < now() - interval '10 minutes' RETURNING id`;
+                    if (
+                      before.some((row) => row.locked === true) &&
+                      !changed.length
+                    )
+                      throw new Error(
+                        "Lock is too recent; verify the owner stopped before using --confirmed-stopped",
+                      );
+                  }
                 }),
               ),
             (db) => Effect.promise(() => db.end()),
@@ -438,6 +669,10 @@ const cli = Command.make("openfinacle").pipe(
                   db`SELECT tablename FROM pg_tables WHERE schemaname='public'`,
               );
               const names = tables.map((row) => row.tablename as string);
+              const commandLimits = yield* Effect.tryPromise(
+                () =>
+                  db`SELECT column_name,character_maximum_length FROM information_schema.columns WHERE table_name='m_portfolio_command_source' AND character_maximum_length IS NOT NULL`,
+              );
               const lock = names.includes("databasechangeloglock")
                 ? yield* Effect.tryPromise(
                     () =>
@@ -459,7 +694,14 @@ const cli = Command.make("openfinacle").pipe(
                 Bun.write(
                   "/tmp/openfinacle-database-status.json",
                   JSON.stringify(
-                    { activity, lock, migrated, latest, tables: names.length },
+                    {
+                      activity,
+                      lock,
+                      migrated,
+                      latest,
+                      commandLimits,
+                      tables: names.length,
+                    },
                     null,
                     2,
                   ),

@@ -66,6 +66,31 @@ const requireAccount = (bank: Bank) =>
 export const bootstrap = Effect.gen(function* () {
   const store = yield* Store;
   const core = yield* Core;
+  const paymentSetting = yield* store.one<{ value: string }>(
+    "SELECT value FROM settings WHERE key='cash_payment_type'",
+  );
+  if (!paymentSetting) {
+    const types = yield* core.request<
+      { id: number; name: string; isCashPayment: boolean }[]
+    >("GET", "paymenttypes");
+    const cash =
+      types.find((type) => type.isCashPayment)?.id ??
+      (yield* core.request<Created>(
+        "POST",
+        "paymenttypes",
+        {
+          name: "OpenFinacle Cash",
+          description: "Cash at the demonstration branch",
+          isCashPayment: true,
+          position: 1,
+        },
+        "of-cash-payment-type",
+      )).resourceId;
+    yield* store.run(
+      "INSERT OR IGNORE INTO settings(key,value) VALUES('cash_payment_type',?)",
+      String(cash),
+    );
+  }
   const exists = yield* store.one<{ value: string }>(
     "SELECT value FROM settings WHERE key='savings_product'",
   );
@@ -130,9 +155,9 @@ export const bootstrap = Effect.gen(function* () {
         overdraftPortfolioControlId: gls.OF1001,
         incomeFromInterestId: gls.OF4001,
         writeOffAccountId: gls.OF5001,
-        ...dateFields(),
+        locale: "en",
       },
-      "of-savings-product",
+      "of-savings-product-v2",
     )).resourceId;
   yield* store.run(
     "INSERT OR IGNORE INTO settings(key,value) VALUES('savings_product',?)",
@@ -161,13 +186,24 @@ const openAccount = (
           status: 503,
         }),
       );
+    const cash = yield* store.one<{ value: string }>(
+      "SELECT value FROM settings WHERE key='cash_payment_type'",
+    );
+    if (!cash)
+      return yield* Effect.fail(
+        new BankingError({
+          message: "Cash payment type has not been configured.",
+          status: 503,
+        }),
+      );
     const today = bankingDate();
     const client = yield* core.request<Created>(
       "POST",
       "clients",
       {
-        firstname,
-        lastname,
+        ...(suffix === "employer"
+          ? { fullname: `${firstname} ${lastname}`, legalFormId: 2 }
+          : { firstname, lastname, legalFormId: 1 }),
         officeId: 1,
         active: true,
         activationDate: today,
@@ -204,7 +240,12 @@ const openAccount = (
       yield* core.request(
         "POST",
         `savingsaccounts/${account.resourceId}/transactions?command=deposit`,
-        { transactionDate: today, transactionAmount: funding, ...dateFields() },
+        {
+          transactionDate: today,
+          transactionAmount: funding,
+          paymentTypeId: Number(cash.value),
+          ...dateFields(),
+        },
         `${bank}-${suffix}-fund`,
       );
     return { client: client.resourceId, account: account.resourceId };
@@ -858,12 +899,23 @@ export const executeCommand = (
           command.id,
         );
       }
+      const cash = yield* store.one<{ value: string }>(
+        "SELECT value FROM settings WHERE key='cash_payment_type'",
+      );
+      if (!cash)
+        return yield* Effect.fail(
+          new BankingError({
+            message: "Cash payment type has not been configured.",
+            status: 503,
+          }),
+        );
       return yield* core.request<Created>(
         "POST",
         `savingsaccounts/${bank.customer_account}/transactions?command=${command.kind}`,
         {
           transactionDate: today,
           transactionAmount: command.amount_minor / 100,
+          paymentTypeId: Number(cash.value),
           receiptNumber: command.id,
           ...fields,
         },

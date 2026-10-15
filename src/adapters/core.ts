@@ -2,9 +2,11 @@ import { getContainer } from "@cloudflare/containers";
 import { Effect, Layer } from "effect";
 import { BankingError } from "../domain/banking";
 import { Core } from "../domain/ports";
+import { coreCommandKey } from "./core-command-key";
 import type { Environment } from "./environment";
 
 interface CoreFailure {
+  error?: string;
   defaultUserMessage?: string;
   errors?: { defaultUserMessage?: string }[];
 }
@@ -17,7 +19,18 @@ export const coreLayer = (env: Environment) =>
           "Fineract-Platform-TenantId": "default",
           "Content-Type": "application/json",
         });
-        if (key) headers.set("Idempotency-Key", key);
+        if (key)
+          headers.set(
+            "Idempotency-Key",
+            yield* Effect.tryPromise({
+              try: () => coreCommandKey(key),
+              catch: () =>
+                new BankingError({
+                  message: "Could not prepare the core command identity.",
+                  status: 503,
+                }),
+            }),
+          );
         const response = yield* Effect.tryPromise({
           try: () =>
             getContainer(env.CORE, "banking").fetch(
@@ -65,6 +78,7 @@ export const coreLayer = (env: Environment) =>
                   .filter(Boolean)
                   .join("; ") ||
                 data.defaultUserMessage ||
+                data.error ||
                 `Banking operation declined (${response.status}).`,
               status: response.status >= 500 ? 503 : 422,
               uncertain: response.status >= 500 && method !== "GET",

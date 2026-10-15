@@ -5,7 +5,7 @@ import type { Environment } from "./environment";
 
 export class BankingCore extends Container<Environment> {
   defaultPort = 8080;
-  sleepAfter = "1h";
+  sleepAfter = "12h";
   envVars = coreEnvironment(this.env.CORE_DATABASE);
   override fetch(request: Request): Promise<Response> {
     return Effect.runPromise(

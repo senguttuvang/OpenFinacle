@@ -286,7 +286,7 @@ export default function Page() {
           {busy && (
             <p role="status">
               Preparing your accounts. The first visit after a quiet period can
-              take a minute while the bank starts.
+              take a few minutes while the bank starts.
             </p>
           )}
           <span className="welcome-note">
