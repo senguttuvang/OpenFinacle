@@ -68,3 +68,5 @@ For local UI development: `bun run dev` (port 3048). Financial integration is ve
 Rollback: use Cloudflare's previous Worker deployment/version. Container changes need the corresponding previous image digest; database and workflow migrations must remain backward-compatible. Do not delete or reset financial state as an application rollback.
 
 Specifications: [everyday banking](specs/001-everyday-banking/spec.md). Execution: Beads issue `of-mtw` (local coordination). Quality gates: strict TypeScript, Biome, Oxlint, Knip, dependency-cruiser, type-coverage, Bun behavioral tests, production build, Wrangler dry-run and live Playwright verification.
+
+Capability interpretation and extension boundaries: [Finacle capability map](docs/capabilities.md).

@@ -449,11 +449,17 @@ const cli = Command.make("openfinacle").pipe(
                     () => db`SELECT COUNT(*) AS changes FROM databasechangelog`,
                   )
                 : [];
+              const latest = names.includes("databasechangelog")
+                ? yield* Effect.tryPromise(
+                    () =>
+                      db`SELECT id,filename FROM databasechangelog ORDER BY orderexecuted DESC LIMIT 1`,
+                  )
+                : [];
               yield* Effect.tryPromise(() =>
                 Bun.write(
                   "/tmp/openfinacle-database-status.json",
                   JSON.stringify(
-                    { activity, lock, migrated, tables: names.length },
+                    { activity, lock, migrated, latest, tables: names.length },
                     null,
                     2,
                   ),

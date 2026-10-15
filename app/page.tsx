@@ -283,6 +283,12 @@ export default function Page() {
           >
             Start your banking story <ArrowRight size={18} />
           </PendingButton>
+          {busy && (
+            <p role="status">
+              Preparing your accounts. The first visit after a quiet period can
+              take a minute while the bank starts.
+            </p>
+          )}
           <span className="welcome-note">
             <LockKeyhole size={14} /> Your own isolated workspace · Synthetic
             data only
@@ -390,47 +396,68 @@ export default function Page() {
             action: () => changeRole("approver", "application"),
             button: "Switch to approver",
           }
-        : !journeySteps[2]
+        : data.application.status === "needs_changes"
           ? {
-              title: "Make your first deposit",
-              text: "Visit the cash desk as the officer. The approver will authorise the posting.",
-              action: () => changeRole("officer", "cash"),
-              button: "Go to the cash desk",
+              title: "A little more information",
+              text: "Read the officer's note and update your application.",
+              action: () => changeRole("customer", "application"),
+              button: "Update application",
             }
-          : !journeySteps[3]
+          : ["opening", "opening_exception"].includes(data.application.status)
             ? {
-                title: "Add someone you know",
-                text: "Add Arjun as a beneficiary and confirm the demo verification code.",
-                action: () => changeRole("customer", "transfer"),
-                button: "Add beneficiary",
+                title: "Account opening needs attention",
+                text: "The bank must inspect the core outcome before trying the opening again.",
+                action: () => changeRole("officer", "application"),
+                button: "Inspect opening status",
               }
-            : !journeySteps[4]
+            : pending.length > 0
               ? {
-                  title: "Send your first payment",
-                  text: "Transfer money to Arjun. Both accounts will update in the banking core.",
-                  action: () => changeRole("customer", "transfer"),
-                  button: "Make a transfer",
+                  title: "Ready for a second pair of eyes",
+                  text: "Your instruction is waiting for independent approval before it can affect the account.",
+                  action: () => changeRole("approver", "approvals"),
+                  button: "Review pending instruction",
                 }
-              : !journeySteps[5]
+              : !journeySteps[2]
                 ? {
-                    title: "It's salary day",
-                    text: "The officer prepares a salary payment from Northstar Studio's funded account.",
-                    action: () => {
-                      setCashKind("salary");
-                      setCashAmount("85000");
-                      changeRole("officer", "cash");
-                    },
-                    button: "Prepare salary payment",
+                    title: "Make your first deposit",
+                    text: "Visit the cash desk as the officer. The approver will authorise the posting.",
+                    action: () => changeRole("officer", "cash"),
+                    button: "Go to the cash desk",
                   }
-                : {
-                    title: "Your banking story is connected",
-                    text: "Explore statements, account controls and the full activity trail.",
-                    action: () => {
-                      setView("statements");
-                      if (staff) changeRole("customer", "statements");
-                    },
-                    button: "View your statement",
-                  };
+                : !journeySteps[3]
+                  ? {
+                      title: "Add someone you know",
+                      text: "Add Arjun as a beneficiary and confirm the demo verification code.",
+                      action: () => changeRole("customer", "transfer"),
+                      button: "Add beneficiary",
+                    }
+                  : !journeySteps[4]
+                    ? {
+                        title: "Send your first payment",
+                        text: "Transfer money to Arjun. Both accounts will update in the banking core.",
+                        action: () => changeRole("customer", "transfer"),
+                        button: "Make a transfer",
+                      }
+                    : !journeySteps[5]
+                      ? {
+                          title: "It's salary day",
+                          text: "The officer prepares a salary payment from Northstar Studio's funded account.",
+                          action: () => {
+                            setCashKind("salary");
+                            setCashAmount("85000");
+                            changeRole("officer", "cash");
+                          },
+                          button: "Prepare salary payment",
+                        }
+                      : {
+                          title: "Your banking story is connected",
+                          text: "Explore statements, account controls and the full activity trail.",
+                          action: () => {
+                            setView("statements");
+                            if (staff) changeRole("customer", "statements");
+                          },
+                          button: "View your statement",
+                        };
 
   return (
     <div className="app-shell">

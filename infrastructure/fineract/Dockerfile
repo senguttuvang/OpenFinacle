@@ -7,6 +7,9 @@ RUN curl -fSL --retry 3 https://dlcdn.apache.org/fineract/1.15.0/apache-fineract
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=distribution /fineract.jar /app/fineract.jar
+COPY --from=distribution /distribution/LICENSE /app/LICENSE
+COPY --from=distribution /distribution/NOTICE /app/NOTICE
+COPY --from=distribution /distribution/licenses /app/licenses
 RUN mkdir -p /var/log/fineract /var/logs/fineract && chmod -R 777 /var/log/fineract /var/logs/fineract
 USER 1000
 EXPOSE 8080

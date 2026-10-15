@@ -78,8 +78,11 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
     page.getByText("Instruction sent to the separate approver."),
   ).toBeVisible();
   expect((await snapshot(page)).account?.summary?.accountBalance).toBe(0);
-  await changeRole(page, "approver");
-  await page.getByRole("button", { name: /Approval inbox/ }).click();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review pending instruction" })
+    .click();
+  await expect(page.getByLabel("Demo persona")).toHaveValue("approver");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(
     page.getByText("Instruction posted. Account balances are updated."),
