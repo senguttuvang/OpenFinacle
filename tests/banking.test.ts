@@ -74,7 +74,12 @@ const layers = () =>
           if (coreFailure) return yield* Effect.fail(coreFailure);
           if (
             method === "GET" &&
-            ["glaccounts", "savingsproducts", "paymenttypes"].includes(path)
+            [
+              "glaccounts",
+              "savingsproducts",
+              "paymenttypes",
+              "financialactivityaccounts",
+            ].includes(path)
           )
             return [] as T;
           if (method !== "GET") {
@@ -153,6 +158,18 @@ test("bootstrap configures a real cash payment channel when it is missing", asyn
   expect(
     db.query("SELECT value FROM settings WHERE key='cash_payment_type'").get(),
   ).toBeTruthy();
+});
+
+test("bootstrap repairs the required savings transfer mapping even when its product already exists", async () => {
+  db.run("INSERT INTO settings(key,value) VALUES('savings_product','1')");
+  await run(bootstrap);
+  expect(
+    postings.find((posting) => posting.path === "financialactivityaccounts")
+      ?.body,
+  ).toMatchObject({
+    financialActivityId: 200,
+    glAccountId: expect.any(Number),
+  });
 });
 
 test("debit restrictions carry the required core reason and need an independent approver", async () => {

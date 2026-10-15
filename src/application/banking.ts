@@ -94,7 +94,6 @@ export const bootstrap = Effect.gen(function* () {
   const exists = yield* store.one<{ value: string }>(
     "SELECT value FROM settings WHERE key='savings_product'",
   );
-  if (exists) return { product: Number(exists.value), initialized: true };
   yield* core.request(
     "PUT",
     "currencies",
@@ -123,6 +122,17 @@ export const bootstrap = Effect.gen(function* () {
         `of-gl-${code}`,
       )).resourceId;
   }
+  const mappings = yield* core.request<
+    { financialActivityData: { id: number } }[]
+  >("GET", "financialactivityaccounts");
+  if (!mappings.some((mapping) => mapping.financialActivityData.id === 200))
+    yield* core.request(
+      "POST",
+      "financialactivityaccounts",
+      { financialActivityId: 200, glAccountId: gls.OF2002 },
+      "of-savings-transfer-accounting",
+    );
+  if (exists) return { product: Number(exists.value), initialized: true };
   const products = yield* core.request<{ id: number; shortName: string }[]>(
     "GET",
     "savingsproducts",
