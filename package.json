@@ -1,0 +1,50 @@
+{
+  "name": "openfinacle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3048",
+    "dev:api": "wrangler dev --port 8788",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "bun test tests",
+    "test:e2e": "playwright test",
+    "static:oxlint": "oxlint src app tests",
+    "static:knip": "knip",
+    "static:depcruise": "depcruise --validate .dependency-cruiser.cjs src",
+    "static:type-coverage": "type-coverage --at-least 95 --ignore-catch",
+    "static:all": "bun run static:oxlint && bun run static:knip && bun run static:depcruise && bun run static:type-coverage",
+    "check": "bun run typecheck && bun run lint && bun run static:all && bun test tests && bun run build && wrangler deploy --dry-run",
+    "cli": "bun src/cli/main.ts",
+    "deploy": "bun run cli deploy"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7",
+    "@effect/cli": "^0.77.2",
+    "@effect/platform": "^0.97.2",
+    "@effect/platform-node": "0.107.0",
+    "@effect/schema": "^0.75.5",
+    "effect": "^3.19",
+    "lucide-react": "^1.57.0",
+    "next": "^16.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@cloudflare/workers-types": "^5.20261015.1",
+    "@playwright/test": "^1.64.1",
+    "@types/bun": "^1.4.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "dependency-cruiser": "^18.6.0",
+    "knip": "^6.41.0",
+    "oxlint": "^1.88.0",
+    "postgres": "^3.4.9",
+    "type-coverage": "^2.30.4",
+    "typescript": "^6",
+    "wrangler": "^4.151.0"
+  }
+}

@@ -1,0 +1,179 @@
+import { expect, type Page, test } from "@playwright/test";
+import type { Dashboard } from "../src/domain/view";
+
+const changeRole = async (page: Page, role: string) => {
+  await page.getByLabel("Demo persona").selectOption(role);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Switched to" }),
+  ).toBeVisible();
+};
+const snapshot = async (page: Page): Promise<Dashboard> => {
+  const response = await page.request.get("/api/dashboard");
+  expect(response.status()).toBe(200);
+  return response.json() as Promise<Dashboard>;
+};
+
+test("customer to payday: documents, approvals, deposit, beneficiary, transfer, salary and statement", async ({
+  page,
+}) => {
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "A bank is more than a balance." }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/welcome-desktop.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Start your banking story" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Good things ahead, Mira." }),
+  ).toBeVisible({ timeout: 120000 });
+  await page
+    .getByRole("button", { name: "Account opening", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Use sample documents" }).click();
+  await expect(
+    page.getByText("Two synthetic documents attached."),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Submit application", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Application submitted. The bank officer can now review it.",
+    ),
+  ).toBeVisible();
+  await changeRole(page, "officer");
+  await page
+    .getByRole("button", { name: "Account opening", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Recommend opening" }).click();
+  await expect(
+    page.getByText("Application sent to the separate approver."),
+  ).toBeVisible();
+  const forbidden = await page.request.post("/api/application/review", {
+    data: { decision: "approve", note: "Attempted self approval" },
+  });
+  expect(forbidden.status()).toBe(403);
+  await changeRole(page, "approver");
+  await page
+    .getByRole("button", { name: "Account opening", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Approve & open account" }).click();
+  await expect(
+    page.getByText("Account opened and activated in the banking core."),
+  ).toBeVisible();
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(0);
+
+  await changeRole(page, "officer");
+  await page
+    .getByRole("button", { name: "Cash & salary", exact: true })
+    .click();
+  await page.getByLabel("Amount (INR)").fill("10000");
+  await page.getByRole("button", { name: "Send for approval" }).click();
+  await expect(
+    page.getByText("Instruction sent to the separate approver."),
+  ).toBeVisible();
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(0);
+  await changeRole(page, "approver");
+  await page.getByRole("button", { name: /Approval inbox/ }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(
+    page.getByText("Instruction posted. Account balances are updated."),
+  ).toBeVisible();
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(10000);
+
+  await changeRole(page, "customer");
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Add beneficiary", exact: true })
+    .click();
+  await expect(
+    page.getByText("Beneficiary added. Confirm with the demo code."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(
+    page.getByText("Beneficiary verified and active."),
+  ).toBeVisible();
+  await page.getByLabel("Amount (INR)").fill("2500");
+  await page.getByRole("button", { name: "Review & send money" }).click();
+  await expect(
+    page.getByText("Transfer completed. Your statement is up to date."),
+  ).toBeVisible();
+  const transferView = await snapshot(page);
+  expect(transferView.account?.summary?.accountBalance).toBe(7500);
+  const transfer = transferView.commands.find((c) => c.kind === "transfer");
+  expect(transfer?.status).toBe("posted");
+  const originalBody = JSON.parse(transfer?.payload ?? "{}");
+  const replay = await page.request.post("/api/commands", {
+    headers: { "Idempotency-Key": transfer?.key ?? "missing" },
+    data: originalBody,
+  });
+  expect(replay.status()).toBe(200);
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(7500);
+  const declined = await page.request.post("/api/commands", {
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    data: {
+      kind: "transfer",
+      amount: 12000,
+      beneficiaryId: transferView.beneficiaries[0].id,
+      description: "Insufficient funds proof",
+    },
+  });
+  expect(declined.status()).toBe(422);
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(7500);
+
+  await changeRole(page, "officer");
+  const officerView = await snapshot(page);
+  expect(officerView.recipient.summary?.accountBalance).toBe(5000);
+  await page
+    .getByRole("button", { name: "Cash & salary", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Salary credit", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Send for approval" }).click();
+  await expect(
+    page.getByText("Instruction sent to the separate approver."),
+  ).toBeVisible();
+  await changeRole(page, "approver");
+  await page.getByRole("button", { name: /Approval inbox/ }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(
+    page.getByText("Instruction posted. Account balances are updated."),
+  ).toBeVisible();
+  const paid = await snapshot(page);
+  expect(paid.account?.summary?.accountBalance).toBe(92500);
+  expect(paid.employer?.summary?.accountBalance).toBe(415000);
+  expect(
+    paid.audit.some((event) => event.action === "Instruction posted"),
+  ).toBe(true);
+  await changeRole(page, "customer");
+  await page.screenshot({
+    path: "test-results/customer-desktop.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Statements", exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: /₹92,500/ }).first(),
+  ).toBeVisible();
+  const csv = await page.request.get("/api/statement");
+  expect(csv.status()).toBe(200);
+  expect(await csv.text()).toContain("92500");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.screenshot({
+    path: "test-results/customer-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  expect(browserErrors).toEqual([]);
+});

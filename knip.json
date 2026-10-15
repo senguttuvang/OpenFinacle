@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "app/**/*.tsx",
+    "src/worker.ts",
+    "src/cli/main.ts",
+    "tests/**/*.ts",
+    "e2e/**/*.ts"
+  ],
+  "project": ["app/**/*.{ts,tsx}", "src/**/*.ts", "tests/**/*.ts"],
+  "ignoreDependencies": [
+    "@effect/schema",
+    "@types/bun",
+    "@cloudflare/workers-types",
+    "@effect/platform-node"
+  ],
+  "ignore": ["next-env.d.ts"]
+}
