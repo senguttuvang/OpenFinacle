@@ -15,6 +15,7 @@ const snapshot = async (page: Page): Promise<Dashboard> => {
 
 test("customer to payday: documents, approvals, deposit, beneficiary, transfer, salary and statement", async ({
   page,
+  browser,
 }) => {
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
@@ -176,4 +177,88 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
     ),
   ).toBe(true);
   expect(browserErrors).toEqual([]);
+  const first = await snapshot(page);
+  const stranger = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    expect((await stranger.request.get("/api/dashboard")).status()).toBe(401);
+    expect((await stranger.request.post("/api/session")).status()).toBe(200);
+    const isolated = await stranger.request.get("/api/dashboard");
+    const second = (await isolated.json()) as Dashboard;
+    expect(second.bank.id).not.toBe(first.bank.id);
+    expect(second.account).toBeNull();
+    expect(second.recipient.id).not.toBe(first.recipient.id);
+    expect(
+      (
+        await stranger.request.get(`/api/documents/${first.documents[0].id}`)
+      ).status(),
+    ).toBe(404);
+    await stranger.request.post("/api/session/role", {
+      data: { role: "approver" },
+    });
+    expect(
+      (
+        await stranger.request.post("/api/commands/approve", {
+          data: { id: transfer?.id },
+        })
+      ).status(),
+    ).toBe(404);
+  } finally {
+    await stranger.close();
+  }
+
+  const authorise = async (body: Record<string, unknown>) => {
+    await page.request.post("/api/session/role", { data: { role: "officer" } });
+    const created = await page.request.post("/api/commands", {
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      data: body,
+    });
+    expect(created.status()).toBe(200);
+    const command = (await created.json()) as { id: string };
+    await page.request.post("/api/session/role", {
+      data: { role: "approver" },
+    });
+    const approved = await page.request.post("/api/commands/approve", {
+      data: { id: command.id },
+    });
+    expect(approved.status(), await approved.text()).toBe(200);
+    return command.id;
+  };
+  await authorise({ kind: "freeze", description: "Verify debit restriction" });
+  expect((await snapshot(page)).account?.subStatus?.blockDebit).toBe(true);
+  await page.request.post("/api/session/role", { data: { role: "customer" } });
+  const blocked = await page.request.post("/api/commands", {
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    data: {
+      kind: "transfer",
+      amount: 100,
+      beneficiaryId: first.beneficiaries[0].id,
+    },
+  });
+  expect(blocked.status()).toBe(422);
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(92500);
+  await authorise({
+    kind: "unfreeze",
+    description: "Release debit restriction",
+  });
+  expect((await snapshot(page)).account?.subStatus?.blockDebit).toBe(false);
+  const initialDeposit = first.commands.find(
+    (command) => command.kind === "deposit",
+  );
+  expect(initialDeposit).toBeDefined();
+  await authorise({
+    kind: "reverse",
+    originalId: initialDeposit?.id,
+    description: "Correct initial cash deposit",
+  });
+  const corrected = await snapshot(page);
+  expect(corrected.account?.summary?.accountBalance).toBe(82500);
+  expect(
+    corrected.account?.transactions?.find(
+      (t) => t.id === initialDeposit?.core_id,
+    )?.reversed,
+  ).toBe(true);
+  await page.reload();
+  expect((await snapshot(page)).account?.summary?.accountBalance).toBe(82500);
 });

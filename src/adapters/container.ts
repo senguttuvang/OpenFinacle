@@ -15,7 +15,7 @@ export class BankingCore extends Container<Environment> {
             ports: [8080],
             cancellationOptions: {
               instanceGetTimeoutMS: 120000,
-              portReadyTimeoutMS: 600000,
+              portReadyTimeoutMS: 1800000,
               waitInterval: 1000,
             },
           }),

@@ -618,6 +618,19 @@ export const createCommand = (
         );
       return existing;
     }
+    const unresolved = yield* store.one<{ id: string }>(
+      "SELECT id FROM commands WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain') LIMIT 1",
+      bank.id,
+      accountId,
+    );
+    if (unresolved)
+      return yield* Effect.fail(
+        new BankingError({
+          message:
+            "An earlier instruction is still processing or requires reconciliation. Inspect it before starting another financial instruction.",
+          status: 409,
+        }),
+      );
     const allowed: CommandKind[] =
       session.role === "customer"
         ? ["transfer"]
@@ -759,14 +772,18 @@ export const executeCommand = (
         }),
       );
     const claim = yield* store.run(
-      "UPDATE commands SET status='executing',approver=? WHERE id=? AND status='pending'",
+      "UPDATE commands SET status='executing',approver=? WHERE id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM commands other WHERE other.bank_id=? AND other.account_id=? AND other.id<>? AND other.status IN ('executing','uncertain'))",
       automatic ? "policy:retail-transfer" : session.role,
+      command.id,
+      bank.id,
+      command.account_id,
       command.id,
     );
     if (!claim)
       return yield* Effect.fail(
         new BankingError({
-          message: "Instruction is already being processed.",
+          message:
+            "This or another instruction is processing or requires reconciliation.",
           status: 409,
         }),
       );
@@ -778,7 +795,9 @@ export const executeCommand = (
         return yield* core.request<Created>(
           "POST",
           `savingsaccounts/${bank.customer_account}?command=${command.kind === "freeze" ? "blockDebit" : "unblockDebit"}`,
-          {},
+          command.kind === "freeze"
+            ? { reasonForBlock: command.description }
+            : {},
           command.id,
         );
       }

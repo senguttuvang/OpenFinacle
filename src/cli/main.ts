@@ -273,6 +273,46 @@ const cli = Command.make("openfinacle").pipe(
     deploy,
     initialize,
     diagnosticEnvironment,
+    Command.make("diagnostic-core", {}, () =>
+      Effect.gen(function* () {
+        const raw = yield* Effect.tryPromise(() =>
+          Bun.file(".dev.vars").text(),
+        );
+        const line = raw
+          .split("\n")
+          .find((l) => l.startsWith("CORE_DATABASE="));
+        if (!line)
+          return yield* Effect.fail(new Error("Database not configured"));
+        const vars = coreEnvironment(
+          JSON.parse(line.slice("CORE_DATABASE=".length)) as string,
+        );
+        const log = "/tmp/openfinacle-native-core.log";
+        yield* Effect.tryPromise(() => Bun.write(log, ""));
+        yield* execute(["chmod", "600", log]);
+        const child = Bun.spawn(
+          ["java", "-jar", "/tmp/openfinacle-fineract.jar"],
+          {
+            env: {
+              ...process.env,
+              ...vars,
+              JAVA_TOOL_OPTIONS: "-Xmx1500m",
+              FINERACT_SERVER_PORT: "8087",
+              SERVER_ADDRESS: "127.0.0.1",
+            },
+            stdout: Bun.file(log),
+            stderr: Bun.file(log),
+          },
+        );
+        yield* Console.log(
+          "Native diagnostic core started; output is in the protected diagnostic log.",
+        );
+        const code = yield* Effect.promise(() => child.exited);
+        if (code !== 0)
+          return yield* Effect.fail(
+            new Error(`Diagnostic core exited ${code}`),
+          );
+      }),
+    ),
     Command.make(
       "release-abandoned-migration",
       {
@@ -306,30 +346,51 @@ const cli = Command.make("openfinacle").pipe(
                     throw new Error(
                       "Refusing lock recovery while core database connections exist",
                     );
-                  const before = await tx`SELECT * FROM databasechangeloglock`;
+                  const tables =
+                    await tx`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+                  const names = tables.map((row) => row.tablename as string);
+                  const before = names.includes("databasechangeloglock")
+                    ? await tx`SELECT * FROM databasechangeloglock`
+                    : [];
                   await Bun.write(
                     "/tmp/openfinacle-migration-lock-before.json",
                     JSON.stringify(before),
                   );
                   if (emptyBaseline) {
-                    const tables =
-                      await tx`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
                     const count =
                       await tx`SELECT COUNT(*)::int AS count FROM databasechangelog`;
                     if (
-                      tables.length !== 2 ||
                       count[0]?.count !== 0 ||
-                      !tables.every((row) =>
-                        ["databasechangelog", "databasechangeloglock"].includes(
-                          row.tablename as string,
-                        ),
+                      !names.every(
+                        (name) =>
+                          [
+                            "databasechangelog",
+                            "databasechangeloglock",
+                          ].includes(name) ||
+                          name.startsWith("openfinacle_abandoned_"),
                       )
                     )
                       throw new Error(
                         "Refusing initial-baseline recovery: database contains application state",
                       );
-                    await tx`ALTER TABLE databasechangelog RENAME TO openfinacle_abandoned_changelog`;
-                    await tx`ALTER TABLE databasechangeloglock RENAME TO openfinacle_abandoned_lock`;
+                    const suffix = Date.now();
+                    const constraints =
+                      await tx`SELECT t.relname AS table_name,c.conname FROM pg_constraint c JOIN pg_class t ON c.conrelid=t.oid WHERE c.conname='databasechangeloglock_pkey' AND t.relname LIKE 'openfinacle_abandoned_%'`;
+                    for (const row of constraints) {
+                      const name = row.table_name as string;
+                      if (!/^openfinacle_abandoned_[a-z0-9_]+$/.test(name))
+                        throw new Error("Unexpected backup table identifier");
+                      await tx.unsafe(
+                        `ALTER TABLE "${name}" RENAME CONSTRAINT databasechangeloglock_pkey TO abandoned_lock_pkey_${suffix}`,
+                      );
+                    }
+                    await tx.unsafe(
+                      `ALTER TABLE databasechangelog RENAME TO openfinacle_abandoned_changelog_${suffix}`,
+                    );
+                    if (names.includes("databasechangeloglock"))
+                      await tx.unsafe(
+                        `ALTER TABLE databasechangeloglock RENAME TO openfinacle_abandoned_lock_${suffix}`,
+                      );
                     return;
                   }
                   await tx`UPDATE databasechangeloglock SET locked=false,lockgranted=NULL,lockedby=NULL WHERE locked=true AND lockgranted < now() - interval '10 minutes'`;
@@ -372,17 +433,30 @@ const cli = Command.make("openfinacle").pipe(
                 () =>
                   db`SELECT pid,datname,state,wait_event_type,wait_event,query_start,xact_start,split_part(query,' ',1) AS operation FROM pg_stat_activity WHERE datname IN ('fineract_default','fineract_tenants') AND pid <> pg_backend_pid()`,
               );
-              const lock = yield* Effect.tryPromise(
+              const tables = yield* Effect.tryPromise(
                 () =>
-                  db`SELECT locked,lockgranted,lockedby FROM databasechangeloglock`,
+                  db`SELECT tablename FROM pg_tables WHERE schemaname='public'`,
               );
-              const migrated = yield* Effect.tryPromise(
-                () => db`SELECT COUNT(*) AS changes FROM databasechangelog`,
-              );
+              const names = tables.map((row) => row.tablename as string);
+              const lock = names.includes("databasechangeloglock")
+                ? yield* Effect.tryPromise(
+                    () =>
+                      db`SELECT locked,lockgranted,lockedby FROM databasechangeloglock`,
+                  )
+                : [];
+              const migrated = names.includes("databasechangelog")
+                ? yield* Effect.tryPromise(
+                    () => db`SELECT COUNT(*) AS changes FROM databasechangelog`,
+                  )
+                : [];
               yield* Effect.tryPromise(() =>
                 Bun.write(
                   "/tmp/openfinacle-database-status.json",
-                  JSON.stringify({ activity, lock, migrated }, null, 2),
+                  JSON.stringify(
+                    { activity, lock, migrated, tables: names.length },
+                    null,
+                    2,
+                  ),
                 ),
               );
               yield* execute([

@@ -61,9 +61,10 @@ bun run cli initialize --url https://openfinacle.plts.in
 
 Provisioning creates the two Fineract databases and stores Cloudflare secrets through stdin. It refuses to replace an existing local secrets file. Initialization checks core health, rotates the original bootstrap credential, configures INR, creates accounting mappings and establishes the savings product. Credentials never belong in Git or command arguments.
 
+The first Fineract schema initialization can take considerably longer than a normal cold start because it runs thousands of migrations against the persistent database. Do not interrupt it. `bun run cli database-status` writes a protected report with migration counts and connection metadata. The guarded `release-abandoned-migration` command refuses to run while the core has database connections; its `--empty-baseline` recovery preserves empty migration metadata and refuses databases containing application tables or applied changes. It is for an interrupted, empty first initialization, not a financial-data reset.
+
 For local UI development: `bun run dev` (port 3048). Financial integration is verified on the deployed sandbox; the local Next.js development server alone does not provide the banking API.
 
 Rollback: use Cloudflare's previous Worker deployment/version. Container changes need the corresponding previous image digest; database and workflow migrations must remain backward-compatible. Do not delete or reset financial state as an application rollback.
 
 Specifications: [everyday banking](specs/001-everyday-banking/spec.md). Execution: Beads issue `of-mtw` (local coordination). Quality gates: strict TypeScript, Biome, Oxlint, Knip, dependency-cruiser, type-coverage, Bun behavioral tests, production build, Wrangler dry-run and live Playwright verification.
-Everyday banking demonstration built on Apache Fineract with customer and staff experiences

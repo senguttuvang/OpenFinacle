@@ -36,6 +36,7 @@ beforeEach(async () => {
   db?.close();
   db = new Database(":memory:");
   db.exec(await Bun.file("migrations/0001_workflows.sql").text());
+  db.exec(await Bun.file("migrations/0002_reversal_guard.sql").text());
   db.run(
     "INSERT INTO banks(id,status,customer_client,customer_account,recipient_client,recipient_account,employer_client,employer_account) VALUES('bank-one','ready',1,101,2,102,3,103)",
   );
@@ -96,6 +97,25 @@ const run = <A>(
 const failureOf = <A>(
   task: Effect.Effect<A, BankingError, CoreService | StoreService>,
 ) => Effect.runPromise(task.pipe(Effect.provide(layers()), Effect.flip));
+
+test("debit restrictions carry the required core reason and need an independent approver", async () => {
+  const command = await run(
+    createCommand(
+      officer,
+      { kind: "freeze", description: "Customer reported a lost phone" },
+      "freeze-reason-001",
+    ),
+  );
+  expect(postings).toHaveLength(0);
+  expect((await failureOf(executeCommand(officer, command.id))).status).toBe(
+    403,
+  );
+  await run(executeCommand(approver, command.id));
+  expect(postings[0].path).toBe("savingsaccounts/101?command=blockDebit");
+  expect(postings[0].body).toEqual({
+    reasonForBlock: "Customer reported a lost phone",
+  });
+});
 
 describe("money boundaries", () => {
   test("uses exact minor units at the input boundary", () => {
@@ -271,6 +291,17 @@ describe("financial command lifecycle", () => {
     coreFailure = undefined;
     const replay = await run(executeCommand(approver, command.id));
     expect(replay.status).toBe("uncertain");
+    expect(
+      (
+        await failureOf(
+          createCommand(
+            officer,
+            { kind: "deposit", amount: 1000 },
+            "new-key-after-uncertainty",
+          ),
+        )
+      ).status,
+    ).toBe(409);
     expect(postings).toHaveLength(0);
   });
   test("declined transfer records failure without reporting success", async () => {

@@ -61,7 +61,8 @@ export interface Account {
   accountNo: string;
   clientId: number;
   clientName: string;
-  status: { id: number; value: string; active?: boolean; blockDebit?: boolean };
+  status: { id: number; value: string; active?: boolean };
+  subStatus?: { value: string; blockDebit?: boolean; block?: boolean };
   summary?: {
     accountBalance: number;
     availableBalance?: number;

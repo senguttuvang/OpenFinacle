@@ -98,6 +98,7 @@ const statusLabel = (status: string) =>
     pending: "Awaiting approval",
     posted: "Completed",
     rejected: "Declined",
+    reversed: "Reversed",
     failed: "Not processed",
     uncertain: "Needs reconciliation",
     opening_exception: "Opening exception",
@@ -110,6 +111,17 @@ const Pill = ({ status }: { status: string }) => (
     <span />
     {statusLabel(status)}
   </span>
+);
+
+const PendingButton = ({
+  busy,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy: boolean }) => (
+  <button {...props} disabled={busy || props.disabled}>
+    {busy ? <LoaderCircle size={16} className="spin" /> : null}
+    {children}
+  </button>
 );
 
 export default function Page() {
@@ -177,7 +189,7 @@ export default function Page() {
     setError("");
     void Effect.runPromise(
       task.pipe(
-        Effect.flatMap(() => (refresh ? load() : Effect.void)),
+        Effect.flatMap(() => (refresh ? Effect.asVoid(load()) : Effect.void)),
         Effect.tap(() => Effect.sync(() => setToast(message))),
         Effect.catchAll((e) => Effect.sync(() => setError(e.message))),
         Effect.ensuring(Effect.sync(() => setBusy(false))),
@@ -233,15 +245,6 @@ export default function Page() {
       Effect.all([attach("identity"), attach("address")], { concurrency: 1 }),
       "Two synthetic documents attached.",
     );
-  const PendingButton = ({
-    children,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button {...props} disabled={busy || props.disabled}>
-      {busy ? <LoaderCircle size={16} className="spin" /> : null}
-      {children}
-    </button>
-  );
 
   if (loading)
     return (
@@ -272,6 +275,7 @@ export default function Page() {
             know. See the same story from both sides of the counter.
           </p>
           <PendingButton
+            busy={busy}
             className="primary large"
             onClick={() =>
               perform(api("/session", {}), "Your own demo bank is ready.")
@@ -583,6 +587,12 @@ export default function Page() {
               {toast}
             </div>
           )}
+          {(account?.subStatus?.blockDebit || account?.subStatus?.block) && (
+            <div className="notice error" role="status">
+              <LockKeyhole size={18} /> Debits are restricted on this account.
+              Contact the bank officer to request release.
+            </div>
+          )}
 
           {view === "overview" && (
             <>
@@ -596,7 +606,7 @@ export default function Page() {
                   </div>
                   <div className="balance-label">
                     {account
-                      ? "Your available balance"
+                      ? "Your account balance"
                       : "Your account starts here"}
                   </div>
                   <div className="balance-amount" data-testid="balance">
@@ -858,6 +868,7 @@ export default function Page() {
                             </label>
                             <div className="button-row">
                               <PendingButton
+                                busy={busy}
                                 className="primary"
                                 onClick={() =>
                                   perform(
@@ -872,6 +883,7 @@ export default function Page() {
                                 Recommend opening <ArrowRight size={16} />
                               </PendingButton>
                               <PendingButton
+                                busy={busy}
                                 className="secondary"
                                 onClick={() =>
                                   perform(
@@ -891,6 +903,7 @@ export default function Page() {
                       {role === "approver" &&
                         data.application.status === "awaiting_approval" && (
                           <PendingButton
+                            busy={busy}
                             className="primary"
                             onClick={() =>
                               perform(
@@ -1016,6 +1029,7 @@ export default function Page() {
                     </div>
                     <div className="button-row">
                       <PendingButton
+                        busy={busy}
                         type="button"
                         className="secondary"
                         onClick={sampleDocs}
@@ -1024,6 +1038,7 @@ export default function Page() {
                         Use sample documents <Sparkles size={15} />
                       </PendingButton>
                       <PendingButton
+                        busy={busy}
                         className="primary"
                         type="submit"
                         disabled={
@@ -1188,6 +1203,7 @@ export default function Page() {
                       go to the approver.
                     </div>
                     <PendingButton
+                      busy={busy}
                       className="primary"
                       type="submit"
                       disabled={!activeBeneficiary}
@@ -1224,6 +1240,7 @@ export default function Page() {
                           />
                         </label>
                         <PendingButton
+                          busy={busy}
                           className="primary"
                           onClick={() =>
                             perform(
@@ -1271,6 +1288,7 @@ export default function Page() {
                       <input value={data.recipient.accountNo} readOnly />
                     </label>
                     <PendingButton
+                      busy={busy}
                       type="submit"
                       className="secondary"
                       disabled={!account}
@@ -1375,6 +1393,7 @@ export default function Page() {
                     </div>
                   )}
                   <PendingButton
+                    busy={busy}
                     className="primary"
                     disabled={!account || role !== "officer"}
                     type="submit"
@@ -1464,6 +1483,7 @@ export default function Page() {
                       </strong>
                       <div className="button-row">
                         <PendingButton
+                          busy={busy}
                           className="secondary"
                           disabled={role !== "approver"}
                           onClick={() =>
@@ -1476,6 +1496,7 @@ export default function Page() {
                           Decline
                         </PendingButton>
                         <PendingButton
+                          busy={busy}
                           className="primary"
                           disabled={role !== "approver"}
                           onClick={() =>
@@ -1579,7 +1600,7 @@ export default function Page() {
                           </td>
                           <td>{formatMoney(t.runningBalance ?? 0)}</td>
                           <td>
-                            <Pill status={t.reversed ? "rejected" : "posted"} />
+                            <Pill status={t.reversed ? "reversed" : "posted"} />
                           </td>
                         </tr>
                       ))}
@@ -1647,6 +1668,7 @@ export default function Page() {
                       />
                     </label>
                     <PendingButton
+                      busy={busy}
                       type="submit"
                       className="primary"
                       disabled={!account}
@@ -1665,6 +1687,7 @@ export default function Page() {
                       </div>
                       {staff && r.status === "open" && (
                         <PendingButton
+                          busy={busy}
                           className="secondary"
                           onClick={() =>
                             perform(
@@ -1740,9 +1763,13 @@ export default function Page() {
                   </div>
                   <div className="notice neutral">
                     Current core status: {account?.status.value ?? "No account"}
+                    {account?.subStatus?.value
+                      ? ` · ${account.subStatus.value}`
+                      : ""}
                   </div>
                   <div className="button-row">
                     <PendingButton
+                      busy={busy}
                       className="secondary"
                       disabled={!account || role !== "officer"}
                       onClick={() =>
@@ -1752,6 +1779,7 @@ export default function Page() {
                       Restrict debits
                     </PendingButton>
                     <PendingButton
+                      busy={busy}
                       className="secondary"
                       disabled={!account || role !== "officer"}
                       onClick={() =>
@@ -1786,6 +1814,7 @@ export default function Page() {
                           </p>
                         </div>
                         <PendingButton
+                          busy={busy}
                           className="secondary"
                           disabled={
                             role !== "officer" ||
