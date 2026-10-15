@@ -1,0 +1,1947 @@
+"use client";
+
+import { Effect } from "effect";
+import {
+  ArrowDownLeft,
+  ArrowDownToLine,
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUpRight,
+  Bell,
+  Building2,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  CreditCard,
+  FileCheck2,
+  FileText,
+  Fingerprint,
+  Landmark,
+  LayoutDashboard,
+  LoaderCircle,
+  LockKeyhole,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Wallet,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  type CommandKind,
+  formatMoney,
+  type Role,
+} from "../src/domain/banking";
+import type { Dashboard } from "../src/domain/view";
+import { api } from "./api";
+
+type View =
+  | "overview"
+  | "application"
+  | "transfer"
+  | "statements"
+  | "services"
+  | "cash"
+  | "approvals"
+  | "operations"
+  | "audit";
+const labels: Record<View, string> = {
+  overview: "Overview",
+  application: "Account opening",
+  transfer: "Pay & transfer",
+  statements: "Statements",
+  services: "Service requests",
+  cash: "Cash & salary",
+  approvals: "Approval inbox",
+  operations: "Bank operations",
+  audit: "Activity & audit",
+};
+const roles: Record<Role, { name: string; person: string; initials: string }> =
+  {
+    customer: { name: "Customer", person: "Mira Krishnan", initials: "MK" },
+    officer: {
+      name: "Bank officer",
+      person: "Priya · Branch operations",
+      initials: "PR",
+    },
+    approver: {
+      name: "Approver",
+      person: "Dev · Branch manager",
+      initials: "DV",
+    },
+  };
+const navIcons = {
+  overview: LayoutDashboard,
+  application: FileCheck2,
+  transfer: ArrowLeftRight,
+  statements: FileText,
+  services: CreditCard,
+  cash: Wallet,
+  approvals: ShieldCheck,
+  operations: Building2,
+  audit: Clock3,
+};
+const statusLabel = (status: string) =>
+  ({
+    awaiting_approval: "Awaiting approval",
+    needs_changes: "Needs information",
+    submitted: "Under review",
+    approved: "Account opened",
+    pending: "Awaiting approval",
+    posted: "Completed",
+    rejected: "Declined",
+    reversed: "Reversed",
+    failed: "Not processed",
+    uncertain: "Needs reconciliation",
+    opening_exception: "Opening exception",
+    opening: "Opening account",
+  })[status] ?? status.replaceAll("_", " ");
+const Pill = ({ status }: { status: string }) => (
+  <span
+    className={`pill ${["posted", "approved", "active", "fulfilled"].includes(status) ? "success" : ["failed", "uncertain", "opening_exception", "rejected"].includes(status) ? "danger" : "pending"}`}
+  >
+    <span />
+    {statusLabel(status)}
+  </span>
+);
+
+const PendingButton = ({
+  busy,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy: boolean }) => (
+  <button {...props} disabled={busy || props.disabled}>
+    {busy ? <LoaderCircle size={16} className="spin" /> : null}
+    {children}
+  </button>
+);
+
+export default function Page() {
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [view, setView] = useState<View>("overview");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({
+    name: "Mira Krishnan",
+    email: "mira@example.test",
+    phone: "9000000001",
+    address: "14 Garden Lane, Adyar, Chennai 600020",
+    employment: "Designer at Northstar Studio",
+  });
+  const [amount, setAmount] = useState("2500");
+  const [note, setNote] = useState("For this month's shared expenses");
+  const [cashKind, setCashKind] = useState<"deposit" | "withdrawal" | "salary">(
+    "deposit",
+  );
+  const [cashAmount, setCashAmount] = useState("10000");
+  const [reviewNote, setReviewNote] = useState(
+    "Identity and address documents checked. Recommend account opening.",
+  );
+  const [beneficiaryName, setBeneficiaryName] = useState("Arjun Raman");
+  const [otp, setOtp] = useState("246810");
+  const [serviceKind, setServiceKind] = useState("chequebook");
+  const [serviceDetail, setServiceDetail] = useState(
+    "Please issue a 25-leaf chequebook for my savings account.",
+  );
+
+  const load = useCallback(
+    () =>
+      api<Dashboard>("/dashboard").pipe(
+        Effect.tap((next) => Effect.sync(() => setData(next))),
+      ),
+    [],
+  );
+  useEffect(() => {
+    void Effect.runPromise(
+      load().pipe(
+        Effect.catchAll((e) =>
+          Effect.sync(() => {
+            if (e.status !== 401) setError(e.message);
+          }),
+        ),
+        Effect.ensuring(Effect.sync(() => setLoading(false))),
+      ),
+    );
+  }, [load]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 6000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+  const perform = <A,>(
+    task: Effect.Effect<A, { message: string }>,
+    message: string,
+    refresh = true,
+  ) => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    void Effect.runPromise(
+      task.pipe(
+        Effect.flatMap(() => (refresh ? Effect.asVoid(load()) : Effect.void)),
+        Effect.tap(() => Effect.sync(() => setToast(message))),
+        Effect.catchAll((e) => Effect.sync(() => setError(e.message))),
+        Effect.ensuring(Effect.sync(() => setBusy(false))),
+      ),
+    );
+  };
+  const changeRole = (role: Role, destination: View = "overview") => {
+    setView(destination);
+    perform(
+      api("/session/role", { role }),
+      `Switched to ${roles[role].name.toLowerCase()}.`,
+    );
+  };
+  const instruction = (
+    kind: CommandKind,
+    value = 0,
+    description = "",
+    extra: Record<string, string> = {},
+  ) =>
+    perform(
+      api(
+        "/commands",
+        {
+          kind,
+          ...(value > 0 ? { amount: value } : {}),
+          description,
+          ...extra,
+        },
+        crypto.randomUUID(),
+      ),
+      kind === "transfer" && value <= 25000
+        ? "Transfer completed. Your statement is up to date."
+        : "Instruction sent to the separate approver.",
+    );
+  const attach = (kind: "identity" | "address", file?: File) => {
+    const body = new FormData();
+    body.set("kind", kind);
+    body.set(
+      "file",
+      file ??
+        new File(
+          [
+            `SYNTHETIC DEMO DOCUMENT\n${form.name}\n${kind === "identity" ? "Demo identity reference: DEMO-MIRA-001" : form.address}\nNot valid for identification. No real personal information.`,
+          ],
+          `sample-${kind}.txt`,
+          { type: "text/plain" },
+        ),
+    );
+    return api("/documents", body);
+  };
+  const sampleDocs = () =>
+    perform(
+      Effect.all([attach("identity"), attach("address")], { concurrency: 1 }),
+      "Two synthetic documents attached.",
+    );
+
+  if (loading)
+    return (
+      <main className="loading">
+        <Landmark size={35} />
+        <p>Connecting your banking workspace…</p>
+        <LoaderCircle className="spin" />
+      </main>
+    );
+  if (!data)
+    return (
+      <main className="welcome">
+        <div className="welcome-copy">
+          <a className="brand" href="/">
+            <span className="brand-symbol">
+              <Landmark size={25} />
+            </span>
+            OpenFinacle<span className="brand-dot">.</span>
+          </a>
+          <span className="eyebrow">A WORKING BANKING SANDBOX</span>
+          <h1>
+            A bank is more
+            <br />
+            than a balance.
+          </h1>
+          <p>
+            Open an account. Make your first deposit. Send money to someone you
+            know. See the same story from both sides of the counter.
+          </p>
+          <PendingButton
+            busy={busy}
+            className="primary large"
+            onClick={() =>
+              perform(api("/session", {}), "Your own demo bank is ready.")
+            }
+          >
+            Start your banking story <ArrowRight size={18} />
+          </PendingButton>
+          {busy && (
+            <p role="status">
+              Preparing your accounts. The first visit after a quiet period can
+              take a few minutes while the bank starts.
+            </p>
+          )}
+          <span className="welcome-note">
+            <LockKeyhole size={14} /> Your own isolated workspace · Synthetic
+            data only
+          </span>
+          {error && (
+            <div role="alert" className="notice error">
+              {error}
+            </div>
+          )}
+          <div className="welcome-footer">
+            Built on Apache Fineract <span>Customer + staff experiences</span>
+          </div>
+        </div>
+        <div className="welcome-art">
+          <div className="orbit orbit-one" />
+          <div className="orbit orbit-two" />
+          <div className="welcome-card">
+            <div className="card-top">
+              <Landmark size={23} />
+              <span>EVERYDAY SAVINGS</span>
+            </div>
+            <p>
+              Good things
+              <br />
+              start here.
+            </p>
+            <div className="card-bottom">
+              <span>MIRA KRISHNAN</span>
+              <span>● ● ● ● &nbsp; DEMO</span>
+            </div>
+          </div>
+          <div className="floating-proof">
+            <span className="proof-icon">
+              <CheckCheck size={20} />
+            </span>
+            <div>
+              One connected banking story
+              <small>From application to salary day</small>
+            </div>
+          </div>
+          <div className="art-caption">
+            REAL WORKFLOWS. REAL POSTINGS. DEMO MONEY.
+          </div>
+        </div>
+      </main>
+    );
+
+  const role = data.role;
+  const staff = role !== "customer";
+  const account = data.account;
+  const balance = account?.summary?.accountBalance ?? 0;
+  const pending = data.commands.filter((c) => c.status === "pending");
+  const activeBeneficiary = data.beneficiaries.find(
+    (b) => b.status === "active",
+  );
+  const transactions = [...(account?.transactions ?? [])].sort(
+    (a, b) => b.id - a.id,
+  );
+  const customerNav: View[] = [
+    "overview",
+    "application",
+    "transfer",
+    "statements",
+    "services",
+  ];
+  const staffNav: View[] = [
+    "overview",
+    "application",
+    "cash",
+    "approvals",
+    "operations",
+    "services",
+    "audit",
+  ];
+  const journeySteps = [
+    Boolean(data.application),
+    data.application?.status === "approved",
+    data.commands.some((c) => c.kind === "deposit" && c.status === "posted"),
+    Boolean(activeBeneficiary),
+    data.commands.some((c) => c.kind === "transfer" && c.status === "posted"),
+    data.commands.some((c) => c.kind === "salary" && c.status === "posted"),
+  ];
+  const progress = journeySteps.filter(Boolean).length;
+  const nextStep = !data.application
+    ? {
+        title: "Let's open your account",
+        text: "Start with your details and two sample documents.",
+        action: () => {
+          setView("application");
+          if (role !== "customer") changeRole("customer", "application");
+        },
+        button: "Begin application",
+      }
+    : data.application.status === "submitted"
+      ? {
+          title: "Your documents are with the bank",
+          text: "Step behind the counter and review the application as a bank officer.",
+          action: () => changeRole("officer", "application"),
+          button: "Review as bank officer",
+        }
+      : data.application.status === "awaiting_approval"
+        ? {
+            title: "A second pair of eyes",
+            text: "A separate approver authorises the account opening.",
+            action: () => changeRole("approver", "application"),
+            button: "Switch to approver",
+          }
+        : data.application.status === "needs_changes"
+          ? {
+              title: "A little more information",
+              text: "Read the officer's note and update your application.",
+              action: () => changeRole("customer", "application"),
+              button: "Update application",
+            }
+          : ["opening", "opening_exception"].includes(data.application.status)
+            ? {
+                title: "Account opening needs attention",
+                text: "The bank must inspect the core outcome before trying the opening again.",
+                action: () => changeRole("officer", "application"),
+                button: "Inspect opening status",
+              }
+            : pending.length > 0
+              ? {
+                  title: "Ready for a second pair of eyes",
+                  text: "Your instruction is waiting for independent approval before it can affect the account.",
+                  action: () => changeRole("approver", "approvals"),
+                  button: "Review pending instruction",
+                }
+              : !journeySteps[2]
+                ? {
+                    title: "Make your first deposit",
+                    text: "Visit the cash desk as the officer. The approver will authorise the posting.",
+                    action: () => changeRole("officer", "cash"),
+                    button: "Go to the cash desk",
+                  }
+                : !journeySteps[3]
+                  ? {
+                      title: "Add someone you know",
+                      text: "Add Arjun as a beneficiary and confirm the demo verification code.",
+                      action: () => changeRole("customer", "transfer"),
+                      button: "Add beneficiary",
+                    }
+                  : !journeySteps[4]
+                    ? {
+                        title: "Send your first payment",
+                        text: "Transfer money to Arjun. Both accounts will update in the banking core.",
+                        action: () => changeRole("customer", "transfer"),
+                        button: "Make a transfer",
+                      }
+                    : !journeySteps[5]
+                      ? {
+                          title: "It's salary day",
+                          text: "The officer prepares a salary payment from Northstar Studio's funded account.",
+                          action: () => {
+                            setCashKind("salary");
+                            setCashAmount("85000");
+                            changeRole("officer", "cash");
+                          },
+                          button: "Prepare salary payment",
+                        }
+                      : {
+                          title: "Your banking story is connected",
+                          text: "Explore statements, account controls and the full activity trail.",
+                          action: () => {
+                            setView("statements");
+                            if (staff) changeRole("customer", "statements");
+                          },
+                          button: "View your statement",
+                        };
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a className="brand" href="/">
+          <span className="brand-symbol">
+            <Landmark size={22} />
+          </span>
+          OpenFinacle<span className="brand-dot">.</span>
+        </a>
+        <div className="workspace-label">
+          {staff ? "BRANCH WORKSPACE" : "PERSONAL BANKING"}
+          <span>DEMO</span>
+        </div>
+        <nav aria-label="Main navigation">
+          {(staff ? staffNav : customerNav).map((item) => {
+            const Icon = navIcons[item];
+            return (
+              <button
+                type="button"
+                className={view === item ? "nav-item active" : "nav-item"}
+                key={item}
+                onClick={() => {
+                  setView(item);
+                  setSearch("");
+                }}
+              >
+                <Icon size={19} />
+                <span>{labels[item]}</span>
+                {item === "approvals" && pending.length > 0 && (
+                  <b>{pending.length}</b>
+                )}
+                {item === "application" &&
+                  data.application?.status === "awaiting_approval" && (
+                    <span className="nav-dot" />
+                  )}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="demo-help">
+            <Sparkles size={19} />
+            <strong>Experience both sides</strong>
+            <p>Switch roles to follow a customer's journey through the bank.</p>
+            <div className="role-select">
+              <Users size={16} />
+              <select
+                aria-label="Demo persona"
+                value={role}
+                disabled={busy}
+                onChange={(e) => changeRole(e.target.value as Role)}
+              >
+                {Object.entries(roles).map(([key, info]) => (
+                  <option value={key} key={key}>
+                    {info.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} />
+            </div>
+          </div>
+          <div className="core-status">
+            <span /> Banking core connected
+            <small>Apache Fineract · INR sandbox</small>
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="breadcrumb">
+            {staff ? "Branch banking" : "Personal banking"}
+            <ChevronRight size={14} />
+            <strong>{labels[view]}</strong>
+          </div>
+          <div className="topbar-right">
+            <span className="sandbox-label">
+              <ShieldCheck size={14} /> Demo environment
+            </span>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Refresh workspace"
+              disabled={busy}
+              onClick={() => perform(load(), "Workspace refreshed.", false)}
+            >
+              <RefreshCw size={18} />
+            </button>
+            <div className="person">
+              <span className="avatar">{roles[role].initials}</span>
+              <div>
+                <strong>
+                  {staff
+                    ? role === "officer"
+                      ? "Priya Rao"
+                      : "Dev Sharma"
+                    : (data.application?.name ?? "Mira Krishnan")}
+                </strong>
+                <small>{roles[role].name}</small>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="content">
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">
+                {staff ? "ADYAR BRANCH · CHENNAI" : "YOUR EVERYDAY, SIMPLIFIED"}
+              </span>
+              <h1>
+                {view === "overview"
+                  ? staff
+                    ? "A clear view of your branch."
+                    : `Good things ahead, ${(data.application?.name ?? "Mira").split(" ")[0]}.`
+                  : labels[view]}
+              </h1>
+              <p>
+                {view === "overview"
+                  ? staff
+                    ? "Every application, approval and transaction. One connected workspace."
+                    : "Your money, your next step, and everything in between."
+                  : view === "application"
+                    ? "A simple beginning. Carefully reviewed."
+                    : view === "transfer"
+                      ? "Send money confidently to the people who matter."
+                      : view === "cash"
+                        ? "Record the instruction here. A separate approver posts it."
+                        : view === "approvals"
+                          ? "Review the details. Keep the maker and approver separate."
+                          : "Your banking activity, clearly connected."}
+              </p>
+            </div>
+            <span className="business-date">
+              <Clock3 size={14} />
+              {data.businessDate}
+            </span>
+          </div>
+          {error && (
+            <div className="notice error" role="alert">
+              <CircleHelp size={18} />
+              <span>{error}</span>
+              <button
+                type="button"
+                aria-label="Dismiss error"
+                onClick={() => setError("")}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {toast && (
+            <div className="notice positive" role="status">
+              <CheckCircle2 size={18} />
+              {toast}
+            </div>
+          )}
+          {(account?.subStatus?.blockDebit || account?.subStatus?.block) && (
+            <div className="notice error" role="status">
+              <LockKeyhole size={18} /> Debits are restricted on this account.
+              Contact the bank officer to request release.
+            </div>
+          )}
+
+          {view === "overview" && (
+            <>
+              <div className="overview-grid">
+                <section className="balance-card">
+                  <div className="card-top">
+                    <span>
+                      <Wallet size={18} /> EVERYDAY SAVINGS
+                    </span>
+                    <span className="card-bank">of.</span>
+                  </div>
+                  <div className="balance-label">
+                    {account
+                      ? "Your account balance"
+                      : "Your account starts here"}
+                  </div>
+                  <div className="balance-amount" data-testid="balance">
+                    {formatMoney(balance)}
+                  </div>
+                  <div className="account-number">
+                    {account
+                      ? `A/C ${account.accountNo}  ·  ${account.status.value}`
+                      : "Open an account to begin your banking story"}
+                  </div>
+                  <div className="balance-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setView(account ? "transfer" : "application")
+                      }
+                    >
+                      {account ? <Send size={16} /> : <Plus size={16} />}
+                      {account ? "Send money" : "Open account"}
+                      <ArrowUpRight size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setView("statements")}
+                      disabled={!account}
+                    >
+                      <FileText size={16} /> Statement
+                    </button>
+                  </div>
+                  <div className="balance-pattern" aria-hidden="true" />
+                </section>
+                <section className="next-step">
+                  <span className="eyebrow">
+                    <span className="step-spark">
+                      <Sparkles size={15} />
+                    </span>{" "}
+                    YOUR NEXT STEP
+                  </span>
+                  <h2>{nextStep.title}</h2>
+                  <p>{nextStep.text}</p>
+                  <button
+                    type="button"
+                    className="text-link"
+                    disabled={busy}
+                    onClick={nextStep.action}
+                  >
+                    {nextStep.button}
+                    <ArrowRight size={16} />
+                  </button>
+                  <div className="journey-progress">
+                    <div>
+                      <span style={{ width: `${(progress / 6) * 100}%` }} />
+                    </div>
+                    <small>{progress} of 6 milestones complete</small>
+                  </div>
+                </section>
+              </div>
+              <div className="quick-row">
+                {[
+                  {
+                    icon: ArrowLeftRight,
+                    title: "Pay someone",
+                    subtitle: "Beneficiaries & transfers",
+                    destination: "transfer" as View,
+                  },
+                  {
+                    icon: ArrowDownToLine,
+                    title: "Your statements",
+                    subtitle: "Every transaction, clearly",
+                    destination: "statements" as View,
+                  },
+                  {
+                    icon: CreditCard,
+                    title: "At your service",
+                    subtitle: "Cards, cheques & requests",
+                    destination: "services" as View,
+                  },
+                ].map(({ icon: Icon, title, subtitle, destination }) => (
+                  <button
+                    type="button"
+                    className="quick-item"
+                    key={title}
+                    onClick={() =>
+                      setView(
+                        staff && destination === "transfer"
+                          ? "cash"
+                          : destination,
+                      )
+                    }
+                  >
+                    <span className="quick-icon">
+                      <Icon size={20} />
+                    </span>
+                    <span>
+                      <strong>{title}</strong>
+                      <small>{subtitle}</small>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+              </div>
+              <div className="lower-grid">
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Recent activity</h2>
+                      <p>A little context for every movement.</p>
+                    </div>
+                    <button
+                      className="text-link"
+                      type="button"
+                      onClick={() => setView(staff ? "audit" : "statements")}
+                    >
+                      View all <ArrowRight size={14} />
+                    </button>
+                  </div>
+                  {data.commands.length ? (
+                    <div className="activity-list">
+                      {data.commands.slice(0, 5).map((c) => (
+                        <div className="activity" key={c.id}>
+                          <span
+                            className={`activity-icon ${["deposit", "salary"].includes(c.kind) ? "incoming" : ""}`}
+                          >
+                            {["deposit", "salary"].includes(c.kind) ? (
+                              <ArrowDownLeft size={19} />
+                            ) : (
+                              <ArrowUpRight size={19} />
+                            )}
+                          </span>
+                          <div>
+                            <strong>{c.description}</strong>
+                            <small>
+                              {c.kind.replaceAll("_", " ")} ·{" "}
+                              {new Date(
+                                `${c.created_at.replace(" ", "T")}Z`,
+                              ).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </small>
+                          </div>
+                          <div className="activity-value">
+                            <strong>
+                              {c.amount_minor
+                                ? formatMoney(c.amount_minor / 100)
+                                : "Account control"}
+                            </strong>
+                            <Pill status={c.status} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <ArrowLeftRight size={26} />
+                      <h3>Your story is just beginning</h3>
+                      <p>
+                        Deposits, payments and salary credits will appear here.
+                      </p>
+                    </div>
+                  )}
+                </section>
+                <section className="panel journey-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>From first hello to payday</h2>
+                      <p>Your six-step banking journey.</p>
+                    </div>
+                  </div>
+                  {[
+                    "Submit your application",
+                    "Get your account opened",
+                    "Make an initial deposit",
+                    "Add a beneficiary",
+                    "Send your first transfer",
+                    "Receive your salary",
+                  ].map((step, i) => (
+                    <div
+                      className={`journey-step ${journeySteps[i] ? "complete" : ""}`}
+                      key={step}
+                    >
+                      <span>
+                        {journeySteps[i] ? <Check size={13} /> : i + 1}
+                      </span>
+                      <strong>{step}</strong>
+                      {journeySteps[i] && <small>Done</small>}
+                    </div>
+                  ))}
+                </section>
+              </div>
+            </>
+          )}
+
+          {view === "application" && (
+            <div className="form-grid">
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      {staff ? "Customer application" : "Your first account"}
+                    </h2>
+                    <p>
+                      {staff
+                        ? "Review submitted details and supporting documents."
+                        : "Everyday Savings · 3.5% p.a. configured interest · INR"}
+                    </p>
+                  </div>
+                  {data.application && (
+                    <Pill status={data.application.status} />
+                  )}
+                </div>
+                {staff ? (
+                  data.application ? (
+                    <>
+                      <div className="detail-grid">
+                        {Object.entries({
+                          Customer: data.application.name,
+                          Email: data.application.email,
+                          Phone: data.application.phone,
+                          Address: data.application.address,
+                          Employment: data.application.employment,
+                        }).map(([key, value]) => (
+                          <div key={key}>
+                            <small>{key}</small>
+                            <strong>{value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="document-list">
+                        {data.documents.map((doc) => (
+                          <a
+                            key={doc.id}
+                            href={`/api/documents/${doc.id}`}
+                            className="document"
+                          >
+                            <FileCheck2 size={20} />
+                            <div>
+                              <strong>{doc.name}</strong>
+                              <small>{doc.kind} · synthetic document</small>
+                            </div>
+                            <ArrowDownToLine size={17} />
+                          </a>
+                        ))}
+                      </div>
+                      {data.application.review_note && (
+                        <div className="notice neutral">
+                          {data.application.review_note}
+                        </div>
+                      )}
+                      {role === "officer" &&
+                        data.application.status === "submitted" && (
+                          <div className="form-actions-column">
+                            <label>
+                              Review notes
+                              <textarea
+                                value={reviewNote}
+                                onChange={(e) => setReviewNote(e.target.value)}
+                              />
+                            </label>
+                            <div className="button-row">
+                              <PendingButton
+                                busy={busy}
+                                className="primary"
+                                onClick={() =>
+                                  perform(
+                                    api("/application/review", {
+                                      decision: "recommend",
+                                      note: reviewNote,
+                                    }),
+                                    "Application sent to the separate approver.",
+                                  )
+                                }
+                              >
+                                Recommend opening <ArrowRight size={16} />
+                              </PendingButton>
+                              <PendingButton
+                                busy={busy}
+                                className="secondary"
+                                onClick={() =>
+                                  perform(
+                                    api("/application/review", {
+                                      decision: "needs_changes",
+                                      note: reviewNote,
+                                    }),
+                                    "Customer notified of requested information.",
+                                  )
+                                }
+                              >
+                                Request information
+                              </PendingButton>
+                            </div>
+                          </div>
+                        )}
+                      {role === "approver" &&
+                        data.application.status === "awaiting_approval" && (
+                          <PendingButton
+                            busy={busy}
+                            className="primary"
+                            onClick={() =>
+                              perform(
+                                api("/application/review", {
+                                  decision: "approve",
+                                  note: "Approved after independent review",
+                                }),
+                                "Account opened and activated in the banking core.",
+                              )
+                            }
+                          >
+                            Approve & open account <CheckCheck size={16} />
+                          </PendingButton>
+                        )}
+                      {data.application.status === "awaiting_approval" &&
+                        role === "officer" && (
+                          <button
+                            type="button"
+                            className="primary"
+                            onClick={() =>
+                              changeRole("approver", "application")
+                            }
+                          >
+                            Continue as the approver <ArrowRight size={16} />
+                          </button>
+                        )}
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <FileText />
+                      <h3>No application yet</h3>
+                      <p>Switch to the customer to start the journey.</p>
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => changeRole("customer", "application")}
+                      >
+                        Start as customer
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      perform(
+                        api("/application", form),
+                        "Application submitted. The bank officer can now review it.",
+                      );
+                    }}
+                  >
+                    <div className="fields-grid">
+                      {(["name", "email", "phone", "employment"] as const).map(
+                        (key) => (
+                          <label key={key}>
+                            {
+                              {
+                                name: "Full name",
+                                email: "Email address",
+                                phone: "Mobile number",
+                                employment: "Employment",
+                              }[key]
+                            }
+                            <input
+                              required
+                              value={form[key]}
+                              onChange={(e) =>
+                                setForm({ ...form, [key]: e.target.value })
+                              }
+                              disabled={data.application?.status === "approved"}
+                              type={key === "email" ? "email" : "text"}
+                            />
+                          </label>
+                        ),
+                      )}
+                    </div>
+                    <label>
+                      Residential address
+                      <textarea
+                        required
+                        value={form.address}
+                        onChange={(e) =>
+                          setForm({ ...form, address: e.target.value })
+                        }
+                        disabled={data.application?.status === "approved"}
+                      />
+                    </label>
+                    <h3 className="subheading">Supporting documents</h3>
+                    <p className="muted">
+                      Use the sample documents, or attach synthetic files.
+                      Please don't upload real identity documents.
+                    </p>
+                    <div className="upload-grid">
+                      {(["identity", "address"] as const).map((kind) => (
+                        <label className="upload-box" key={kind}>
+                          <FileCheck2 size={23} />
+                          <strong>
+                            {kind === "identity"
+                              ? "Identity document"
+                              : "Address proof"}
+                          </strong>
+                          <span>
+                            {data.documents.some((d) => d.kind === kind)
+                              ? "Document attached ✓"
+                              : "PDF, JPG, PNG or TXT · Up to 1 MB"}
+                          </span>
+                          <input
+                            aria-label={`Upload ${kind} document`}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.txt"
+                            disabled={busy}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file)
+                                perform(
+                                  attach(kind, file),
+                                  "Document attached.",
+                                );
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <div className="button-row">
+                      <PendingButton
+                        busy={busy}
+                        type="button"
+                        className="secondary"
+                        onClick={sampleDocs}
+                        disabled={data.documents.length >= 2}
+                      >
+                        Use sample documents <Sparkles size={15} />
+                      </PendingButton>
+                      <PendingButton
+                        busy={busy}
+                        className="primary"
+                        type="submit"
+                        disabled={
+                          !!(
+                            data.application &&
+                            !["needs_changes"].includes(data.application.status)
+                          )
+                        }
+                      >
+                        Submit application <ArrowRight size={16} />
+                      </PendingButton>
+                    </div>
+                    {data.application?.review_note && (
+                      <div className="notice neutral">
+                        {data.application.review_note}
+                      </div>
+                    )}
+                    {data.application?.status === "submitted" && (
+                      <button
+                        className="text-link spaced"
+                        type="button"
+                        onClick={() => changeRole("officer", "application")}
+                      >
+                        Next: review as bank officer <ArrowRight size={16} />
+                      </button>
+                    )}
+                    {data.application?.status === "approved" && (
+                      <div className="notice positive">
+                        <CheckCircle2 size={18} />
+                        Your account is open. You're ready for your first
+                        deposit.
+                      </div>
+                    )}
+                  </form>
+                )}
+              </section>
+              <aside className="info-panel">
+                <Fingerprint size={35} />
+                <h2>
+                  A thoughtful
+                  <br />
+                  first step.
+                </h2>
+                <p>
+                  Opening an account connects your identity, documents, product
+                  and branch.
+                </p>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />
+                  Document review by the officer
+                </div>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />
+                  Independent approval
+                </div>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />A real account in the banking core
+                </div>
+                <div className="small-note">
+                  Identity verification is simulated. Account creation and
+                  activation execute in Apache Fineract.
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {view === "transfer" && (
+            <div className="form-grid">
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Make a payment</h2>
+                    <p>To another customer in your demo bank.</p>
+                  </div>
+                  <span className="circle-icon">
+                    <Send size={20} />
+                  </span>
+                </div>
+                {!account ? (
+                  <div className="empty-state">
+                    <LockKeyhole />
+                    <h3>Your account comes first</h3>
+                    <p>Complete account opening before sending money.</p>
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={() => setView("application")}
+                    >
+                      Open your account
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      instruction("transfer", Number(amount), note, {
+                        beneficiaryId: activeBeneficiary?.id ?? "",
+                      });
+                    }}
+                  >
+                    <label>
+                      From account
+                      <input
+                        className="sr-only"
+                        aria-label="From account number"
+                        value={account.accountNo}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <div className="account-selector">
+                        <Landmark size={20} />
+                        <div>
+                          <strong>
+                            Everyday Savings · {account.accountNo}
+                          </strong>
+                          <small>{formatMoney(balance)} available</small>
+                        </div>
+                        <CheckCircle2 size={18} />
+                      </div>
+                    </label>
+                    <label>
+                      To beneficiary
+                      <select
+                        disabled={!activeBeneficiary}
+                        aria-label="Select beneficiary"
+                      >
+                        <option>
+                          {activeBeneficiary
+                            ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
+                            : "Add and confirm a beneficiary first"}
+                        </option>
+                      </select>
+                    </label>
+                    <div className="fields-grid">
+                      <label>
+                        Amount (INR)
+                        <div className="money-input">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            min="0.01"
+                            max="10000000"
+                            step="0.01"
+                            required
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                          />
+                        </div>
+                      </label>
+                      <label>
+                        Payment note
+                        <input
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          maxLength={160}
+                        />
+                      </label>
+                    </div>
+                    <div className="notice neutral">
+                      <ShieldCheck size={17} />
+                      Transfers up to ₹25,000 post immediately. Larger transfers
+                      go to the approver.
+                    </div>
+                    <PendingButton
+                      busy={busy}
+                      className="primary"
+                      type="submit"
+                      disabled={!activeBeneficiary}
+                    >
+                      Review & send money <ArrowRight size={16} />
+                    </PendingButton>
+                  </form>
+                )}
+              </section>
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Your beneficiaries</h2>
+                    <p>Know where your money is going.</p>
+                  </div>
+                  <Users size={20} />
+                </div>
+                {data.beneficiaries.map((b) => (
+                  <div key={b.id} className="beneficiary">
+                    <span className="avatar peach">AR</span>
+                    <div>
+                      <strong>{b.name}</strong>
+                      <small>{b.account_no}</small>
+                      <Pill status={b.status} />
+                    </div>
+                    {b.status === "pending" && (
+                      <div className="otp-form">
+                        <label>
+                          Demo code
+                          <input
+                            aria-label="Beneficiary verification code"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                          />
+                        </label>
+                        <PendingButton
+                          busy={busy}
+                          className="primary"
+                          onClick={() =>
+                            perform(
+                              api("/beneficiaries/confirm", {
+                                id: b.id,
+                                code: otp,
+                              }),
+                              "Beneficiary verified and active.",
+                            )
+                          }
+                        >
+                          Confirm
+                        </PendingButton>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {!data.beneficiaries.length && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      perform(
+                        api("/beneficiaries", { name: beneficiaryName }),
+                        "Beneficiary added. Confirm with the demo code.",
+                      );
+                    }}
+                  >
+                    <div className="recipient-preview">
+                      <span className="avatar peach">AR</span>
+                      <div>
+                        <strong>Arjun Raman</strong>
+                        <small>A customer in your demo bank</small>
+                      </div>
+                    </div>
+                    <label>
+                      Beneficiary nickname
+                      <input
+                        value={beneficiaryName}
+                        onChange={(e) => setBeneficiaryName(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Account number
+                      <input value={data.recipient.accountNo} readOnly />
+                    </label>
+                    <PendingButton
+                      busy={busy}
+                      type="submit"
+                      className="secondary"
+                      disabled={!account}
+                    >
+                      <Plus size={16} />
+                      Add beneficiary
+                    </PendingButton>
+                  </form>
+                )}
+                <div className="small-note">
+                  <ShieldCheck size={16} />
+                  Verification is simulated. Use <strong>246810</strong>; no SMS
+                  is sent.
+                </div>
+              </section>
+            </div>
+          )}
+
+          {view === "cash" && (
+            <div className="form-grid">
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Prepare a banking instruction</h2>
+                    <p>
+                      Customer:{" "}
+                      {data.application?.name ?? "Account not yet opened"}
+                    </p>
+                  </div>
+                  <Wallet size={21} />
+                </div>
+                <div className="segmented">
+                  {(["deposit", "withdrawal", "salary"] as const).map(
+                    (kind) => (
+                      <button
+                        className={cashKind === kind ? "selected" : ""}
+                        type="button"
+                        key={kind}
+                        onClick={() => {
+                          setCashKind(kind);
+                          setCashAmount(kind === "salary" ? "85000" : "10000");
+                        }}
+                      >
+                        {kind === "salary"
+                          ? "Salary credit"
+                          : kind === "deposit"
+                            ? "Cash deposit"
+                            : "Withdrawal"}
+                      </button>
+                    ),
+                  )}
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    instruction(
+                      cashKind,
+                      Number(cashAmount),
+                      cashKind === "salary"
+                        ? "Salary · Northstar Studio"
+                        : cashKind === "deposit"
+                          ? "Cash deposit · Adyar branch"
+                          : "Cash withdrawal · Adyar branch",
+                    );
+                  }}
+                >
+                  <label>
+                    Customer account
+                    <input
+                      readOnly
+                      value={account?.accountNo ?? "Account opening required"}
+                    />
+                  </label>
+                  <label>
+                    Amount (INR)
+                    <div className="money-input">
+                      <span>₹</span>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        required
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(e.target.value)}
+                      />
+                    </div>
+                  </label>
+                  {cashKind === "salary" && (
+                    <div className="notice neutral">
+                      <Building2 size={20} />
+                      <div>
+                        From Northstar Studio
+                        <small>
+                          Employer balance:{" "}
+                          {formatMoney(
+                            data.employer?.summary?.accountBalance ?? 0,
+                          )}
+                          . This is an account-to-account transfer, not a
+                          balance adjustment.
+                        </small>
+                      </div>
+                    </div>
+                  )}
+                  <PendingButton
+                    busy={busy}
+                    className="primary"
+                    disabled={!account || role !== "officer"}
+                    type="submit"
+                  >
+                    Send for approval <ArrowRight size={16} />
+                  </PendingButton>
+                </form>
+              </section>
+              <section className="info-panel">
+                <ShieldCheck size={35} />
+                <h2>
+                  One instruction.
+                  <br />
+                  Two people.
+                </h2>
+                <p>
+                  The officer prepares the instruction. The approver checks it.
+                  Only then does the core post it.
+                </p>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />
+                  No editable account balances
+                </div>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />
+                  No duplicate posting on approval
+                </div>
+                <div className="info-line">
+                  <CheckCircle2 size={17} />
+                  Traceable core reference
+                </div>
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={() => changeRole("approver", "approvals")}
+                >
+                  Open approver's inbox <ArrowRight size={16} />
+                </button>
+              </section>
+            </div>
+          )}
+
+          {view === "approvals" && (
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>
+                    Ready for a second look{" "}
+                    <span className="count">{pending.length}</span>
+                  </h2>
+                  <p>
+                    {role === "approver"
+                      ? "Your decisions execute against the banking core."
+                      : "Only the separate approver can authorise these instructions."}
+                  </p>
+                </div>
+                {role !== "approver" && (
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => changeRole("approver", "approvals")}
+                  >
+                    Switch to approver
+                  </button>
+                )}
+              </div>
+              {pending.length ? (
+                pending.map((c) => (
+                  <article className="approval-card" key={c.id}>
+                    <div>
+                      <span className="eyebrow">
+                        {c.kind.toUpperCase()} · BY {c.maker.toUpperCase()}
+                      </span>
+                      <h3>{c.description}</h3>
+                      <p>
+                        {data.application?.name} · A/C {account?.accountNo}
+                      </p>
+                      <small className="reference">
+                        Instruction {c.id.slice(0, 8)}
+                      </small>
+                    </div>
+                    <div className="approval-right">
+                      <strong>
+                        {c.amount_minor
+                          ? formatMoney(c.amount_minor / 100)
+                          : c.kind.replaceAll("_", " ")}
+                      </strong>
+                      <div className="button-row">
+                        <PendingButton
+                          busy={busy}
+                          className="secondary"
+                          disabled={role !== "approver"}
+                          onClick={() =>
+                            perform(
+                              api("/commands/reject", { id: c.id }),
+                              "Instruction declined.",
+                            )
+                          }
+                        >
+                          Decline
+                        </PendingButton>
+                        <PendingButton
+                          busy={busy}
+                          className="primary"
+                          disabled={role !== "approver"}
+                          onClick={() =>
+                            perform(
+                              api("/commands/approve", { id: c.id }),
+                              "Instruction posted. Account balances are updated.",
+                            )
+                          }
+                        >
+                          Approve <Check size={15} />
+                        </PendingButton>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <CheckCheck size={32} />
+                  <h3>All caught up</h3>
+                  <p>
+                    New instructions appear here when they need independent
+                    approval.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+          {view === "statements" && (
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Everyday Savings statement</h2>
+                  <p>
+                    {account
+                      ? `Account ${account.accountNo} · Transactions from Apache Fineract`
+                      : "Your statement will be available after opening an account."}
+                  </p>
+                </div>
+                {account && (
+                  <a className="secondary button" href="/api/statement">
+                    <ArrowDownToLine size={16} />
+                    Download CSV
+                  </a>
+                )}
+              </div>
+              <div className="table-toolbar">
+                <label className="search-box">
+                  <Search size={17} />
+                  <input
+                    aria-label="Search transactions"
+                    placeholder="Search transactions"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </label>
+                <span>{transactions.length} transactions</span>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Transaction</th>
+                      <th>Date</th>
+                      <th>Reference</th>
+                      <th>Amount</th>
+                      <th>Balance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions
+                      .filter((t) =>
+                        `${t.transactionType.value} ${t.id}`
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                      )
+                      .map((t) => (
+                        <tr key={t.id}>
+                          <td>
+                            <span className="table-transaction">
+                              {t.transactionType.deposit ? (
+                                <ArrowDownLeft size={16} />
+                              ) : (
+                                <ArrowUpRight size={16} />
+                              )}
+                              {t.transactionType.value}
+                            </span>
+                          </td>
+                          <td>
+                            {t.date[2]}/{t.date[1]}/{t.date[0]}
+                          </td>
+                          <td className="reference">#{t.id}</td>
+                          <td
+                            className={
+                              t.transactionType.deposit ? "amount-credit" : ""
+                            }
+                          >
+                            {t.transactionType.deposit ? "+" : "−"}
+                            {formatMoney(t.amount)}
+                          </td>
+                          <td>{formatMoney(t.runningBalance ?? 0)}</td>
+                          <td>
+                            <Pill status={t.reversed ? "reversed" : "posted"} />
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {!transactions.length && (
+                  <div className="empty-state">
+                    <FileText />
+                    <h3>A fresh page</h3>
+                    <p>Your first posted transaction will appear here.</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {view === "services" && (
+            <div className="form-grid">
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      {staff ? "Customer service queue" : "How can we help?"}
+                    </h2>
+                    <p>
+                      {staff
+                        ? "Record the outcome of simulated fulfilment."
+                        : "Track your requests without another branch visit."}
+                    </p>
+                  </div>
+                  <CreditCard size={21} />
+                </div>
+                {!staff && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      perform(
+                        api("/requests", {
+                          kind: serviceKind,
+                          detail: serviceDetail,
+                        }),
+                        "Service request recorded.",
+                      );
+                    }}
+                  >
+                    <label>
+                      I'd like to
+                      <select
+                        value={serviceKind}
+                        onChange={(e) => setServiceKind(e.target.value)}
+                      >
+                        <option value="chequebook">Request a chequebook</option>
+                        <option value="debit_card">Request a debit card</option>
+                        <option value="address_change">
+                          Update my address
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      Details
+                      <textarea
+                        value={serviceDetail}
+                        onChange={(e) => setServiceDetail(e.target.value)}
+                        required
+                      />
+                    </label>
+                    <PendingButton
+                      busy={busy}
+                      type="submit"
+                      className="primary"
+                      disabled={!account}
+                    >
+                      Submit request <ArrowRight size={16} />
+                    </PendingButton>
+                  </form>
+                )}
+                <div className="request-list">
+                  {data.requests.map((r) => (
+                    <div className="request" key={r.id}>
+                      <div>
+                        <strong>{r.kind.replaceAll("_", " ")}</strong>
+                        <p>{r.detail}</p>
+                        <Pill status={r.status} />
+                      </div>
+                      {staff && r.status === "open" && (
+                        <PendingButton
+                          busy={busy}
+                          className="secondary"
+                          onClick={() =>
+                            perform(
+                              api("/requests/resolve", { id: r.id }),
+                              "Demo fulfilment recorded.",
+                            )
+                          }
+                        >
+                          Record demo fulfilment
+                        </PendingButton>
+                      )}
+                    </div>
+                  ))}
+                  {staff && !data.requests.length && (
+                    <div className="empty-state">
+                      <Bell />
+                      <h3>No requests waiting</h3>
+                      <p>Customer requests will arrive here.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+              <aside className="info-panel">
+                <CreditCard size={35} />
+                <h2>
+                  Little things.
+                  <br />
+                  Taken care of.
+                </h2>
+                <p>
+                  Submit a request as the customer. Switch to the bank officer
+                  to see and fulfil it.
+                </p>
+                <div className="small-note">
+                  Card issuance, cheque dispatch and address verification are
+                  simulated service workflows. No physical item is dispatched.
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {view === "operations" && (
+            <>
+              <div className="stats-row">
+                <div>
+                  <span>Customer savings</span>
+                  <strong>{formatMoney(balance)}</strong>
+                  <small>A/C {account?.accountNo ?? "Pending opening"}</small>
+                </div>
+                <div>
+                  <span>Beneficiary savings</span>
+                  <strong>
+                    {formatMoney(data.recipient.summary?.accountBalance ?? 0)}
+                  </strong>
+                  <small>{data.recipient.clientName}</small>
+                </div>
+                <div>
+                  <span>Employer funding</span>
+                  <strong>
+                    {formatMoney(data.employer?.summary?.accountBalance ?? 0)}
+                  </strong>
+                  <small>Northstar Studio</small>
+                </div>
+              </div>
+              <div className="form-grid">
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Account controls</h2>
+                      <p>Debit restrictions require separate approval.</p>
+                    </div>
+                    <LockKeyhole size={21} />
+                  </div>
+                  <div className="notice neutral">
+                    Current core status: {account?.status.value ?? "No account"}
+                    {account?.subStatus?.value
+                      ? ` · ${account.subStatus.value}`
+                      : ""}
+                  </div>
+                  <div className="button-row">
+                    <PendingButton
+                      busy={busy}
+                      className="secondary"
+                      disabled={!account || role !== "officer"}
+                      onClick={() =>
+                        instruction("freeze", 0, "Place debit restriction")
+                      }
+                    >
+                      Restrict debits
+                    </PendingButton>
+                    <PendingButton
+                      busy={busy}
+                      className="secondary"
+                      disabled={!account || role !== "officer"}
+                      onClick={() =>
+                        instruction("unfreeze", 0, "Release debit restriction")
+                      }
+                    >
+                      Release restriction
+                    </PendingButton>
+                  </div>
+                </section>
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Cash corrections</h2>
+                      <p>Reverse the posting; preserve the original record.</p>
+                    </div>
+                    <RefreshCw size={21} />
+                  </div>
+                  {data.commands
+                    .filter(
+                      (c) =>
+                        ["deposit", "withdrawal"].includes(c.kind) &&
+                        c.status === "posted",
+                    )
+                    .map((c) => (
+                      <div className="request" key={c.id}>
+                        <div>
+                          <strong>{c.description}</strong>
+                          <p>
+                            {formatMoney(c.amount_minor / 100)} · Core #
+                            {c.core_id}
+                          </p>
+                        </div>
+                        <PendingButton
+                          busy={busy}
+                          className="secondary"
+                          disabled={
+                            role !== "officer" ||
+                            data.commands.some(
+                              (r) =>
+                                r.kind === "reverse" &&
+                                r.payload.includes(c.id) &&
+                                [
+                                  "posted",
+                                  "pending",
+                                  "executing",
+                                  "uncertain",
+                                ].includes(r.status),
+                            )
+                          }
+                          onClick={() =>
+                            instruction(
+                              "reverse",
+                              0,
+                              `Reverse cash posting #${c.core_id}`,
+                              { originalId: c.id },
+                            )
+                          }
+                        >
+                          Request reversal
+                        </PendingButton>
+                      </div>
+                    ))}
+                </section>
+              </div>
+              <section className="panel spaced">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Instruction register</h2>
+                    <p>Every command, including declines and exceptions.</p>
+                  </div>
+                </div>
+                {data.commands.map((c) => (
+                  <div className="register-item" key={c.id}>
+                    <div>
+                      <strong>{c.description}</strong>
+                      <small>
+                        {c.error ??
+                          `Core reference: ${c.core_id ?? "not posted"}`}
+                      </small>
+                    </div>
+                    <span>{formatMoney(c.amount_minor / 100)}</span>
+                    <Pill status={c.status} />
+                  </div>
+                ))}
+              </section>
+            </>
+          )}
+
+          {view === "audit" && (
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>The complete activity trail</h2>
+                  <p>
+                    Application actions and core posting references, in order.
+                  </p>
+                </div>
+                <Clock3 size={21} />
+              </div>
+              <div className="audit-list">
+                {data.audit.map((event) => (
+                  <div className="audit-event" key={event.id}>
+                    <span className="audit-dot" />
+                    <div>
+                      <div className="audit-title">
+                        <strong>{event.action}</strong>
+                        <span>{event.actor}</span>
+                      </div>
+                      <p>{event.detail}</p>
+                      <small>{event.created_at} UTC</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          <footer className="page-footer">
+            <span>
+              <ShieldCheck size={14} />
+              Synthetic data. Demonstration money. Real banking workflows.
+            </span>
+            <span>
+              OpenFinacle <span className="footer-dot">/</span> Powered by
+              Apache Fineract
+            </span>
+          </footer>
+        </main>
+      </div>
+      {busy && (
+        <div className="working" role="status">
+          <LoaderCircle size={17} className="spin" />
+          Working with the bank…
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+.wrangler/
+.dev.vars*
+.env*
+.railway/
+playwright-report/
+test-results/
+.beads/
+.claude/
+.codex/
+.agents/skills/
+*.tsbuildinfo
