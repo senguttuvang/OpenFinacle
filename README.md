@@ -26,6 +26,8 @@ Persona switching is explicitly a demonstration control, not production identity
 
 ## Architecture and ownership
 
+The project owner confirmed Fineract as the core on 2026-10-16. The [accepted decision](specs/decisions/001-banking-core.md) records custom TypeScript, TigerBeetle and ERP/accounting alternatives, tradeoffs and production-effort assumptions. The next [customer experience specification](specs/002-customer-experience/spec.md) covers both new applicants and existing customers, with an authorized ICICI screen-reference review pending. These are accepted requirements, not a claim that the existing-customer redesign has shipped.
+
 - **Next.js / React:** customer and staff experiences, built to static assets.
 - **Effect-TS on Cloudflare Workers:** session/ownership checks, application workflows, approval rules and integration adapters. No Java rewrite and no CMS dependency.
 - **Apache Fineract 1.15.0 on Cloudflare Containers:** customer accounts, savings products, internal transfers, cash transactions and configured cash accounting.
