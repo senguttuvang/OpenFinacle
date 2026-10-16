@@ -2,6 +2,7 @@ import { getContainer } from "@cloudflare/containers";
 import { Effect, Layer, Schema } from "effect";
 import { coreLayer } from "./adapters/core";
 import type { Environment } from "./adapters/environment";
+import { parseJsonRequest as parse } from "./adapters/request-json";
 import { storeLayer } from "./adapters/store";
 import {
   addBeneficiary,
@@ -48,21 +49,6 @@ const hash = (value: string) =>
         ).join(""),
       ),
   );
-const parse = <A, I>(request: Request, schema: Schema.Schema<A, I, never>) =>
-  Effect.gen(function* () {
-    const text = yield* io(() => request.text());
-    if (text.length > 20000)
-      return yield* Effect.fail(failure("Request is too large.", 413));
-    const data = yield* Effect.try({
-      try: () => JSON.parse(text) as unknown,
-      catch: () => failure("Send valid JSON."),
-    });
-    return yield* Schema.decodeUnknown(schema)(data).pipe(
-      Effect.mapError(() =>
-        failure("Some required fields are missing or invalid."),
-      ),
-    );
-  });
 const getSession = (request: Request) =>
   Effect.gen(function* () {
     const token = request.headers
@@ -164,14 +150,13 @@ const handle = (request: Request, env: Environment) =>
       return yield* Effect.fail(failure("Admin route not found.", 404));
     }
     if (path === "/api/session" && request.method === "POST") {
-      const input = request.body
-        ? yield* parse(
-            request,
-            Schema.Struct({
-              journey: Schema.optional(Schema.Literal("new", "existing")),
-            }),
-          )
-        : {};
+      const input = yield* parse(
+        request,
+        Schema.Struct({
+          journey: Schema.optional(Schema.Literal("new", "existing")),
+        }),
+        true,
+      );
       const current = yield* getSession(request).pipe(
         Effect.catchAll((error) =>
           error.status === 401 ? Effect.succeed(null) : Effect.fail(error),

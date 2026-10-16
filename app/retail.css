@@ -194,9 +194,9 @@
   margin-top: 6px;
 }
 .customer-retail .primary {
-  background: #ce5611;
+  background: #b94b10;
   color: white;
-  border-color: #ce5611;
+  border-color: #b94b10;
 }
 .customer-retail .secondary {
   background: white;
@@ -328,7 +328,7 @@
 .retail-action-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: #e7761b;
+  background: #bd5410;
 }
 .retail-action-strip button {
   color: white;
@@ -609,6 +609,9 @@
   }
 }
 @media (max-width: 640px) {
+  .app-shell:not(.customer-retail) .sidebar nav {
+    margin-top: 44px;
+  }
   .sidebar .journey-switch {
     margin-top: 2px;
     padding: 3px 4px;
