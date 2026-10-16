@@ -508,6 +508,7 @@
     display: none;
   }
   .customer-retail .sidebar-bottom {
+    position: static;
     margin: 0;
     padding: 0;
   }
