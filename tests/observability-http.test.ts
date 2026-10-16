@@ -84,3 +84,102 @@ test("readiness uses only the authenticated core read and never initializes a wo
   });
   expect(calls).toEqual(["GET /fineract-provider/api/v1/offices/1"]);
 });
+
+test("production mode refuses anonymous demo sessions and role switching", async () => {
+  const environment = env();
+  for (const path of ["/api/session", "/api/session/role"]) {
+    const response = await handleRequest(
+      new Request(`https://demo.test${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "approver" }),
+      }),
+      environment,
+    );
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain(
+      "Production customer identity is not configured",
+    );
+  }
+});
+
+test("journey entry only reads permanent saved data and never provisions or calls the core", async () => {
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(":memory:");
+  for (const file of [
+    "0001_workflows.sql",
+    "0002_reversal_guard.sql",
+    "0003_customer_journey.sql",
+    "0004_persistent_demo.sql",
+  ])
+    db.exec(await Bun.file(`migrations/${file}`).text());
+  db.run(
+    "INSERT INTO banks(id,status,journey,customer_account,recipient_account,employer_account) VALUES('permanent','ready','existing',11,22,33)",
+  );
+  db.run(
+    "INSERT INTO settings(key,value) VALUES('demo_existing_bank','permanent')",
+  );
+  const account = {
+    id: 11,
+    accountNo: "00011",
+    clientName: "Mira",
+    summary: { accountBalance: 121300 },
+    transactions: [],
+  };
+  db.run(
+    "INSERT INTO financial_snapshots(bank_id,payload,synced_at) VALUES('permanent',?,?)",
+    [
+      JSON.stringify({
+        account,
+        recipient: { ...account, id: 22 },
+        employer: { ...account, id: 33 },
+      }),
+      Date.now(),
+    ],
+  );
+  const database = {
+    prepare: (sql: string) => {
+      let values: (string | number | null)[] = [];
+      return {
+        bind(...input: (string | number | null)[]) {
+          values = input;
+          return this;
+        },
+        first: async () => db.query(sql).get(...values),
+        all: async () => ({ results: db.query(sql).all(...values) }),
+        run: async () => ({ meta: { changes: db.run(sql, values).changes } }),
+      };
+    },
+  } as unknown as D1Database;
+  const environment = env(database);
+  environment.DEMO_MODE = "true";
+  let coreCalls = 0;
+  environment.CORE = {
+    fetch: async () => {
+      coreCalls++;
+      throw new Error("Unavailable core must not be called during entry");
+    },
+  } as unknown as Environment["CORE"];
+  const response = await handleRequest(
+    new Request("https://demo.test/api/session", {
+      method: "POST",
+      body: JSON.stringify({ journey: "existing" }),
+    }),
+    environment,
+  );
+  expect(response.status).toBe(200);
+  const result = (await response.json()) as {
+    bankId: string;
+    dashboard: {
+      account: { summary: { accountBalance: number } };
+      core: { cached: boolean };
+    };
+  };
+  expect(result.bankId).toBe("permanent");
+  expect(result.dashboard.account.summary.accountBalance).toBe(121300);
+  expect(result.dashboard.core.cached).toBe(true);
+  expect(response.headers.get("Set-Cookie")).toContain("HttpOnly; Secure");
+  expect(coreCalls).toBe(0);
+  expect(db.query("SELECT COUNT(*) AS n FROM banks").get()).toEqual({ n: 1 });
+  db.close();
+});

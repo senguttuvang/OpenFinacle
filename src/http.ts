@@ -16,9 +16,11 @@ import {
   requiredBank,
   requireStaff,
   reviewApplication,
-  startBankWithJourney,
   submitApplication,
 } from "./application/banking";
+import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
+import { financialView } from "./application/financial-view";
+import type { Bank } from "./domain/banking";
 import {
   type Account,
   BankingError,
@@ -32,6 +34,13 @@ import { safeRoute } from "./domain/telemetry";
 
 const failure = (message: string, status = 400) =>
   new BankingError({ message, status });
+const financialMutation = (request: Request) =>
+  request.method === "POST" &&
+  [
+    "/api/commands",
+    "/api/commands/approve",
+    "/api/application/review",
+  ].includes(new URL(request.url).pathname);
 const io = <A>(f: () => Promise<A>) =>
   Effect.tryPromise({
     try: f,
@@ -141,6 +150,43 @@ const handle = (request: Request, env: Environment) =>
     if (path.startsWith("/api/admin/")) {
       if (request.headers.get("Authorization") !== `Bearer ${env.ADMIN_TOKEN}`)
         return yield* Effect.fail(failure("Unauthorised.", 401));
+      if (path.startsWith("/api/admin/demo/") && env.DEMO_MODE !== "true")
+        return yield* Effect.fail(
+          failure("Synthetic scenarios are disabled outside demo mode.", 403),
+        );
+      if (path === "/api/admin/demo/prepare" && request.method === "POST") {
+        const input = yield* parse(
+          request,
+          Schema.Struct({
+            journey: Schema.Literal("new", "existing"),
+            restart: Schema.optional(Schema.Boolean),
+          }),
+        );
+        return Response.json(
+          yield* prepareScenario(input.journey, input.restart),
+        );
+      }
+      if (path === "/api/admin/demo/backfill" && request.method === "POST") {
+        const input = yield* parse(
+          request,
+          Schema.Struct({ bankId: Schema.optional(Schema.String) }),
+          true,
+        );
+        if (!input.bankId)
+          return Response.json({
+            banks: yield* store.all<{ id: string }>(
+              "SELECT id FROM banks WHERE status='ready' ORDER BY created_at",
+            ),
+          });
+        const bank = yield* store.one<Bank>(
+          "SELECT * FROM banks WHERE id=? AND status='ready'",
+          input.bankId,
+        );
+        if (!bank)
+          return yield* Effect.fail(failure("Ready workspace not found.", 404));
+        yield* financialView(bank, true);
+        return Response.json({ refreshed: true });
+      }
       if (path === "/api/admin/telemetry-probe" && request.method === "POST") {
         return yield* Effect.die(
           new Error("OpenFinacle controlled telemetry probe"),
@@ -178,6 +224,13 @@ const handle = (request: Request, env: Environment) =>
         return Response.json(yield* bootstrap);
       return yield* Effect.fail(failure("Admin route not found.", 404));
     }
+    if (env.DEMO_MODE !== "true")
+      return yield* Effect.fail(
+        failure(
+          "Production customer identity is not configured. Demo sessions and role switching are disabled.",
+          503,
+        ),
+      );
     if (path === "/api/session" && request.method === "POST") {
       const input = yield* parse(
         request,
@@ -193,18 +246,20 @@ const handle = (request: Request, env: Environment) =>
       );
       if (current) {
         const bank = yield* requiredBank(current);
-        return Response.json({
-          bankId: bank.id,
-          journey: bank.journey,
-          resumed: true,
-        });
+        if (!input.journey || bank.journey === input.journey)
+          return Response.json({
+            bankId: bank.id,
+            journey: bank.journey,
+            resumed: true,
+            dashboard: yield* dashboard(current, false),
+          });
       }
       const limitKey = `${Math.floor(Date.now() / 3600000)}:${yield* hash(request.headers.get("CF-Connecting-IP") ?? "local")}`;
       const usage = yield* store.one<{ attempts: number }>(
         "INSERT INTO usage_limits(key,attempts) VALUES(?,1) ON CONFLICT(key) DO UPDATE SET attempts=attempts+1 RETURNING attempts",
         limitKey,
       );
-      if ((usage?.attempts ?? 100) > 20)
+      if ((usage?.attempts ?? 121) > 120)
         return yield* Effect.fail(
           failure(
             "This connection has reached the hourly demo limit. Continue in your existing workspace or try again later.",
@@ -212,18 +267,29 @@ const handle = (request: Request, env: Environment) =>
           ),
         );
       const token = crypto.randomUUID() + crypto.randomUUID();
-      const id = yield* startBankWithJourney(input.journey ?? "new");
+      const bank = yield* scenarioBank(input.journey ?? "new");
+      const id = bank.id;
+      const session: Session = {
+        token_hash: yield* hash(token),
+        bank_id: id,
+        role: "customer",
+        expires_at: Date.now() + 31536000000,
+      };
       yield* store.run(
         "INSERT INTO sessions(token_hash,bank_id,role,expires_at) VALUES(?,?,'customer',?)",
-        yield* hash(token),
+        session.token_hash,
         id,
-        Date.now() + 86400000,
+        session.expires_at,
       );
       return Response.json(
-        { bankId: id },
+        {
+          bankId: id,
+          journey: bank.journey,
+          dashboard: yield* dashboard(session, false),
+        },
         {
           headers: {
-            "Set-Cookie": `of_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`,
+            "Set-Cookie": `of_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`,
           },
         },
       );
@@ -257,7 +323,15 @@ const handle = (request: Request, env: Environment) =>
       return Response.json({ role });
     }
     if (path === "/api/dashboard" && request.method === "GET")
-      return Response.json(yield* dashboard(session));
+      return Response.json(
+        yield* dashboard(session, url.searchParams.get("refresh") === "true"),
+      );
+    if (financialMutation(request))
+      yield* store.run(
+        "UPDATE financial_snapshots SET invalidated_at=? WHERE bank_id=?",
+        Date.now(),
+        session.bank_id,
+      );
     if (path === "/api/application" && request.method === "POST")
       return Response.json(
         yield* submitApplication(session, yield* parse(request, appSchema)),
@@ -488,6 +562,22 @@ export const handleRequest = (
   });
   return Effect.runPromise(
     handle(request, env).pipe(
+      Effect.tap((response) =>
+        financialMutation(request) && response.ok
+          ? Effect.gen(function* () {
+              const session = yield* getSession(request);
+              const bank = yield* requiredBank(session);
+              yield* financialView(bank, true).pipe(
+                Effect.mapError(() =>
+                  failure(
+                    "The instruction status is saved, but balances could not be refreshed. Inspect its status and use Refresh balances; do not repeat the financial instruction.",
+                    503,
+                  ),
+                ),
+              );
+            })
+          : Effect.void,
+      ),
       Effect.provide(
         Layer.merge(coreLayer(env, requestId), storeLayer(env.DB)),
       ),
