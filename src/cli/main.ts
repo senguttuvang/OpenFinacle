@@ -12,6 +12,7 @@ import {
   bootstrapPasswordAcceptable,
   createBootstrapPassword,
 } from "./bootstrap-password";
+import { observability } from "./commands/observability";
 
 const execute = (args: string[], stdin?: string) =>
   Effect.tryPromise({
@@ -306,6 +307,7 @@ const diagnosticEnvironment = Command.make("diagnostic-environment", {}, () =>
 );
 const cli = Command.make("openfinacle").pipe(
   Command.withSubcommands([
+    observability,
     provision,
     deploy,
     initialize,
