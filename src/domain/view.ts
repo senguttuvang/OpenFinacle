@@ -4,12 +4,13 @@ import type {
   Audit,
   BankingCommand,
   Beneficiary,
+  CustomerJourney,
   DocumentRecord,
   Role,
   ServiceRequest,
 } from "./banking";
 export interface Dashboard {
-  bank: { id: string; created_at: string };
+  bank: { id: string; created_at: string; journey: CustomerJourney };
   role: Role;
   account: Account | null;
   recipient: {

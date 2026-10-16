@@ -14,7 +14,7 @@ import {
   requiredBank,
   requireStaff,
   reviewApplication,
-  startBank,
+  startBankWithJourney,
   submitApplication,
 } from "./application/banking";
 import {
@@ -164,6 +164,27 @@ const handle = (request: Request, env: Environment) =>
       return yield* Effect.fail(failure("Admin route not found.", 404));
     }
     if (path === "/api/session" && request.method === "POST") {
+      const input = request.body
+        ? yield* parse(
+            request,
+            Schema.Struct({
+              journey: Schema.optional(Schema.Literal("new", "existing")),
+            }),
+          )
+        : {};
+      const current = yield* getSession(request).pipe(
+        Effect.catchAll((error) =>
+          error.status === 401 ? Effect.succeed(null) : Effect.fail(error),
+        ),
+      );
+      if (current) {
+        const bank = yield* requiredBank(current);
+        return Response.json({
+          bankId: bank.id,
+          journey: bank.journey,
+          resumed: true,
+        });
+      }
       const limitKey = `${Math.floor(Date.now() / 3600000)}:${yield* hash(request.headers.get("CF-Connecting-IP") ?? "local")}`;
       const usage = yield* store.one<{ attempts: number }>(
         "INSERT INTO usage_limits(key,attempts) VALUES(?,1) ON CONFLICT(key) DO UPDATE SET attempts=attempts+1 RETURNING attempts",
@@ -177,7 +198,7 @@ const handle = (request: Request, env: Environment) =>
           ),
         );
       const token = crypto.randomUUID() + crypto.randomUUID();
-      const id = yield* startBank;
+      const id = yield* startBankWithJourney(input.journey ?? "new");
       yield* store.run(
         "INSERT INTO sessions(token_hash,bank_id,role,expires_at) VALUES(?,?,'customer',?)",
         yield* hash(token),
@@ -194,6 +215,21 @@ const handle = (request: Request, env: Environment) =>
       );
     }
     const session = yield* getSession(request);
+    if (path === "/api/session/end" && request.method === "POST") {
+      yield* store.run(
+        "DELETE FROM sessions WHERE token_hash=?",
+        session.token_hash,
+      );
+      return Response.json(
+        { ended: true },
+        {
+          headers: {
+            "Set-Cookie":
+              "of_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0",
+          },
+        },
+      );
+    }
     if (path === "/api/session/role" && request.method === "POST") {
       const { role } = yield* parse(
         request,
