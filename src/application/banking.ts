@@ -8,6 +8,7 @@ import {
   type Beneficiary,
   bankingDate,
   type CommandKind,
+  type CustomerJourney,
   canApprove,
   dateFields,
   moneyToMinor,
@@ -261,36 +262,151 @@ const openAccount = (
     return { client: client.resourceId, account: account.resourceId };
   });
 
-export const startBank = Effect.gen(function* () {
-  const store = yield* Store;
-  const core = yield* Core;
-  yield* core.request("GET", "offices/1");
-  const id = crypto.randomUUID();
-  yield* store.run("INSERT INTO banks(id) VALUES(?)", id);
-  const recipient = yield* openAccount(id, "recipient", "Arjun", "Raman", 2500);
-  const employer = yield* openAccount(
-    id,
-    "employer",
-    "Northstar",
-    "Studio",
-    500000,
-  );
-  yield* store.run(
-    "UPDATE banks SET status='ready',recipient_client=?,recipient_account=?,employer_client=?,employer_account=? WHERE id=?",
-    recipient.client,
-    recipient.account,
-    employer.client,
-    employer.account,
-    id,
-  );
-  yield* audit(
-    id,
-    "system",
-    "Demo workspace opened",
-    "Arjun and Northstar Studio have core-backed accounts. Your customer journey begins with an application.",
-  );
-  return id;
-});
+export const startBankWithJourney = (journey: CustomerJourney) =>
+  Effect.gen(function* () {
+    const store = yield* Store;
+    const core = yield* Core;
+    yield* core.request("GET", "offices/1");
+    const id = crypto.randomUUID();
+    yield* store.run("INSERT INTO banks(id,journey) VALUES(?,?)", id, journey);
+    const initialize = Effect.gen(function* () {
+      const recipient = yield* openAccount(
+        id,
+        "recipient",
+        "Arjun",
+        "Raman",
+        2500,
+      );
+      const employer = yield* openAccount(
+        id,
+        "employer",
+        "Northstar",
+        "Studio",
+        500000,
+      );
+      if (journey === "existing") {
+        const customer = yield* openAccount(
+          id,
+          "customer",
+          "Mira",
+          "Krishnan",
+          40000,
+        );
+        yield* store.run(
+          "UPDATE banks SET customer_client=?,customer_account=? WHERE id=?",
+          customer.client,
+          customer.account,
+          id,
+        );
+        const today = bankingDate(yield* Clock.currentTimeMillis);
+        const transfer = (
+          suffix: string,
+          from: typeof customer,
+          to: typeof customer,
+          amount: number,
+          description: string,
+        ) =>
+          core.request<Created>(
+            "POST",
+            "accounttransfers",
+            {
+              fromOfficeId: "1",
+              toOfficeId: "1",
+              fromClientId: String(from.client),
+              toClientId: String(to.client),
+              fromAccountType: "2",
+              toAccountType: "2",
+              fromAccountId: String(from.account),
+              toAccountId: String(to.account),
+              transferDate: today,
+              transferAmount: String(amount),
+              transferDescription: description,
+              ...dateFields(),
+            },
+            `${id}-seed-${suffix}`,
+          );
+        yield* transfer(
+          "salary",
+          employer,
+          customer,
+          85000,
+          "Sample salary · Northstar Studio",
+        );
+        yield* transfer(
+          "payment",
+          customer,
+          recipient,
+          2500,
+          "Sample shared expenses · Arjun Raman",
+        );
+        const cash = yield* store.one<{ value: string }>(
+          "SELECT value FROM settings WHERE key='cash_payment_type'",
+        );
+        if (!cash)
+          return yield* Effect.fail(
+            new BankingError({
+              message: "Cash payment type is missing.",
+              status: 503,
+            }),
+          );
+        yield* core.request(
+          "POST",
+          `savingsaccounts/${customer.account}/transactions?command=withdrawal`,
+          {
+            transactionDate: today,
+            transactionAmount: 1200,
+            paymentTypeId: Number(cash.value),
+            ...dateFields(),
+          },
+          `${id}-seed-withdrawal`,
+        );
+        const recipientAccount = yield* core.request<Account>(
+          "GET",
+          `savingsaccounts/${recipient.account}`,
+        );
+        yield* store.run(
+          "INSERT INTO beneficiaries(id,bank_id,name,account_id,account_no,status) VALUES(?,?,?,?,?,'active')",
+          crypto.randomUUID(),
+          id,
+          "Arjun Raman",
+          recipient.account,
+          recipientAccount.accountNo,
+        );
+        yield* audit(
+          id,
+          "system",
+          "Existing customer sample activity prepared",
+          "Synthetic setup: opening funds ₹40,000, employer-funded salary ₹85,000, internal payment ₹2,500 and cash withdrawal ₹1,200. All posted today in Fineract; no historical dates invented.",
+        );
+      }
+      yield* store.run(
+        "UPDATE banks SET status='ready',recipient_client=?,recipient_account=?,employer_client=?,employer_account=? WHERE id=?",
+        recipient.client,
+        recipient.account,
+        employer.client,
+        employer.account,
+        id,
+      );
+      yield* audit(
+        id,
+        "system",
+        "Demo workspace opened",
+        journey === "existing"
+          ? "Existing customer workspace: active savings account and real core-posted synthetic sample activity. Setup is not a production account-opening control."
+          : "Arjun and Northstar Studio have core-backed accounts. Your customer journey begins with an application.",
+      );
+    });
+    yield* initialize.pipe(
+      Effect.tapError(() =>
+        store.run(
+          "UPDATE banks SET status='initialization_exception' WHERE id=?",
+          id,
+        ),
+      ),
+    );
+    return id;
+  });
+export const startBank = startBankWithJourney("new");
 
 export const dashboard = (session: Session) =>
   Effect.gen(function* () {
@@ -339,7 +455,7 @@ export const dashboard = (session: Session) =>
       bank.id,
     );
     return {
-      bank: { id: bank.id, created_at: bank.created_at },
+      bank: { id: bank.id, created_at: bank.created_at, journey: bank.journey },
       role: session.role,
       account,
       recipient: {

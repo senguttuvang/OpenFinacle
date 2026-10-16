@@ -6,6 +6,7 @@ export class BankingError extends Data.TaggedError("BankingError")<{
   uncertain?: boolean;
 }> {}
 export type Role = "customer" | "officer" | "approver";
+export type CustomerJourney = "new" | "existing";
 export const RoleSchema = Schema.Literal("customer", "officer", "approver");
 export const moneyToMinor = (amount: number): number => {
   if (
@@ -41,6 +42,7 @@ type CommandStatus =
   | "rejected";
 export interface Bank {
   id: string;
+  journey: CustomerJourney;
   status: string;
   customer_client: number;
   customer_account: number;

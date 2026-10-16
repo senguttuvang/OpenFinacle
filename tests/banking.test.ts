@@ -7,6 +7,7 @@ import {
   executeCommand,
   rejectCommand,
   startBank,
+  startBankWithJourney,
   submitApplication,
 } from "../src/application/banking";
 import {
@@ -34,12 +35,14 @@ const approver: Session = { ...customer, role: "approver" };
 let db: Database;
 let postings: { path: string; body: unknown; key?: string }[];
 let coreFailure: BankingError | undefined;
+let failSeedTransfer = false;
 let lastBalance = 10000;
 beforeEach(async () => {
   db?.close();
   db = new Database(":memory:");
   db.exec(await Bun.file("migrations/0001_workflows.sql").text());
   db.exec(await Bun.file("migrations/0002_reversal_guard.sql").text());
+  db.exec(await Bun.file("migrations/0003_customer_journey.sql").text());
   db.run("INSERT INTO settings(key,value) VALUES('cash_payment_type','1')");
   db.run(
     "INSERT INTO banks(id,status,customer_client,customer_account,recipient_client,recipient_account,employer_client,employer_account) VALUES('bank-one','ready',1,101,2,102,3,103)",
@@ -52,6 +55,7 @@ beforeEach(async () => {
   );
   postings = [];
   coreFailure = undefined;
+  failSeedTransfer = false;
   lastBalance = 10000;
 });
 const layers = () =>
@@ -73,6 +77,18 @@ const layers = () =>
       ) =>
         Effect.gen(function* () {
           if (coreFailure) return yield* Effect.fail(coreFailure);
+          if (failSeedTransfer && path === "accounttransfers")
+            return yield* Effect.fail(
+              new BankingError({
+                message: "Transfer outcome unknown",
+                status: 503,
+                uncertain: true,
+              }),
+            );
+          if (method === "GET" && /^savingsaccounts\/\d+$/.test(path)) {
+            const id = Number(path.split("/")[1]);
+            return { id, accountNo: String(id).padStart(9, "0") } as T;
+          }
           if (
             method === "GET" &&
             [
@@ -159,6 +175,97 @@ test("bootstrap configures a real cash payment channel when it is missing", asyn
   expect(
     db.query("SELECT value FROM settings WHERE key='cash_payment_type'").get(),
   ).toBeTruthy();
+});
+
+test("new customer workspace starts without a customer account or application", async () => {
+  db.run("INSERT INTO settings(key,value) VALUES('savings_product','1')");
+  const id = await run(startBank);
+  expect(
+    db
+      .query("SELECT journey,status,customer_account FROM banks WHERE id=?")
+      .get(id),
+  ).toEqual({ journey: "new", status: "ready", customer_account: 0 });
+  expect(
+    db
+      .query("SELECT count(*) AS count FROM applications WHERE bank_id=?")
+      .get(id),
+  ).toEqual({ count: 0 });
+  expect(
+    postings.filter((posting) => posting.path === "accounttransfers"),
+  ).toHaveLength(0);
+});
+
+test("existing customer setup posts salary from employer and payment to recipient through core transfers", async () => {
+  db.run("INSERT INTO settings(key,value) VALUES('savings_product','1')");
+  lastBalance = 500000;
+  const id = await run(startBankWithJourney("existing"));
+  const bank = db.query("SELECT * FROM banks WHERE id=?").get(id) as {
+    journey: string;
+    status: string;
+    customer_account: number;
+    recipient_account: number;
+    employer_account: number;
+  };
+  expect(bank.journey).toBe("existing");
+  expect(bank.status).toBe("ready");
+  expect(bank.customer_account).toBeGreaterThan(0);
+  const transfers = postings.filter(
+    (posting) => posting.path === "accounttransfers",
+  );
+  expect(transfers.map((posting) => posting.body)).toMatchObject([
+    {
+      fromAccountId: String(bank.employer_account),
+      toAccountId: String(bank.customer_account),
+      transferAmount: "85000",
+    },
+    {
+      fromAccountId: String(bank.customer_account),
+      toAccountId: String(bank.recipient_account),
+      transferAmount: "2500",
+    },
+  ]);
+  expect(
+    postings
+      .filter((posting) =>
+        posting.path.includes(
+          `${bank.customer_account}/transactions?command=deposit`,
+        ),
+      )
+      .map((posting) => posting.body),
+  ).toMatchObject([{ transactionAmount: 40000 }]);
+  expect(
+    postings.find((posting) => posting.path.includes("command=withdrawal"))
+      ?.body,
+  ).toMatchObject({ transactionAmount: 1200, paymentTypeId: 1 });
+  expect(
+    db
+      .query("SELECT status,account_id FROM beneficiaries WHERE bank_id=?")
+      .get(id),
+  ).toEqual({ status: "active", account_id: bank.recipient_account });
+  expect(
+    db
+      .query("SELECT count(*) AS count FROM applications WHERE bank_id=?")
+      .get(id),
+  ).toEqual({ count: 0 });
+  const keys = postings.map((posting) => posting.key);
+  expect(new Set(keys).size).toBe(keys.length);
+});
+
+test("ambiguous existing-customer setup never exposes a ready workspace", async () => {
+  db.run("INSERT INTO settings(key,value) VALUES('savings_product','1')");
+  failSeedTransfer = true;
+  const error = await failureOf(startBankWithJourney("existing"));
+  expect(error.uncertain).toBe(true);
+  expect(
+    db.query("SELECT status FROM banks WHERE journey='existing'").get(),
+  ).toEqual({ status: "initialization_exception" });
+  expect(
+    db
+      .query(
+        "SELECT count(*) AS count FROM beneficiaries WHERE bank_id NOT IN ('bank-one','other-bank')",
+      )
+      .get(),
+  ).toEqual({ count: 0 });
 });
 
 test("bootstrap repairs the required savings transfer mapping even when its product already exists", async () => {
