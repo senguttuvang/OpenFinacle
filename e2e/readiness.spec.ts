@@ -22,7 +22,11 @@ test("unavailable core explains startup failure without creating demo accounts",
     name: "Explore existing customer",
   });
   await button.click();
-  await expect(page.getByRole("alert")).toContainText("readiness-regression");
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "The banking engine is starting" }),
+  ).toContainText("readiness-regression");
   await expect(button).toBeEnabled();
   expect(sessions).toBe(0);
 });
