@@ -1,34 +1,38 @@
 import { expect, test } from "@playwright/test";
 
-test("unavailable core explains startup failure without creating demo accounts", async ({
+test("existing customer opens within three seconds without consulting core readiness", async ({
   page,
 }) => {
   let sessions = 0;
+  let readiness = 0;
   page.on("request", (request) => {
     if (new URL(request.url()).pathname === "/api/session") sessions++;
   });
-  await page.route("**/api/ready", (route) =>
-    route.fulfill({
+  await page.route("**/api/ready", (route) => {
+    readiness++;
+    return route.fulfill({
       status: 503,
       contentType: "application/json",
       headers: { "X-Request-ID": "readiness-regression" },
       body: JSON.stringify({
         error: "The banking engine is starting. Check again shortly.",
       }),
-    }),
-  );
+    });
+  });
   await page.goto("/");
   const button = page.getByRole("button", {
     name: "Explore existing customer",
   });
+  const started = performance.now();
   await button.click();
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "The banking engine is starting" }),
-  ).toContainText("readiness-regression");
-  await expect(button).toBeEnabled();
-  expect(sessions).toBe(0);
+    page.getByRole("heading", { name: "Welcome back, Mira" }),
+  ).toBeVisible({ timeout: 3000 });
+  const elapsed = performance.now() - started;
+  expect(elapsed).toBeLessThan(3000);
+  console.info(`Existing demo entry: ${Math.round(elapsed)}ms`);
+  expect(sessions).toBe(1);
+  expect(readiness).toBe(0);
 });
 
 test("browser exceptions reach the Sentry-compatible ingestion endpoint without customer data", async ({

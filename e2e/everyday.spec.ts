@@ -201,11 +201,18 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   });
   try {
     expect((await stranger.request.get("/api/dashboard")).status()).toBe(401);
-    expect((await stranger.request.post("/api/session")).status()).toBe(200);
+    expect(
+      (
+        await stranger.request.post("/api/session", {
+          data: { journey: "existing" },
+        })
+      ).status(),
+    ).toBe(200);
     const isolated = await stranger.request.get("/api/dashboard");
     const second = (await isolated.json()) as Dashboard;
     expect(second.bank.id).not.toBe(first.bank.id);
-    expect(second.account).toBeNull();
+    expect(second.bank.journey).toBe("existing");
+    expect(second.account?.status.active).toBe(true);
     expect(second.recipient.id).not.toBe(first.recipient.id);
     expect(
       (

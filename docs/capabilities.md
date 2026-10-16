@@ -8,11 +8,13 @@ The supplied UpNote export contains four Markdown notes: overlapping Finacle com
 - **Teller cash:** an officer prepares a deposit or withdrawal; an approver authorizes the Fineract posting. Corrections use a reversal and preserve transaction history.
 - **Beneficiaries and payments:** customer-owned beneficiary records, an explicitly displayed demo confirmation code, and internal savings-account transfers. The core debits the sender and credits the recipient together.
 - **Salary receipt:** an approved internal transfer debits the employer's funded account and credits the customer's account.
-- **Account inquiry and statements:** live account balances, core transaction references, transaction history and CSV export.
+- **Account inquiry and statements:** saved core-backed balances with a synchronization timestamp, explicit live refresh, core transaction references, transaction history and live CSV export.
 - **Restrictions and operations:** approved debit restrictions and release, three-party balance inquiry, command status and an application audit trail.
 - **Customer servicing:** chequebook, debit-card and address-change request queues, with explicitly simulated fulfillment.
 
 These workflows compose Fineract APIs with channel-specific application state. Fineract owns account lifecycle, financial transactions and configured savings accounting. D1 owns the application, approvals, beneficiaries, requests and originating demo-role audit. R2 owns private document objects.
+
+Demo mode uses two permanent shared synthetic scenarios, prepared by an operator before visits. Entry reads saved Fineract responses rather than creating accounts. Successful financial mutations update the saved view. Scenario selection and role switching are demo-only; production channel requests fail closed until a real identity integration is supplied. No scheduled replenishment runs.
 
 ## Capabilities available for subsequent product workflows
 
