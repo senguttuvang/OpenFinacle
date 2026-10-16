@@ -9,4 +9,5 @@ export interface Environment {
   ADMIN_TOKEN: string;
   APP_REVISION: string;
   SENTRY_DSN?: string;
+  DEMO_MODE?: string;
 }

@@ -26,6 +26,13 @@ export interface Dashboard {
   audit: Audit[];
   documents: Omit<DocumentRecord, "bank_id" | "object_key">[];
   requests: ServiceRequest[];
-  core: { engine: string; version: string; connected: boolean };
+  core: {
+    engine: string;
+    version: string;
+    connected: boolean;
+    syncedAt?: number;
+    cached?: boolean;
+    stale?: boolean;
+  };
   businessDate: string;
 }

@@ -15,6 +15,7 @@ import {
   type Session,
 } from "../domain/banking";
 import { Core, Store } from "../domain/ports";
+import { financialView } from "./financial-view";
 
 interface Created {
   resourceId: number;
@@ -408,28 +409,13 @@ export const startBankWithJourney = (journey: CustomerJourney) =>
   });
 export const startBank = startBankWithJourney("new");
 
-export const dashboard = (session: Session) =>
+export const dashboard = (session: Session, refresh = true) =>
   Effect.gen(function* () {
     const store = yield* Store;
-    const core = yield* Core;
     const bank = yield* requiredBank(session);
-    const account = bank.customer_account
-      ? yield* core.request<Account>(
-          "GET",
-          `savingsaccounts/${bank.customer_account}?associations=transactions`,
-        )
-      : null;
-    const recipient = yield* core.request<Account>(
-      "GET",
-      `savingsaccounts/${bank.recipient_account}?associations=transactions`,
-    );
-    const employer =
-      session.role === "customer"
-        ? null
-        : yield* core.request<Account>(
-            "GET",
-            `savingsaccounts/${bank.employer_account}?associations=transactions`,
-          );
+    const financial = yield* financialView(bank, refresh);
+    const { account, recipient } = financial;
+    const employer = session.role === "customer" ? null : financial.employer;
     const application = yield* store.one<Application>(
       "SELECT * FROM applications WHERE bank_id=?",
       bank.id,
@@ -471,7 +457,14 @@ export const dashboard = (session: Session) =>
       audit: events,
       documents,
       requests,
-      core: { engine: "Apache Fineract", version: "1.15.0", connected: true },
+      core: {
+        engine: "Apache Fineract",
+        version: "1.15.0",
+        connected: refresh,
+        syncedAt: financial.syncedAt,
+        cached: !refresh,
+        stale: financial.stale,
+      },
       businessDate: bankingDate(yield* Clock.currentTimeMillis),
     };
   });
