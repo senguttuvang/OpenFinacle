@@ -4,6 +4,7 @@ import { coreLayer } from "./adapters/core";
 import type { Environment } from "./adapters/environment";
 import { parseJsonRequest as parse } from "./adapters/request-json";
 import { storeLayer } from "./adapters/store";
+import { reportFailure } from "./adapters/telemetry";
 import {
   addBeneficiary,
   bootstrap,
@@ -27,6 +28,7 @@ import {
   type Session,
 } from "./domain/banking";
 import { Core, Store } from "./domain/ports";
+import { safeRoute } from "./domain/telemetry";
 
 const failure = (message: string, status = 400) =>
   new BankingError({ message, status });
@@ -106,6 +108,28 @@ const handle = (request: Request, env: Environment) =>
         revision: env.APP_REVISION,
         engine: "Apache Fineract 1.15.0",
       });
+    if (path === "/api/telemetry-config")
+      return Response.json({ dsn: env.SENTRY_DSN, release: env.APP_REVISION });
+    if (path === "/api/ready" && request.method === "GET") {
+      yield* store.one("SELECT 1 AS ready").pipe(
+        Effect.timeoutFail({
+          duration: "5 seconds",
+          onTimeout: () => failure("Workflow storage is not ready.", 503),
+        }),
+      );
+      const core = yield* Core;
+      yield* core.request("GET", "offices/1").pipe(
+        Effect.timeoutFail({
+          duration: "35 seconds",
+          onTimeout: () =>
+            failure(
+              "The banking engine is starting or unavailable. No demo accounts have been created. Please check again shortly.",
+              503,
+            ),
+        }),
+      );
+      return Response.json({ status: "ready", revision: env.APP_REVISION });
+    }
     if (
       request.method !== "GET" &&
       request.headers.get("Origin") &&
@@ -117,6 +141,11 @@ const handle = (request: Request, env: Environment) =>
     if (path.startsWith("/api/admin/")) {
       if (request.headers.get("Authorization") !== `Bearer ${env.ADMIN_TOKEN}`)
         return yield* Effect.fail(failure("Unauthorised.", 401));
+      if (path === "/api/admin/telemetry-probe" && request.method === "POST") {
+        return yield* Effect.die(
+          new Error("OpenFinacle controlled telemetry probe"),
+        );
+      }
       if (path === "/api/admin/stop-core" && request.method === "POST") {
         yield* io(() => getContainer(env.CORE, "banking").stop());
         return Response.json({ stopped: true });
@@ -436,35 +465,79 @@ const handle = (request: Request, env: Environment) =>
 export const handleRequest = (
   request: Request,
   env: Environment,
-): Promise<Response> =>
-  Effect.runPromise(
+): Promise<Response> => {
+  const started = Date.now();
+  const requestId = crypto.randomUUID();
+  let eventId: string | undefined;
+  const route = safeRoute(new URL(request.url).pathname);
+  console.log(
+    JSON.stringify({
+      event: "http_request_started",
+      requestId,
+      route,
+      method: request.method,
+      revision: env.APP_REVISION,
+    }),
+  );
+  const diagnostic = (status: number) => ({
+    requestId,
+    route,
+    method: request.method,
+    status,
+    durationMs: Date.now() - started,
+  });
+  return Effect.runPromise(
     handle(request, env).pipe(
-      Effect.provide(Layer.merge(coreLayer(env), storeLayer(env.DB))),
-      Effect.catchAll((error) =>
-        Effect.succeed(
-          Response.json(
-            { error: error.message, uncertain: error.uncertain ?? false },
-            { status: error.status },
-          ),
-        ),
+      Effect.provide(
+        Layer.merge(coreLayer(env, requestId), storeLayer(env.DB)),
       ),
-      Effect.catchAllDefect(() =>
-        Effect.succeed(
-          Response.json(
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          if (error.status >= 500)
+            eventId = reportFailure({
+              ...diagnostic(error.status),
+              uncertain: error.uncertain,
+            });
+          return Response.json(
+            {
+              error: error.message,
+              uncertain: error.uncertain ?? false,
+              requestId,
+            },
+            { status: error.status },
+          );
+        }),
+      ),
+      Effect.catchAllDefect((defect) =>
+        Effect.sync(() => {
+          eventId = reportFailure(diagnostic(500), defect);
+          return Response.json(
             {
               error:
                 "An unexpected error occurred. Inspect instruction status before retrying.",
+              requestId,
             },
             { status: 500 },
-          ),
-        ),
+          );
+        }),
       ),
       Effect.map((response) => {
         const secured = new Response(response.body, response);
         secured.headers.set("Cache-Control", "no-store");
         secured.headers.set("X-Content-Type-Options", "nosniff");
         secured.headers.set("Referrer-Policy", "same-origin");
+        secured.headers.set("X-Request-ID", requestId);
+        if (eventId) secured.headers.set("X-Error-ID", eventId);
+        secured.headers.set("Server-Timing", `app;dur=${Date.now() - started}`);
+        console.log(
+          JSON.stringify({
+            event: "http_request",
+            revision: env.APP_REVISION,
+            ...diagnostic(response.status),
+          }),
+        );
         return secured;
       }),
     ),
   );
+};

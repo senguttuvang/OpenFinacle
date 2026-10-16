@@ -4,10 +4,12 @@ import {
   HttpClientRequest,
 } from "@effect/platform";
 import { Data, Effect } from "effect";
+import { reportTransportFailure } from "./browser-errors";
 
 class ApiError extends Data.TaggedError("ApiError")<{
   message: string;
   status: number;
+  transportFailure?: boolean;
 }> {}
 export const api = <T>(path: string, body?: unknown, key?: string) =>
   Effect.gen(function* () {
@@ -28,14 +30,29 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
     if (response.status >= 400)
       return yield* Effect.fail(
         new ApiError({
-          message:
-            (json as { error?: string }).error ??
-            "The request could not be completed.",
+          message: `${(json as { error?: string }).error ?? "The request could not be completed."} Reference: ${response.headers["x-request-id"] ?? "unavailable"}`,
           status: response.status,
         }),
       );
     return json as T;
   }).pipe(
+    Effect.timeoutFail({
+      duration:
+        path === "/session"
+          ? "180 seconds"
+          : body === undefined
+            ? "45 seconds"
+            : "90 seconds",
+      onTimeout: () =>
+        new ApiError({
+          message:
+            body === undefined
+              ? "The bank is taking too long to respond. Please check readiness again shortly."
+              : "The instruction is taking too long. Its outcome is not confirmed. Refresh and inspect its status before trying again.",
+          status: 504,
+          transportFailure: true,
+        }),
+    }),
     Effect.provide(FetchHttpClient.layer),
     Effect.mapError((error) =>
       error instanceof ApiError
@@ -44,6 +61,12 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
             message:
               "Cannot connect to the bank. Refresh to check the instruction status before trying again.",
             status: 503,
+            transportFailure: true,
           }),
+    ),
+    Effect.tapError((error) =>
+      Effect.sync(() => {
+        if (error.transportFailure) reportTransportFailure(path);
+      }),
     ),
   );

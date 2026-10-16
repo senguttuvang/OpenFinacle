@@ -47,6 +47,7 @@ import {
   RetailOverview,
   RetailProfile,
 } from "./retail-overview";
+import { initializeTelemetry } from "./telemetry";
 
 type View =
   | "overview"
@@ -139,6 +140,7 @@ export default function Page() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [view, setView] = useState<View>("overview");
   const [busy, setBusy] = useState(false);
+  const [startupStage, setStartupStage] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
@@ -174,6 +176,7 @@ export default function Page() {
     [],
   );
   useEffect(() => {
+    void Effect.runPromise(initializeTelemetry());
     void Effect.runPromise(
       load().pipe(
         Effect.catchAll((e) =>
@@ -207,6 +210,24 @@ export default function Page() {
       ),
     );
   };
+  const startJourney = (journey: "new" | "existing") =>
+    perform(
+      Effect.gen(function* () {
+        yield* Effect.sync(() =>
+          setStartupStage("Checking that the bank is ready…"),
+        );
+        yield* api("/ready");
+        yield* Effect.sync(() =>
+          setStartupStage(
+            journey === "existing"
+              ? "Opening your demo workspace and preparing salary and payment history. This can take up to three minutes…"
+              : "Preparing your demo workspace. This can take up to three minutes…",
+          ),
+        );
+        yield* api("/session", { journey });
+      }),
+      "Your demo bank is ready.",
+    );
   const changeRole = (role: Role, destination: View = "overview") => {
     setView(destination);
     perform(
@@ -289,12 +310,7 @@ export default function Page() {
             <PendingButton
               busy={busy}
               className="primary large"
-              onClick={() =>
-                perform(
-                  api("/session", { journey: "new" }),
-                  "Your own demo bank is ready.",
-                )
-              }
+              onClick={() => startJourney("new")}
             >
               Start your banking story <ArrowRight size={18} />
             </PendingButton>
@@ -302,23 +318,13 @@ export default function Page() {
             <PendingButton
               busy={busy}
               className="secondary large"
-              onClick={() =>
-                perform(
-                  api("/session", { journey: "existing" }),
-                  "Welcome back. Your existing-customer workspace is ready.",
-                )
-              }
+              onClick={() => startJourney("existing")}
             >
               Explore existing customer <ArrowRight size={18} />
             </PendingButton>
             <span>Active account · Salary, payments & statements</span>
           </div>
-          {busy && (
-            <p role="status">
-              Preparing your accounts. The first visit after a quiet period can
-              take a few minutes while the bank starts.
-            </p>
-          )}
+          {busy && <p role="status">{startupStage}</p>}
           <span className="welcome-note">
             <LockKeyhole size={14} /> Your own isolated workspace · Synthetic
             data only
