@@ -14,8 +14,8 @@ export class BankingCore extends Container<Environment> {
           this.startAndWaitForPorts({
             ports: [8080],
             cancellationOptions: {
-              instanceGetTimeoutMS: 120000,
-              portReadyTimeoutMS: 1800000,
+              instanceGetTimeoutMS: 10000,
+              portReadyTimeoutMS: 20000,
               waitInterval: 1000,
             },
           }),

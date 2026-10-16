@@ -26,6 +26,8 @@
     "@effect/platform": "^0.97.2",
     "@effect/platform-node": "0.107.0",
     "@effect/schema": "^0.75.5",
+    "@sentry/browser": "^11.8.0",
+    "@sentry/cloudflare": "^11.8.0",
     "effect": "^3.19",
     "lucide-react": "^1.57.0",
     "next": "^16.4.1",

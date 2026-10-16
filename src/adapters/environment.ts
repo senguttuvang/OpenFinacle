@@ -8,4 +8,5 @@ export interface Environment {
   CORE_PASSWORD: string;
   ADMIN_TOKEN: string;
   APP_REVISION: string;
+  SENTRY_DSN?: string;
 }
