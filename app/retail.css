@@ -608,3 +608,10 @@
     font-size: 21px;
   }
 }
+@media (max-width: 640px) {
+  .sidebar .journey-switch {
+    margin-top: 2px;
+    padding: 3px 4px;
+    font-size: 9px;
+  }
+}
