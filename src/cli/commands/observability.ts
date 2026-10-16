@@ -40,15 +40,19 @@ const processCommand = (args: string[], input?: string) =>
           ),
     ),
   );
-const credentials = processCommand([
-  "security",
-  "find-generic-password",
-  "-a",
-  process.env.USER ?? "SenG",
-  "-s",
-  "betterstack_pearlthoughts_api_token",
-  "-w",
-]);
+const credentials = Effect.suspend(() =>
+  process.env.BETTERSTACK_PEARLTHOUGHTS_API_TOKEN
+    ? Effect.succeed(process.env.BETTERSTACK_PEARLTHOUGHTS_API_TOKEN)
+    : processCommand([
+        "security",
+        "find-generic-password",
+        "-a",
+        process.env.USER ?? "SenG",
+        "-s",
+        "betterstack_pearlthoughts_api_token",
+        "-w",
+      ]),
+);
 const call = <T>(
   token: string,
   url: string,
@@ -176,7 +180,7 @@ export const observability = Command.make(
       }
       if (app)
         yield* Console.log(
-          `Errors: https://errors.betterstack.com/team/applications/${app.id}`,
+          `Errors application ${app.id}: https://errors.betterstack.com/team/applications`,
         );
       if (probe) {
         const lines = (yield* Effect.tryPromise(() =>

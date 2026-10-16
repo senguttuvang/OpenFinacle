@@ -36,10 +36,11 @@ test("browser exceptions reach the Sentry-compatible ingestion endpoint without 
       response.request().method() === "POST",
     { timeout: 30000 },
   );
-  await page.goto("/");
-  await page.waitForResponse((response) =>
+  const configured = page.waitForResponse((response) =>
     response.url().includes("/api/telemetry-config"),
   );
+  await page.goto("/");
+  await configured;
   // Error value deliberately resembles sensitive data; only a static label should leave the browser.
   await page.evaluate(() => {
     window.setTimeout(() => {

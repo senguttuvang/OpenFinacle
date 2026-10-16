@@ -57,3 +57,30 @@ test("controlled exception probe requires administrator authority and returns a 
   expect(body.requestId).toBe(response.headers.get("X-Request-ID") ?? "");
   expect(body.error).not.toContain("probe");
 });
+
+test("readiness uses only the authenticated core read and never initializes a workspace", async () => {
+  const statement = {
+    bind() {
+      return this;
+    },
+    first: async () => ({ ready: 1 }),
+  } as unknown as D1PreparedStatement;
+  const environment = env({ prepare: () => statement });
+  const calls: string[] = [];
+  environment.CORE = {
+    fetch: async (input: Request) => {
+      calls.push(`${input.method} ${new URL(input.url).pathname}`);
+      expect(input.headers.get("Authorization")).toBe(
+        `Basic ${btoa("mifos:unused")}`,
+      );
+      return Response.json({ id: 1 });
+    },
+  } as unknown as Environment["CORE"];
+  const ready = await handleRequest(request("/api/ready"), environment);
+  expect(ready.status).toBe(200);
+  expect(await ready.json()).toEqual({
+    status: "ready",
+    revision: "test-revision",
+  });
+  expect(calls).toEqual(["GET /fineract-provider/api/v1/offices/1"]);
+});
