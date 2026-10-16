@@ -42,9 +42,16 @@ import {
 } from "../src/domain/banking";
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
+import {
+  RetailAccount,
+  RetailOverview,
+  RetailProfile,
+} from "./retail-overview";
 
 type View =
   | "overview"
+  | "accounts"
+  | "profile"
   | "application"
   | "transfer"
   | "statements"
@@ -55,6 +62,8 @@ type View =
   | "audit";
 const labels: Record<View, string> = {
   overview: "Overview",
+  accounts: "My accounts",
+  profile: "My profile",
   application: "Account opening",
   transfer: "Pay & transfer",
   statements: "Statements",
@@ -80,6 +89,8 @@ const roles: Record<Role, { name: string; person: string; initials: string }> =
   };
 const navIcons = {
   overview: LayoutDashboard,
+  accounts: Landmark,
+  profile: Users,
   application: FileCheck2,
   transfer: ArrowLeftRight,
   statements: FileText,
@@ -274,15 +285,34 @@ export default function Page() {
             Open an account. Make your first deposit. Send money to someone you
             know. See the same story from both sides of the counter.
           </p>
-          <PendingButton
-            busy={busy}
-            className="primary large"
-            onClick={() =>
-              perform(api("/session", {}), "Your own demo bank is ready.")
-            }
-          >
-            Start your banking story <ArrowRight size={18} />
-          </PendingButton>
+          <div className="journey-options">
+            <PendingButton
+              busy={busy}
+              className="primary large"
+              onClick={() =>
+                perform(
+                  api("/session", { journey: "new" }),
+                  "Your own demo bank is ready.",
+                )
+              }
+            >
+              Start your banking story <ArrowRight size={18} />
+            </PendingButton>
+            <span>New customer · Open your first account</span>
+            <PendingButton
+              busy={busy}
+              className="secondary large"
+              onClick={() =>
+                perform(
+                  api("/session", { journey: "existing" }),
+                  "Welcome back. Your existing-customer workspace is ready.",
+                )
+              }
+            >
+              Explore existing customer <ArrowRight size={18} />
+            </PendingButton>
+            <span>Active account · Salary, payments & statements</span>
+          </div>
           {busy && (
             <p role="status">
               Preparing your accounts. The first visit after a quiet period can
@@ -338,6 +368,7 @@ export default function Page() {
 
   const role = data.role;
   const staff = role !== "customer";
+  const retail = !staff && data.bank.journey === "existing";
   const account = data.account;
   const balance = account?.summary?.accountBalance ?? 0;
   const pending = data.commands.filter((c) => c.status === "pending");
@@ -347,16 +378,12 @@ export default function Page() {
   const transactions = [...(account?.transactions ?? [])].sort(
     (a, b) => b.id - a.id,
   );
-  const customerNav: View[] = [
-    "overview",
-    "application",
-    "transfer",
-    "statements",
-    "services",
-  ];
+  const customerNav: View[] = retail
+    ? ["overview", "accounts", "transfer", "statements", "services", "profile"]
+    : ["overview", "application", "transfer", "statements", "services"];
   const staffNav: View[] = [
     "overview",
-    "application",
+    data.bank.journey === "existing" ? "accounts" : "application",
     "cash",
     "approvals",
     "operations",
@@ -372,7 +399,7 @@ export default function Page() {
     data.commands.some((c) => c.kind === "salary" && c.status === "posted"),
   ];
   const progress = journeySteps.filter(Boolean).length;
-  const nextStep = !data.application
+  const onboardingNextStep = !data.application
     ? {
         title: "Let's open your account",
         text: "Start with your details and two sample documents.",
@@ -459,8 +486,18 @@ export default function Page() {
                           button: "View your statement",
                         };
 
+  const nextStep =
+    data.bank.journey === "existing" && account
+      ? {
+          title: "An established customer relationship",
+          text: "Review balances, account restrictions, cash instructions and service requests from the branch workspace.",
+          action: () => setView("operations"),
+          button: "Review customer operations",
+        }
+      : onboardingNextStep;
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${retail ? " customer-retail" : ""}`}>
       <aside className="sidebar">
         <a className="brand" href="/">
           <span className="brand-symbol">
@@ -472,7 +509,10 @@ export default function Page() {
           {staff ? "BRANCH WORKSPACE" : "PERSONAL BANKING"}
           <span>DEMO</span>
         </div>
-        <nav aria-label="Main navigation">
+        <nav
+          aria-label="Main navigation"
+          style={retail ? { display: "none" } : undefined}
+        >
           {(staff ? staffNav : customerNav).map((item) => {
             const Icon = navIcons[item];
             return (
@@ -498,6 +538,65 @@ export default function Page() {
             );
           })}
         </nav>
+        {retail && (
+          <div className="retail-shortcuts">
+            <h2>Quick services</h2>
+            <button type="button" onClick={() => setView("statements")}>
+              <FileText size={17} />
+              Account statement
+            </button>
+            <button type="button" onClick={() => setView("transfer")}>
+              <ArrowLeftRight size={17} />
+              Fund transfer
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setServiceKind("debit_card");
+                setServiceDetail(
+                  "Please issue a debit card for my savings account.",
+                );
+                setView("services");
+              }}
+            >
+              <CreditCard size={17} />
+              Request a debit card
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setServiceKind("chequebook");
+                setServiceDetail(
+                  "Please issue a 25-leaf chequebook for my savings account.",
+                );
+                setView("services");
+              }}
+            >
+              <FileCheck2 size={17} />
+              Request a chequebook
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setServiceKind("address_change");
+                setServiceDetail(
+                  "Please update my address using the supplied synthetic details.",
+                );
+                setView("services");
+              }}
+            >
+              <Users size={17} />
+              Update address
+            </button>
+            <div className="retail-shortcuts-note">
+              <ShieldCheck size={21} />
+              <strong>Bank with confidence</strong>
+              <p>
+                OpenFinacle is a demo. Use only the sample customer details.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="sidebar-bottom">
           <div className="demo-help">
             <Sparkles size={19} />
@@ -524,10 +623,40 @@ export default function Page() {
             <span /> Banking core connected
             <small>Apache Fineract · INR sandbox</small>
           </div>
+          <button
+            type="button"
+            className="journey-switch"
+            disabled={busy}
+            onClick={() =>
+              perform(
+                api("/session/end", {}).pipe(
+                  Effect.tap(() =>
+                    Effect.sync(() => {
+                      setData(null);
+                      setView("overview");
+                    }),
+                  ),
+                ),
+                "Choose a new demo journey.",
+                false,
+              )
+            }
+          >
+            Choose another journey <ArrowRight size={13} />
+          </button>
         </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          {retail && (
+            <a className="brand retail-brand" href="/">
+              <span className="brand-symbol">
+                <Landmark size={24} />
+              </span>
+              OpenFinacle<span className="brand-dot">.</span>
+              <small>PERSONAL BANKING</small>
+            </a>
+          )}
           <div className="breadcrumb">
             {staff ? "Branch banking" : "Personal banking"}
             <ChevronRight size={14} />
@@ -561,24 +690,55 @@ export default function Page() {
             </div>
           </div>
         </header>
+        {retail && (
+          <nav className="retail-navigation" aria-label="Main navigation">
+            {customerNav.map((item) => {
+              const Icon = navIcons[item];
+              return (
+                <button
+                  type="button"
+                  key={item}
+                  className={view === item ? "active" : ""}
+                  aria-current={view === item ? "page" : undefined}
+                  onClick={() => {
+                    setView(item);
+                    setSearch("");
+                  }}
+                >
+                  <Icon size={18} />
+                  {labels[item]}
+                  <ChevronDown size={13} />
+                </button>
+              );
+            })}
+          </nav>
+        )}
         <main className="content">
           <div className="page-heading">
             <div>
               <span className="eyebrow">
-                {staff ? "ADYAR BRANCH · CHENNAI" : "YOUR EVERYDAY, SIMPLIFIED"}
+                {staff
+                  ? "ADYAR BRANCH · CHENNAI"
+                  : retail
+                    ? "PERSONAL BANKING / MY VIEW"
+                    : "YOUR EVERYDAY, SIMPLIFIED"}
               </span>
               <h1>
                 {view === "overview"
                   ? staff
                     ? "A clear view of your branch."
-                    : `Good things ahead, ${(data.application?.name ?? "Mira").split(" ")[0]}.`
+                    : retail
+                      ? `Welcome back, ${(account?.clientName ?? "Mira").split(" ")[0]}`
+                      : `Good things ahead, ${(data.application?.name ?? "Mira").split(" ")[0]}.`
                   : labels[view]}
               </h1>
               <p>
                 {view === "overview"
                   ? staff
                     ? "Every application, approval and transaction. One connected workspace."
-                    : "Your money, your next step, and everything in between."
+                    : retail
+                      ? "Here's an overview of your relationship with us."
+                      : "Your money, your next step, and everything in between."
                   : view === "application"
                     ? "A simple beginning. Carefully reviewed."
                     : view === "transfer"
@@ -621,7 +781,16 @@ export default function Page() {
             </div>
           )}
 
-          {view === "overview" && (
+          {view === "overview" && retail && (
+            <RetailOverview data={data} navigate={setView} />
+          )}
+          {view === "accounts" && (
+            <RetailAccount data={data} navigate={setView} />
+          )}
+          {view === "profile" && (
+            <RetailProfile data={data} navigate={setView} />
+          )}
+          {view === "overview" && !retail && (
             <>
               <div className="overview-grid">
                 <section className="balance-card">
@@ -789,14 +958,68 @@ export default function Page() {
                   ) : (
                     <div className="empty-state">
                       <ArrowLeftRight size={26} />
-                      <h3>Your story is just beginning</h3>
+                      <h3>
+                        {data.bank.journey === "existing"
+                          ? "Your account activity is ready"
+                          : "Your story is just beginning"}
+                      </h3>
                       <p>
-                        Deposits, payments and salary credits will appear here.
+                        {data.bank.journey === "existing"
+                          ? "Inspect My accounts and the audit trail for the sample account setup. New instructions will appear here."
+                          : "Deposits, payments and salary credits will appear here."}
                       </p>
                     </div>
                   )}
                 </section>
-                <section className="panel journey-panel">
+                {data.bank.journey === "existing" && (
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Customer relationship</h2>
+                        <p>Active savings · {account?.clientName}</p>
+                      </div>
+                    </div>
+                    <div className="detail-grid">
+                      <div>
+                        <small>Customer account</small>
+                        <strong>{account?.accountNo}</strong>
+                      </div>
+                      <div>
+                        <small>Account status</small>
+                        <strong>{account?.status.value}</strong>
+                      </div>
+                      <div>
+                        <small>Saved beneficiaries</small>
+                        <strong>{data.beneficiaries.length}</strong>
+                      </div>
+                      <div>
+                        <small>Open service requests</small>
+                        <strong>
+                          {
+                            data.requests.filter(
+                              (request) => request.status === "open",
+                            ).length
+                          }
+                        </strong>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => setView("accounts")}
+                    >
+                      Inspect account details <ArrowRight size={15} />
+                    </button>
+                  </section>
+                )}
+                <section
+                  className="panel journey-panel"
+                  style={
+                    data.bank.journey === "existing"
+                      ? { display: "none" }
+                      : undefined
+                  }
+                >
                   <div className="panel-heading">
                     <div>
                       <h2>From first hello to payday</h2>

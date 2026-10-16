@@ -14,7 +14,7 @@ The browser journey defaults to https://openfinacle.plts.in. Set `BASE_URL` to v
 
 ## What to try
 
-1. Start a demo bank. Each browser session has its own customer, beneficiary and funded employer.
+1. Choose **Start your banking story** for a new applicant, or **Explore existing customer** for an active account with sample activity. Each browser session has its own customer, beneficiary and funded employer. Reloading resumes the workspace; **Choose another journey** ends that demo session and returns to the chooser.
 2. Open **Account opening**, attach the provided synthetic documents and submit.
 3. Switch to **Bank officer** and recommend opening. Switch to **Approver** and approve.
 4. As the officer, prepare an initial deposit. The separate approver authorises it.
@@ -24,9 +24,11 @@ The browser journey defaults to https://openfinacle.plts.in. Set `BASE_URL` to v
 
 Persona switching is explicitly a demonstration control, not production identity management. No real documents, SMS, cards, cheque dispatch or external bank transfers are involved. Every supported financial effect executes in Fineract; there is no mock-balance fallback.
 
+The existing-customer journey begins at ₹1,21,300: ₹40,000 opening funds + ₹85,000 employer-funded salary − ₹2,500 internal payment − ₹1,200 cash withdrawal. All four sample transactions post on today's business date. Its account-led interface uses public historical ICICI layout references: horizontal navigation, service shortcuts, savings portfolio, orange action strip and recent transactions. It retains OpenFinacle identity and does not claim parity with the unavailable current authenticated portal. See the [reference evidence and implementation plan](specs/002-customer-experience/plan.md).
+
 ## Architecture and ownership
 
-The project owner confirmed Fineract as the core on 2026-10-16. The [accepted decision](specs/decisions/001-banking-core.md) records custom TypeScript, TigerBeetle and ERP/accounting alternatives, tradeoffs and production-effort assumptions. The next [customer experience specification](specs/002-customer-experience/spec.md) covers both new applicants and existing customers, with an authorized ICICI screen-reference review pending. These are accepted requirements, not a claim that the existing-customer redesign has shipped.
+The project owner confirmed Fineract as the core on 2026-10-16. The [accepted decision](specs/decisions/001-banking-core.md) records custom TypeScript, TigerBeetle and ERP/accounting alternatives, tradeoffs and production-effort assumptions. The [customer experience specification](specs/002-customer-experience/spec.md) covers both new applicants and existing customers. Public references replaced the unavailable authenticated review at the owner's request.
 
 - **Next.js / React:** customer and staff experiences, built to static assets.
 - **Effect-TS on Cloudflare Workers:** session/ownership checks, application workflows, approval rules and integration adapters. No Java rewrite and no CMS dependency.

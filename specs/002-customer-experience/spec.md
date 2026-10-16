@@ -1,12 +1,12 @@
 # New and existing customer banking experiences
 
-Date: 2026-10-16. Status: accepted requirements; implementation pending.
+Date: 2026-10-16. Status: accepted requirements; implementation tracked in Beads `of-djb`. See the plan and verification record for delivered evidence.
 
 ## Purpose
 
 Provide two entry journeys within the Fineract-backed demonstration. Keep OpenFinacle identity and synthetic data while closely following the navigation, information hierarchy, layout and interaction patterns observed in the owner's ICICI personal netbanking session.
 
-The authenticated reference review has been requested but has not yet been completed. The capability candidates below are requirements to assess, not claims about observed ICICI screens or already implemented OpenFinacle functionality.
+The authenticated reference review was unavailable. The owner authorized public-image research and implementation instead. The [plan](plan.md) records inspected historical public images and official service references, with their coverage limits. No current authenticated UI parity is claimed.
 
 ## New customer
 
