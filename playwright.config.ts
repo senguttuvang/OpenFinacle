@@ -12,7 +12,17 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "entry",
+      testMatch: /(?:persistent-entry|readiness)\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+    {
       name: "chromium",
+      testMatch: /(?:everyday|existing-customer)\.spec\.ts/,
+      dependencies: ["entry"],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 1000 },

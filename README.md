@@ -35,6 +35,7 @@ The project owner confirmed Fineract as the core on 2026-10-16. The [accepted de
 - **Apache Fineract 1.15.0 on Cloudflare Containers:** customer accounts, savings products, internal transfers, cash transactions and configured cash accounting.
 - **Railway PostgreSQL:** Fineract tenant registry and banking database. Cloudflare D1 speaks SQLite rather than PostgreSQL, and container disks are ephemeral; this is the persistence reason for the Railway component.
 - **D1:** demo sessions, onboarding, beneficiaries, workflow command records, requests and application audit.
+- **Permanent demo scenarios:** operator-seeded new/existing journeys and saved Fineract account views for fast entry. No per-visit financial provisioning, workspace pool or Cron. The two scenarios are shared synthetic data; ending a session does not reset them.
 - **R2:** private synthetic document objects. Downloads require the same demo session.
 
 Financial balances and transactions have one owner: Fineract. Local workflow state refers to core IDs. Approval claims use conditional SQL updates; duplicate command keys are unique per workspace. Ambiguous core responses remain `uncertain`, and executing/uncertain commands are never automatically replayed. These exceptions require inspection and reconciliation; they do not claim an atomic transaction across D1 and Fineract.
@@ -61,9 +62,13 @@ The repository owns deployment through its Effect CLI:
 bun run cli provision --database-file /protected/railway-export.json --database-host <verified-proxy-host> --database-port <verified-proxy-port>
 bun run deploy
 bun run cli initialize --url https://openfinacle.plts.in
+bunx wrangler d1 migrations apply openfinacle-workflows --remote
+bun run cli demo --backfill
 ```
 
 Provisioning creates the two Fineract databases and stores Cloudflare secrets through stdin. It refuses to replace an existing local secrets file. Initialization checks core health, rotates the original bootstrap credential, configures INR, creates accounting mappings and establishes the savings product. Credentials never belong in Git or command arguments.
+
+`demo` prepares missing scenarios once and refreshes their saved views; repeating it never refunds/recreates existing accounts. `demo --journey new --restart` explicitly prepares a replacement onboarding scenario and retains the former financial records. `--backfill` also saves views for legacy ready workspaces. `DEMO_MODE=true` permits these shared scenarios and demo role switching. Outside demo mode the channel fails closed until production identities are integrated. The read model is derived from Fineract, never an alternative ledger. Balances show their last sync instant; financial mutations and the Refresh control synchronize them with the core.
 
 The first Fineract schema initialization can take considerably longer than a normal cold start because it runs thousands of migrations against the persistent database. Do not interrupt it. `bun run cli database-status` writes a protected report with migration counts and connection metadata. The guarded `release-abandoned-migration` command refuses to run while the core has database connections; its `--empty-baseline` recovery preserves empty migration metadata and refuses databases containing application tables or applied changes. It is for an interrupted, empty first initialization, not a financial-data reset.
 

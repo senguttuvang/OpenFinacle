@@ -169,8 +169,8 @@ export default function Page() {
   );
 
   const load = useCallback(
-    () =>
-      api<Dashboard>("/dashboard").pipe(
+    (refresh = false) =>
+      api<Dashboard>(`/dashboard${refresh ? "?refresh=true" : ""}`).pipe(
         Effect.tap((next) => Effect.sync(() => setData(next))),
       ),
     [],
@@ -213,20 +213,17 @@ export default function Page() {
   const startJourney = (journey: "new" | "existing") =>
     perform(
       Effect.gen(function* () {
-        yield* Effect.sync(() =>
-          setStartupStage("Checking that the bank is ready…"),
-        );
-        yield* api("/ready");
-        yield* Effect.sync(() =>
-          setStartupStage(
-            journey === "existing"
-              ? "Opening your demo workspace and preparing salary and payment history. This can take up to three minutes…"
-              : "Preparing your demo workspace. This can take up to three minutes…",
-          ),
-        );
-        yield* api("/session", { journey });
+        yield* Effect.sync(() => setStartupStage("Opening your saved demo…"));
+        const result = yield* api<{ dashboard: Dashboard }>("/session", {
+          journey,
+        });
+        yield* Effect.sync(() => {
+          setData(result.dashboard);
+          setView("overview");
+        });
       }),
-      "Your demo bank is ready.",
+      "Your saved demo is ready.",
+      false,
     );
   const changeRole = (role: Role, destination: View = "overview") => {
     setView(destination);
@@ -326,8 +323,8 @@ export default function Page() {
           </div>
           {busy && <p role="status">{startupStage}</p>}
           <span className="welcome-note">
-            <LockKeyhole size={14} /> Your own isolated workspace · Synthetic
-            data only
+            <LockKeyhole size={14} /> Permanent shared demo · Synthetic data
+            only
           </span>
           {error && (
             <div role="alert" className="notice error">
@@ -626,8 +623,16 @@ export default function Page() {
             </div>
           </div>
           <div className="core-status">
-            <span /> Banking core connected
-            <small>Apache Fineract · INR sandbox</small>
+            <span />{" "}
+            {data.core.stale
+              ? "Balances need a refresh"
+              : "Core-backed demo data"}
+            <small>
+              Last synced{" "}
+              {data.core.syncedAt
+                ? new Date(data.core.syncedAt).toLocaleString("en-IN")
+                : "before this session"}
+            </small>
           </div>
           <button
             type="button"
@@ -677,7 +682,13 @@ export default function Page() {
               type="button"
               aria-label="Refresh workspace"
               disabled={busy}
-              onClick={() => perform(load(), "Workspace refreshed.", false)}
+              onClick={() =>
+                perform(
+                  load(true),
+                  "Balances synchronized with Fineract.",
+                  false,
+                )
+              }
             >
               <RefreshCw size={18} />
             </button>

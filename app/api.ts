@@ -39,7 +39,7 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
     Effect.timeoutFail({
       duration:
         path === "/session"
-          ? "180 seconds"
+          ? "3 seconds"
           : body === undefined
             ? "45 seconds"
             : "90 seconds",
