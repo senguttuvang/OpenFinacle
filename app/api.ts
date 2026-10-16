@@ -46,9 +46,11 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
       onTimeout: () =>
         new ApiError({
           message:
-            body === undefined
-              ? "The bank is taking too long to respond. Please check readiness again shortly."
-              : "The instruction is taking too long. Its outcome is not confirmed. Refresh and inspect its status before trying again.",
+            path === "/session"
+              ? "The saved demo could not open within three seconds. No accounts are created during entry; reload to resume."
+              : body === undefined
+                ? "The bank is taking too long to respond. Please check readiness again shortly."
+                : "The instruction is taking too long. Its outcome is not confirmed. Refresh and inspect its status before trying again.",
           status: 504,
           transportFailure: true,
         }),
