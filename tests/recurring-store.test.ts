@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Effect, Layer, TestClock, TestContext } from "effect";
 import type { Environment } from "../src/adapters/environment";
+import { depositAdvice } from "../src/application/deposit-advice";
 import {
   actOnRecurringPlan,
   listRecurringPlans,
@@ -10,6 +11,7 @@ import {
   submitRecurringPlan,
 } from "../src/application/recurring-deposits";
 import { BankingError, type Session } from "../src/domain/banking";
+import { adviceText } from "../src/domain/deposit-advice";
 import { Store, type StoreService } from "../src/domain/ports";
 
 mock.module("@cloudflare/containers", () => ({
@@ -131,6 +133,65 @@ const activate = async () => {
     ),
   );
 };
+
+test("recurring opening advice preserves activation facts after allocation and renders labels as plain text", async () => {
+  const active = await activate();
+  const id = active.plan.id;
+  const initial = await run(depositAdvice(customer, "recurring", id));
+  expect(initial).toMatchObject({
+    amount: 1000,
+    planned_minor: 600000,
+    maturity_minor: 610500,
+    activation_version: 2,
+  });
+  await run(
+    actOnRecurringPlan(
+      customer,
+      action(id, 2, "allocate", 1),
+      "advice-allocation",
+    ),
+  );
+  const before = db.serialize();
+  expect(await run(depositAdvice(customer, "recurring", id))).toEqual(initial);
+  expect(await run(depositAdvice(officer, "recurring", id))).toEqual(initial);
+  expect(await run(depositAdvice(approver, "recurring", id))).toEqual(initial);
+  expect(db.serialize()).toEqual(before);
+  expect(
+    await denied(
+      depositAdvice({ ...customer, bank_id: "other" }, "recurring", id),
+    ),
+  ).toMatchObject({ status: 404 });
+  const second = await run(
+    submitRecurringPlan(
+      customer,
+      { ...terms, label: "<script>example</script>\nAmount: 999" },
+      "advice-literal-label",
+    ),
+  );
+  expect(
+    await denied(depositAdvice(customer, "recurring", second.plan.id)),
+  ).toMatchObject({ status: 409 });
+  await run(
+    actOnRecurringPlan(
+      officer,
+      action(second.plan.id, 0, "recommend"),
+      "literal-recommend",
+    ),
+  );
+  await run(
+    actOnRecurringPlan(
+      approver,
+      action(second.plan.id, 1, "activate"),
+      "literal-activate",
+    ),
+  );
+  const text = adviceText(
+    await run(depositAdvice(customer, "recurring", second.plan.id)),
+  );
+  expect(text).toContain("Product: <script>example</script> Amount: 999\r\n");
+  expect(text).not.toContain("\nAmount: 999");
+  expect(text).toContain("no accrued or credited earnings are certified");
+});
 
 test("activation persists one schedule; ordered due/missed demo allocations change progress without financial effects", async () => {
   expect((await run(listRecurringPlans(customer))).plans).toEqual([]);

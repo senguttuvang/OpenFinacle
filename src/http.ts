@@ -25,6 +25,7 @@ import {
   listCards,
 } from "./application/cards";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
+import { depositAdvice } from "./application/deposit-advice";
 import {
   actOnDeposit,
   depositDetail,
@@ -57,6 +58,7 @@ import {
   type Session,
 } from "./domain/banking";
 import { CardCommand } from "./domain/cards";
+import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { Core, Store } from "./domain/ports";
 import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
@@ -516,6 +518,30 @@ const handle = (request: Request, env: Environment) =>
             'attachment; filename="openfinacle-statement.csv"',
         },
       });
+    }
+    if (path === "/api/deposit-advice" && request.method === "GET") {
+      const input = yield* Schema.decodeUnknown(DepositAdviceQuery)(
+        Object.fromEntries(url.searchParams),
+        { onExcessProperty: "error" },
+      ).pipe(
+        Effect.mapError(() =>
+          failure("Choose a valid holding and advice format."),
+        ),
+      );
+      if (
+        [...url.searchParams.keys()].length !==
+        new Set(url.searchParams.keys()).size
+      )
+        return yield* Effect.fail(failure("Choose one holding reference."));
+      const advice = yield* depositAdvice(session, input.kind, input.id);
+      return input.download === "1"
+        ? new Response(adviceText(advice), {
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Content-Disposition": `attachment; filename="openfinacle-demo-${advice.reference}.txt"`,
+            },
+          })
+        : Response.json(advice);
     }
     if (path === "/api/recurring-deposits" && request.method === "GET") {
       const id = url.searchParams.get("id");

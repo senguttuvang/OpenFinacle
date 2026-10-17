@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Effect, Layer, Schema } from "effect";
 import type { Environment } from "../src/adapters/environment";
+import { depositAdvice } from "../src/application/deposit-advice";
 import {
   actOnDeposit,
   depositDetail,
@@ -10,6 +11,7 @@ import {
   submitDeposit,
 } from "../src/application/deposits";
 import { BankingError, type Session } from "../src/domain/banking";
+import { adviceText, openingAdvice } from "../src/domain/deposit-advice";
 import {
   DepositTerms,
   maturityDate,
@@ -387,6 +389,58 @@ test("product boundaries, nominee normalization, leap dates and deterministic si
   );
   expect(saved.deposit.terms.nominee?.name).toBe("Example Parent");
 });
+test("opening advice requires independent activation, remains owned and never writes on enquiry", async () => {
+  const { deposit } = await submit();
+  expect(
+    await denied(depositAdvice(customer, "fixed", deposit.id)),
+  ).toMatchObject({ status: 409 });
+  await run(
+    actOnDeposit(
+      officer,
+      action(deposit.id, 0, "recommend"),
+      "advice-recommend",
+    ),
+  );
+  await run(
+    actOnDeposit(
+      approver,
+      action(deposit.id, 1, "activate"),
+      "advice-activate",
+    ),
+  );
+  const before = db.serialize();
+  const advice = await run(depositAdvice(customer, "fixed", deposit.id));
+  expect(advice).toMatchObject({
+    reference: `FD-${deposit.id.slice(0, 8).toUpperCase()}`,
+    amount: 10000,
+    maturity_minor: 1060000,
+    activation_version: 2,
+  });
+  expect(await run(depositAdvice(officer, "fixed", deposit.id))).toEqual(
+    advice,
+  );
+  expect(await run(depositAdvice(approver, "fixed", deposit.id))).toEqual(
+    advice,
+  );
+  expect(db.serialize()).toEqual(before);
+  expect(
+    await denied(
+      depositAdvice({ ...customer, bank_id: "other" }, "fixed", deposit.id),
+    ),
+  ).toMatchObject({ status: 404 });
+  const detail = await run(depositDetail(customer, deposit.id));
+  for (const changed of [
+    { ...detail, history: [] },
+    { ...detail, deposit: { ...detail.deposit, maturity_minor: 123 } },
+    { ...detail, deposit: { ...detail.deposit, activated_at: "invalid" } },
+    { ...detail, deposit: { ...detail.deposit, checker: "officer" } },
+  ])
+    expect(
+      await denied(openingAdvice({ kind: "fixed", detail: changed })),
+    ).toMatchObject({ status: 503 });
+  expect(adviceText(advice)).toContain("not an interest or tax certificate");
+});
+
 test("HTTP deposits enforce strict inputs, authentication/demo/ownership and never access financial core", async () => {
   const token = "synthetic-deposit-session";
   const hash = new Bun.CryptoHasher("sha256").update(token).digest("hex");
@@ -445,11 +499,48 @@ test("HTTP deposits enforce strict inputs, authentication/demo/ownership and nev
   const response = await http("/deposits", terms);
   expect(response.status).toBe(200);
   const saved = (await response.json()) as { deposit: { id: string } };
+  const advicePath = `/deposit-advice?kind=fixed&id=${saved.deposit.id}`;
+  expect((await http(advicePath, undefined, false)).status).toBe(401);
+  expect((await http(advicePath)).status).toBe(409);
+  expect((await http(`${advicePath}&id=other`)).status).toBe(400);
+  expect((await http(`${advicePath}&rate=99`)).status).toBe(400);
+  expect((await http(`${advicePath}&download=html`)).status).toBe(400);
+  expect((await http("/deposit-advice?kind=unknown&id=example")).status).toBe(
+    400,
+  );
+  await run(
+    actOnDeposit(
+      officer,
+      action(saved.deposit.id, 0, "recommend"),
+      "http-advice-recommend",
+    ),
+  );
+  await run(
+    actOnDeposit(
+      approver,
+      action(saved.deposit.id, 1, "activate"),
+      "http-advice-activate",
+    ),
+  );
+  const download = await http(`${advicePath}&download=1`);
+  expect(download.status).toBe(200);
+  expect(download.headers.get("content-type")).toBe(
+    "text/plain; charset=utf-8",
+  );
+  expect(download.headers.get("content-disposition")).toMatch(
+    /^attachment; filename="openfinacle-demo-FD-[A-Z0-9-]{8}\.txt"$/,
+  );
+  expect(download.headers.get("cache-control")).toBe("no-store");
+  expect(download.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(await download.text()).toContain(
+    "Illustrated maturity amount: ₹10,600.00",
+  );
   expect(
-    (await http("/deposits/action", action(saved.deposit.id, 0, "activate")))
+    (await http("/deposits/action", action(saved.deposit.id, 2, "activate")))
       .status,
   ).toBe(403);
   db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  expect((await http(advicePath)).status).toBe(404);
   expect((await http(`/deposits?id=${saved.deposit.id}`)).status).toBe(404);
   expect((await http("/deposits?key=http-deposit-command")).status).toBe(404);
   expect(
