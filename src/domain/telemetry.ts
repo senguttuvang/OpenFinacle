@@ -17,6 +17,8 @@ const routes = new Set([
   "/api/documents",
   "/api/statement",
   "/api/service-catalog",
+  "/api/service-cases",
+  "/api/service-cases/action",
   "/api/requests",
   "/api/requests/resolve",
   "/api/admin/telemetry-probe",
