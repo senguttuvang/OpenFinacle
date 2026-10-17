@@ -79,6 +79,25 @@
 .deposit-detail {
   margin-top: 28px;
 }
+.recurring-workspace .detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+.recurring-schedule {
+  margin: 24px 0;
+}
+.recurring-schedule li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.recurring-schedule span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
 @media (max-width: 600px) {
   .deposit-workspace .detail-grid {
     grid-template-columns: minmax(0, 1fr);
