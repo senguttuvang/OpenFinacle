@@ -1,6 +1,6 @@
 # Synthetic debit-card controls
 
-This slice implements card enquiry, channel/limit changes, temporary hold/resume and permanent lost/stolen blocking. Card navigation and servicing families were observed; these specific forms, limits and staff permissions are inferred demonstration contracts. Full reference parity, card issuance/replacement, credit-card billing/payments and network integration remain open.
+This slice implements card enquiry, channel/limit changes, temporary hold/resume and permanent lost/stolen blocking. Card navigation and servicing families were observed; these specific forms, limits and staff permissions are inferred demonstration contracts. Independently authorized synthetic replacement, separate delivery/activation and distinct instrument histories are defined in [card replacement](card-replacement.md). Full reference parity, other issuance products, PIN, credit-card billing/payments and network integration remain open.
 
 D1 owns explicitly synthetic debit-card records, separate from Fineract account balances and postings. Migration 0007 creates one synthetic card for each already-open relationship and database triggers create one when a relationship first opens. Reads never provision products. No PAN, CVV, PIN, OTP or real card credentials are collected. The displayed suffix is an invented demonstration label. Controls affect the simulated card record only; no actual card network is contacted.
 
