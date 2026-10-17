@@ -63,6 +63,10 @@ const Deposits = dynamic(
     loading: () => <p role="status">Loading deposit workspace…</p>,
   },
 );
+const Loans = dynamic(
+  () => import("./loan-workspace").then((module) => module.LoanWorkspace),
+  { loading: () => <p role="status">Loading lending workspace…</p> },
+);
 const RetailProfile = dynamic(
   () => import("./customer-profile").then((module) => module.CustomerProfile),
   {
@@ -94,6 +98,7 @@ const navIcons = {
   services: CreditCard,
   cards: CreditCard,
   deposits: Landmark,
+  loans: Landmark,
   cash: Wallet,
   approvals: ShieldCheck,
   operations: Building2,
@@ -1890,6 +1895,17 @@ export default function Page() {
             </section>
           )}
 
+          {view === "loans" && (
+            <Loans
+              key={data.bank.id + data.role}
+              bankId={data.bank.id}
+              role={data.role}
+              busy={busy}
+              perform={perform}
+              accountOpened={Boolean(data.account)}
+              openAccount={() => setView("application")}
+            />
+          )}
           {view === "deposits" && (
             <Deposits
               key={data.bank.id + data.role}
