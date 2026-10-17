@@ -79,6 +79,9 @@
   margin-top: 28px;
 }
 @media (max-width: 600px) {
+  .deposit-workspace .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .deposit-list li {
     flex-direction: column;
     align-items: flex-start;

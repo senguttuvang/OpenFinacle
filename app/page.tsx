@@ -54,6 +54,12 @@ import { initializeTelemetry } from "./telemetry";
 const Cards = dynamic(() => import("./cards").then((module) => module.Cards), {
   loading: () => <p role="status">Loading card workspace…</p>,
 });
+const Deposits = dynamic(
+  () => import("./deposits").then((module) => module.Deposits),
+  {
+    loading: () => <p role="status">Loading deposit workspace…</p>,
+  },
+);
 const RetailProfile = dynamic(
   () => import("./customer-profile").then((module) => module.CustomerProfile),
   {
@@ -84,6 +90,7 @@ const navIcons = {
   statements: FileText,
   services: CreditCard,
   cards: CreditCard,
+  deposits: Landmark,
   cash: Wallet,
   approvals: ShieldCheck,
   operations: Building2,
@@ -1880,6 +1887,15 @@ export default function Page() {
             </section>
           )}
 
+          {view === "deposits" && (
+            <Deposits
+              key={data.bank.id + data.role}
+              bankId={data.bank.id}
+              role={data.role}
+              busy={busy}
+              perform={perform}
+            />
+          )}
           {view === "cards" && (
             <Cards
               key={data.bank.id + data.role}
