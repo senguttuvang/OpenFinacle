@@ -1,0 +1,566 @@
+/* Shared banking presentation. Product and posting behavior stays in its existing services. */
+:root {
+  font-size: 112.5%;
+}
+:root[data-reading="large"] {
+  font-size: 137.5%;
+}
+:root,
+.app-shell.customer-retail,
+.app-shell.branch-workspace {
+  --ink: #172b4d;
+  --muted: #52627a;
+  --teal: #2458d3;
+  --deep: #152b50;
+  --paper: #f2f5fc;
+  --line: #dae2ef;
+  --orange: #2464dd;
+  --radius: 16px;
+}
+body {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+::selection {
+  color: #102d69;
+  background: #d1e4ff;
+}
+input,
+textarea {
+  caret-color: var(--teal);
+}
+* {
+  scrollbar-color: #a4b4cf #f2f5fc;
+  scrollbar-width: thin;
+}
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+h1 {
+  font-size: 2rem;
+}
+h2 {
+  font-size: 1.33rem;
+}
+h3 {
+  font-size: 1.11rem;
+}
+small {
+  font-size: 0.83rem;
+}
+svg {
+  flex-shrink: 0;
+}
+.app-shell
+  :is(
+    .muted,
+    .notice,
+    .small-note,
+    .empty-state p,
+    .text-link,
+    .info-line,
+    label,
+    input,
+    textarea,
+    select
+  ) {
+  font-size: 1rem;
+}
+.app-shell :is(.primary, .secondary, .button),
+.centre-dialog button {
+  min-height: 50px;
+  font-size: 0.94rem;
+  border-radius: 10px;
+  padding: 12px 20px;
+}
+.primary {
+  background: var(--teal);
+}
+.secondary {
+  border-color: #bacbe6;
+}
+.app-shell :is(.pill, .reference, .branch-status, .centre-status) {
+  font-size: 0.78rem;
+  padding: 5px 9px;
+}
+.app-shell
+  :is(
+    .panel-heading h2,
+    .retail-panel-title h2,
+    .retail-shortcuts h2,
+    .retail-notifications h2,
+    .retail-payee-card h2,
+    .branch-control h2
+  ) {
+  font-size: 1.22rem;
+  font-weight: 700;
+}
+.app-shell
+  :is(
+    .panel-heading p,
+    .page-heading p,
+    .retail-update p,
+    .retail-help-card p,
+    .retail-support-banner p,
+    .retail-seed-note,
+    .branch-table-footer,
+    .branch-exception
+  ) {
+  font-size: 0.94rem;
+}
+.app-shell
+  :is(
+    .activity strong,
+    .activity-value strong,
+    .quick-item strong,
+    .branch-table td > strong,
+    .branch-control strong,
+    .register-item strong,
+    .request strong,
+    .beneficiary strong
+  ) {
+  font-size: 1rem;
+}
+.app-shell
+  :is(
+    .activity small,
+    .detail-grid small,
+    .audit-event small,
+    .register-item small,
+    .quick-item small,
+    .branch-table td > small,
+    .branch-control span,
+    .branch-control small,
+    .beneficiary small
+  ) {
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+.app-shell :is(.detail-grid strong, .detail-grid p) {
+  font-size: 1rem;
+}
+.app-shell
+  :is(
+    .stats-row small,
+    .stats-row span,
+    .branch-total,
+    .branch-context,
+    .branch-metric-top,
+    .branch-metric-bottom,
+    .branch-filters button,
+    .branch-operation-grid small,
+    .branch-audit-link small,
+    .retail-shortcuts-note p
+  ) {
+  font-size: 0.83rem;
+}
+.app-shell
+  :is(
+    .branch-operation-grid strong,
+    .branch-audit-link strong,
+    .retail-shortcuts-note strong,
+    .retail-update strong,
+    .retail-payee-card > strong,
+    .retail-help-card h3
+  ) {
+  font-size: 1rem;
+}
+.app-shell :is(th, td, .branch-table) {
+  font-size: 0.89rem;
+}
+.app-shell :is(th, .branch-table th) {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+.app-shell :is(.search-box input, .table-toolbar input) {
+  font-size: 0.94rem;
+}
+.app-shell :is(.panel, .retail-shortcuts) {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.app-shell .panel {
+  padding: 28px;
+}
+.app-shell .page-heading {
+  margin-bottom: 28px;
+}
+.app-shell .page-heading h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+.app-shell .page-heading .eyebrow {
+  display: none;
+}
+.page-heading p {
+  max-width: 65ch;
+}
+.app-shell .content {
+  padding-top: 32px;
+  padding-bottom: 20px;
+}
+.app-shell .sidebar {
+  width: 280px;
+  padding: 28px 20px 20px;
+  background: white;
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.app-shell .sidebar .brand {
+  font-size: 1.4rem;
+  letter-spacing: -0.04em;
+}
+.app-shell .brand-symbol {
+  background: #e6edff;
+  border: 0;
+  color: #2458d3;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.app-shell .workspace-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 32px 8px 16px;
+  letter-spacing: 0.08em;
+}
+.app-shell .workspace-label > span {
+  font-size: 0.61rem;
+  border-color: var(--line);
+}
+.app-shell .nav-item {
+  color: #4b5f7d;
+  font-size: 0.94rem;
+  min-height: 52px;
+  padding: 12px;
+  border-radius: 10px;
+  gap: 12px;
+}
+.app-shell .nav-item svg {
+  width: 22px;
+  height: 22px;
+}
+.app-shell .nav-item.active {
+  background: #e8efff;
+  color: #174abb;
+  box-shadow: none;
+  font-weight: 600;
+}
+.app-shell .nav-item:hover {
+  background: #f0f4ff;
+}
+.app-shell .nav-code {
+  color: #4d6382;
+  background: #f2f5fb;
+  border-color: #d4dfef;
+  font-size: 0.61rem;
+}
+.app-shell .sidebar-bottom {
+  padding-top: 28px;
+}
+.app-shell .demo-help {
+  background: #f3f6ff;
+  border-color: #dce5fa;
+  padding: 16px;
+}
+.app-shell .demo-help strong {
+  font-size: 0.89rem;
+  font-weight: 600;
+}
+.app-shell .demo-help p {
+  font-size: 0.78rem;
+  color: #52627a;
+}
+.app-shell .role-select {
+  background: white;
+  border-color: #c5d3e9;
+  color: var(--ink);
+  padding: 12px 10px;
+}
+.app-shell .role-select select {
+  font-size: 0.89rem;
+}
+.app-shell .role-select option {
+  background: white;
+  color: var(--ink);
+}
+.app-shell :is(.core-status, .journey-switch) {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.app-shell .core-status small {
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+.app-shell .main-shell {
+  margin-left: 280px;
+  width: calc(100% - 280px);
+  min-width: 0;
+}
+.app-shell .topbar {
+  min-height: 90px;
+  height: auto;
+  padding: 18px 32px;
+  background: white;
+  gap: 16px;
+}
+.app-shell .topbar-right {
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.app-shell .breadcrumb {
+  font-size: 0.83rem;
+  gap: 10px;
+}
+.app-shell .person strong {
+  font-size: 0.83rem;
+}
+.app-shell .person small {
+  font-size: 0.72rem;
+}
+.app-shell .avatar {
+  width: 42px;
+  height: 42px;
+  background: #e9edff;
+  border: 0;
+  color: #384eb7;
+  font-size: 0.78rem;
+}
+.app-shell .sandbox-label {
+  display: none;
+}
+.app-shell .icon-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: #f1f5fc;
+  color: #426087;
+}
+.command-trigger,
+.reading-toggle {
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: #3f5576;
+  background: #f1f5fc;
+  border: 1px solid #dbe4f3;
+}
+.reading-toggle[aria-pressed="true"] {
+  color: #174abb;
+  background: #dce7ff;
+  border-color: #668bde;
+}
+.reading-toggle span:not(.sr-only) {
+  white-space: nowrap;
+}
+.command-trigger kbd {
+  font-size: 0.67rem;
+}
+.app-shell .page-footer {
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 28px 0;
+  flex-wrap: wrap;
+}
+.app-shell .page-footer > span {
+  flex-wrap: wrap;
+}
+.app-shell.customer-retail .main-shell {
+  width: 100%;
+  margin: 0;
+}
+.app-shell.customer-retail .sidebar {
+  width: 236px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell.customer-retail .content {
+  margin-left: 272px;
+}
+@media (max-width: 800px) {
+  .app-shell {
+    display: block;
+  }
+  .app-shell .sidebar {
+    position: relative;
+    width: 100%;
+    padding: 20px 16px 0;
+    border-right: 0;
+    overflow: visible;
+  }
+  .app-shell .sidebar nav {
+    display: flex;
+    overflow-x: auto;
+    margin: 20px -16px 0;
+    padding: 0 12px 8px;
+  }
+  .app-shell .nav-item {
+    flex-shrink: 0;
+    font-size: 0.89rem;
+    min-height: 50px;
+  }
+  .app-shell .sidebar .brand {
+    font-size: 1.25rem;
+  }
+  .app-shell .workspace-label,
+  .app-shell .demo-help > strong,
+  .app-shell .demo-help > p,
+  .app-shell .core-status {
+    display: none;
+  }
+  .app-shell .sidebar-bottom {
+    position: static;
+    padding-top: 16px;
+  }
+  .app-shell .demo-help {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .app-shell .demo-help > svg {
+    display: none;
+  }
+  .app-shell .role-select {
+    min-width: 0;
+  }
+  .app-shell .sidebar .journey-switch {
+    font-size: 0.78rem;
+    min-height: 44px;
+    margin: 4px 0;
+  }
+  .app-shell .main-shell {
+    width: 100%;
+    margin: 0;
+  }
+  .app-shell .topbar {
+    padding: 16px;
+    gap: 12px;
+  }
+  .app-shell .topbar-right {
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .app-shell .person {
+    margin-left: auto;
+    padding-left: 10px;
+  }
+  .app-shell .person > div {
+    display: none;
+  }
+  .app-shell .content,
+  .app-shell.customer-retail .content {
+    margin: 0;
+    padding: 26px 16px 12px;
+  }
+  .app-shell .page-heading h1 {
+    font-size: 1.67rem;
+  }
+  .app-shell .panel {
+    padding: 22px 18px;
+  }
+  .app-shell .page-heading {
+    flex-wrap: wrap;
+  }
+  .branch-secondary,
+  .retail-secondary-column {
+    display: flex;
+    flex-direction: column;
+  }
+  .branch-metric {
+    padding: 18px;
+    min-height: 160px;
+  }
+  .branch-metric-top {
+    align-items: flex-start;
+  }
+  .branch-metric > strong {
+    font-size: 1.8rem;
+  }
+  .branch-metric-bottom {
+    line-height: 1.5;
+  }
+  .retail-panel-title {
+    flex-wrap: wrap;
+  }
+  .retail-total > strong {
+    font-size: 2rem;
+  }
+  .retail-action-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .retail-action-strip button {
+    flex-direction: column;
+    font-size: 0.83rem;
+    padding: 18px 10px;
+  }
+  .retail-navigation button {
+    font-size: 0.89rem;
+  }
+  .account-balance,
+  .account-identity {
+    padding: 24px;
+  }
+  .account-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-identity {
+    gap: 14px;
+  }
+  .account-identity .retail-account-active {
+    margin-left: 78px;
+  }
+  .account-information .button-row > button {
+    width: 100%;
+  }
+  .app-shell .panel-heading {
+    flex-wrap: wrap;
+  }
+  .app-shell .activity {
+    flex-wrap: wrap;
+  }
+  .app-shell .activity-value {
+    margin-left: auto;
+    padding-left: 44px;
+  }
+  .app-shell .fields-grid,
+  .app-shell .upload-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .quick-row {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .quick-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 18px;
+  }
+  .app-shell .quick-item small {
+    display: block;
+  }
+  .centre-entrypoints > button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .centre-directory.panel,
+  .centre-requests.panel {
+    padding: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nav-item,
+  .retail-navigation button {
+    transition:
+      background-color 160ms ease-out,
+      color 160ms ease-out;
+  }
+}
