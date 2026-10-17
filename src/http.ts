@@ -30,6 +30,7 @@ import {
   type Session,
 } from "./domain/banking";
 import { Core, Store } from "./domain/ports";
+import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
 
 const failure = (message: string, status = 400) =>
@@ -485,6 +486,8 @@ const handle = (request: Request, env: Environment) =>
         },
       });
     }
+    if (path === "/api/service-catalog" && request.method === "GET")
+      return Response.json({ services: serviceCatalog });
     if (path === "/api/requests" && request.method === "POST") {
       const input = yield* parse(
         request,
