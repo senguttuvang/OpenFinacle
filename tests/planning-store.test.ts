@@ -3,6 +3,7 @@ import { beforeEach, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
 import {
   initializePlanning,
+  inspectPlanningCommand,
   readPlanning,
   savePlanning,
 } from "../src/application/planning";
@@ -76,6 +77,22 @@ test("deliberate setup, save/reload, audit and exact command replay persist with
     ),
   );
   expect(saved.version).toBe(1);
+  const confirmation = await run(
+    inspectPlanningCommand(customer, household, "planning-save-one"),
+  );
+  expect(confirmation.confirmedKey).toBe("planning-save-one");
+  expect(confirmation.state).toEqual(saved);
+  expect(
+    (
+      await outcome(
+        inspectPlanningCommand(
+          customer,
+          "synthetic-kaveri",
+          "planning-save-one",
+        ),
+      )
+    )._tag,
+  ).toBe("Left");
   expect(
     (await run(readPlanning(customer, household))).state.budgets.Dining,
   ).toBe(125000);

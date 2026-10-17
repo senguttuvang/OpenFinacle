@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { planningHouseholds } from "../src/domain/planning-fixtures";
 import {
   initialPlanningState,
+  PlanningError,
+  PlanningScenario,
   transitionPlanningState,
   validatePlanningState,
 } from "../src/domain/planning-state";
@@ -20,6 +22,36 @@ test("state rejects household leaks, invalid versions and assumptions, preserves
     ),
   };
   const next = Effect.runSync(transitionPlanningState(state, changed));
+  expect(
+    Schema.decodeUnknownEither(PlanningScenario)({
+      ...state.scenarios[0],
+      name: "",
+    })._tag,
+  ).toBe("Left");
+  const conflict = Effect.runSync(
+    Effect.flip(transitionPlanningState(next, changed)),
+  );
+  expect(conflict).toBeInstanceOf(PlanningError);
+  expect(conflict.status).toBe(409);
+  expect(
+    Effect.runSync(
+      Effect.either(
+        validatePlanningState(
+          { ...state, unexpectedFutureField: "preserve me" },
+          h.id,
+        ),
+      ),
+    )._tag,
+  ).toBe("Left");
+  const invalidRevision = {
+    ...changed,
+    scenarios: changed.scenarios.map((s) => ({ ...s, version: 25 })),
+  };
+  expect(
+    Effect.runSync(
+      Effect.either(transitionPlanningState(state, invalidRevision)),
+    )._tag,
+  ).toBe("Left");
   expect(next.version).toBe(1);
   expect(
     next.scenarios.find((s) => s.id === "baseline")!.assumptions.sipStep,
