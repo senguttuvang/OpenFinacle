@@ -18,6 +18,12 @@ import {
   reviewApplication,
   submitApplication,
 } from "./application/banking";
+import {
+  cardDetail,
+  cardForKey,
+  changeCard,
+  listCards,
+} from "./application/cards";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
 import { financialView } from "./application/financial-view";
 import {
@@ -35,6 +41,7 @@ import {
   RoleSchema,
   type Session,
 } from "./domain/banking";
+import { CardCommand } from "./domain/cards";
 import { Core, Store } from "./domain/ports";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
@@ -493,6 +500,29 @@ const handle = (request: Request, env: Environment) =>
         },
       });
     }
+    if (path === "/api/cards" && request.method === "GET") {
+      const id = url.searchParams.get("id");
+      const key = url.searchParams.get("key");
+      if (id !== null && key !== null)
+        return yield* Effect.fail(
+          failure("Choose a card or a command reference."),
+        );
+      return Response.json(
+        key !== null
+          ? yield* cardForKey(session, key)
+          : id !== null
+            ? yield* cardDetail(session, id)
+            : yield* listCards(session),
+      );
+    }
+    if (path === "/api/cards/action" && request.method === "POST")
+      return Response.json(
+        yield* changeCard(
+          session,
+          yield* parse(request, CardCommand, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
     if (path === "/api/service-catalog" && request.method === "GET")
       return Response.json({ services: serviceCatalog });
     if (path === "/api/service-cases" && request.method === "GET") {
