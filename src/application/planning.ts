@@ -12,7 +12,9 @@ import { Store } from "../domain/ports";
 const fail = (message: string, status = 409) =>
   Effect.fail(new BankingError({ message, status }));
 const decode = (raw: string, household: string) =>
-  Schema.decodeUnknown(Schema.parseJson(StateSchema))(raw).pipe(
+  Schema.decodeUnknown(Schema.parseJson(StateSchema), {
+    onExcessProperty: "error",
+  })(raw).pipe(
     Effect.mapError(
       () =>
         new BankingError({
@@ -69,7 +71,12 @@ export const readPlanning = (session: Session, household: string) =>
       session.bank_id,
       household,
     );
-    return { state, history, readOnly: session.role !== "customer" };
+    return {
+      state,
+      history,
+      relationship: session.bank_id,
+      readOnly: session.role !== "customer",
+    };
   });
 const commandReplay = (session: Session, key: string, payload: string) =>
   Effect.gen(function* () {
@@ -95,6 +102,36 @@ const commandReplay = (session: Session, key: string, payload: string) =>
         "This command reference belongs to different planning inputs.",
       );
     return yield* decode(event.state, event.household_id);
+  });
+export const inspectPlanningCommand = (
+  session: Session,
+  household: string,
+  key: string,
+) =>
+  Effect.gen(function* () {
+    yield* readPlanning(session, household);
+    if (!/^[a-zA-Z0-9_-]{8,100}$/.test(key))
+      return yield* fail(
+        "A valid planning command reference is required.",
+        400,
+      );
+    const store = yield* Store;
+    const event = yield* store.one<{ state: string }>(
+      "SELECT state FROM planning_events WHERE bank_id=? AND household_id=? AND command_key=?",
+      session.bank_id,
+      household,
+      key,
+    );
+    if (!event)
+      return yield* fail(
+        "No planning command is recorded with this reference. Retain its original inputs before retrying.",
+        404,
+      );
+    return {
+      state: yield* decode(event.state, household),
+      confirmedKey: key,
+      relationship: session.bank_id,
+    };
   });
 export const initializePlanning = (
   session: Session,
