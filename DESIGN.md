@@ -12,6 +12,7 @@ The shared system uses a light workspace, white navigation, cobalt actions and a
 - Account surface secondary text `#d4e3ff`; normal colored status labels retain explicit words/icons.
 - Major panels: 16px corners, 24–28px spacing, simple borders. Primary controls at least 50px high; horizontal navigation scrolls within its own container on narrow screens.
 - Reading size persists on this device. If browser storage fails, the selection still works for the visit and discloses that limitation.
+- The demo persona picker uses Radix Select, matching the existing Radix dialogs. Its portal avoids sidebar clipping, options have 50px targets and a selected checkmark, and the busy state prevents role changes. Keep keyboard navigation, typeahead, Escape and focus return.
 - Responsive account facts stack, dashboard columns collapse, forms use one column, and action controls wrap. Preserve local fonts, reduced-motion support and visible keyboard focus.
 
 ## Public visual research

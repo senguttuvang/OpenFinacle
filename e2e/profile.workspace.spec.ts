@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ProfileDetail } from "../src/domain/profile";
 import { serviceCatalog } from "../src/domain/services";
+import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test("profile enquiry shows approved effects, source cases and shared staff state after reload", async ({
@@ -97,7 +98,7 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
     page.getByLabel("Search request references or details"),
   ).toHaveValue(reference);
   await expect.poll(() => requestQuery).toBe(reference);
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   await page
     .getByRole("button", { name: "Customer profile", exact: true })
     .click();

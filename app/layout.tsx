@@ -11,6 +11,7 @@ import "./service-centre.css";
 import "./cards.css";
 import "./banking-surfaces.css";
 import "./banking-design.css";
+import "./persona-select.css";
 export const metadata: Metadata = {
   title: "OpenFinacle — Everyday banking, connected",
   description: "A working banking sandbox powered by Apache Fineract.",

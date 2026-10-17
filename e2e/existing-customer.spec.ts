@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Dashboard } from "../src/domain/view";
+import { choosePersona } from "./fixtures/persona";
 
 test("existing customer: populated core account, transfer, service request and journey switch", async ({
   page,
@@ -85,7 +86,7 @@ test("existing customer: populated core account, transfer, service request and j
     .getByRole("button", { name: "Submit request", exact: true })
     .click();
   await expect(page.getByText("Service request recorded.")).toBeVisible();
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   await expect(
     page.getByRole("status").filter({ hasText: "Switched to" }),
   ).toBeVisible();
@@ -102,7 +103,7 @@ test("existing customer: populated core account, transfer, service request and j
     .click();
   await page.getByRole("button", { name: "Record demo fulfilment" }).click();
   await expect(page.getByText("Demo fulfilment recorded.")).toBeVisible();
-  await page.getByLabel("Demo persona").selectOption("customer");
+  await choosePersona(page, "customer");
   await expect(
     page.getByRole("status").filter({ hasText: "Switched to" }),
   ).toBeVisible();

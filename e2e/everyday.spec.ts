@@ -1,8 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import type { Role } from "../src/domain/banking";
 import type { Dashboard } from "../src/domain/view";
+import { choosePersona } from "./fixtures/persona";
 
-const changeRole = async (page: Page, role: string) => {
-  await page.getByLabel("Demo persona").selectOption(role);
+const changeRole = async (page: Page, role: Role) => {
+  await choosePersona(page, role);
   await expect(
     page.getByRole("status").filter({ hasText: "Switched to" }),
   ).toBeVisible();
@@ -94,7 +96,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   await page
     .getByRole("button", { name: "Review pending instruction" })
     .click();
-  await expect(page.getByLabel("Demo persona")).toHaveValue("approver");
+  await expect(page.getByLabel("Demo persona")).toHaveText("Approver");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(
     page.getByText("Instruction posted. Account balances are updated."),
