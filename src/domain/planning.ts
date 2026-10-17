@@ -257,7 +257,10 @@ export const planningProjection = (
   a: PlanningAssumptions,
 ): PlanningYear[] => {
   let assets = planningWealth(h).investable;
-  const prepayment = Math.min(a.prepayment, h.debt.principal, assets);
+  const prepayment = Math.max(
+    0,
+    Math.min(a.prepayment, h.debt.principal, assets),
+  );
   assets -= prepayment;
   let debt = { ...h.debt, principal: h.debt.principal - prepayment };
   let deflator = 1;
@@ -278,18 +281,20 @@ export const planningProjection = (
       income = Math.round((income * (12 - breakMonths)) / 12);
     const essential = Math.round(
       (a.essential * 12 + (i < a.dependentYears ? a.dependent * 12 : 0)) *
-        (1 + a.essentialInflation / 10000) ** i,
+        (1 + a.essentialInflation / 10000) ** (i + 1),
     );
     const discretionary = Math.round(
       (a.discretionary * 12 + a.rentChange * 12) *
-        (1 + a.discretionaryInflation / 10000) ** i,
+        (1 + a.discretionaryInflation / 10000) ** (i + 1),
     );
     const amortized = planningAmortize(debt, 12);
     debt = { ...debt, principal: amortized.principal };
     const debtPayment = amortized.interest + amortized.paidPrincipal;
     const goals =
       (year === a.educationYear
-        ? Math.round(a.education * (1 + a.essentialInflation / 10000) ** i)
+        ? Math.round(
+            a.education * (1 + a.essentialInflation / 10000) ** (i + 1),
+          )
         : 0) + (year === a.breakYear ? a.medicalShock : 0);
     const returnRate =
       a.adverseSequence && retired && age - a.retireAge < 3
@@ -298,12 +303,20 @@ export const planningProjection = (
     const sip = retired
       ? 0
       : Math.min(
-          Math.max(0, income - essential - discretionary - debtPayment - goals),
+          Math.max(
+            0,
+            income -
+              essential -
+              discretionary -
+              debtPayment -
+              goals +
+              Math.min(0, assets),
+          ),
           Math.round(a.sip * 12 * (1 + a.sipStep / 10000) ** i),
         );
     // SIP is allocation of surplus, not an additional cash source. Half-year return on current contributions.
     const growth =
-      Math.round((assets * (returnRate - a.fee)) / 10000) +
+      Math.round((Math.max(0, assets) * (returnRate - a.fee)) / 10000) +
       Math.round((sip * (returnRate - a.fee)) / 20000);
     const closing =
       assets +
