@@ -1,7 +1,6 @@
 "use client";
 
-import { Effect } from "effect";
-import { ArrowLeft, Check, Landmark, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Check, Landmark } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   evaluatePlanningProjection,
@@ -10,22 +9,21 @@ import {
   planningAnchor,
   planningDay,
   planningForecast,
+  planningMonthRange,
   planningRange,
   planningRows,
   planningTotals,
   planningWealth,
 } from "../../src/domain/planning";
 import { planningHouseholds } from "../../src/domain/planning-fixtures";
-import {
-  initialPlanningState,
-  type PlanningScenario,
-  type PlanningState,
-} from "../../src/domain/planning-state";
+import type { PlanningScenario } from "../../src/domain/planning-state";
 import { ReadingSize } from "../reading-size";
-import { loadPlanningDevice, savePlanningDevice } from "./planning-device";
+import { PlanningBudgetControls } from "./planning-budget-controls";
 import { PlanningFilters } from "./planning-filters";
 import { PlanningOverview } from "./planning-overview";
 import { PlanningProjection } from "./planning-projection";
+import { usePlanningRepository } from "./planning-repository";
+import { PlanningSource } from "./planning-source";
 import { Transactions } from "./planning-transactions";
 import { Trend } from "./planning-trend";
 import "./planning.css";
@@ -49,46 +47,46 @@ const emptyFilter: PlanningFilter = {
 export default function PlanningPage() {
   const [householdId, setHouseholdId] = useState(households[1]!.id);
   const household = households.find((h) => h.id === householdId)!;
-  const [state, setState] = useState<PlanningState>(() =>
-    initialPlanningState(household),
-  );
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const repository = usePlanningRepository(household);
+  const { state, ready, busy, error, notice, persist, canEdit } = repository;
   const [tab, setTab] = useState<Tab>("Overview");
   const [filter, setFilter] = useState<PlanningFilter>(emptyFilter);
   const [preset, setPreset] = useState("90");
   const [selected, setSelected] = useState("baseline");
   const [editing, setEditing] = useState<PlanningScenario | null>(null);
   const [today, setToday] = useState(true);
+  const [drillStack, setDrillStack] = useState<
+    { filter: PlanningFilter; preset: string; tab: Tab; origin: string }[]
+  >([]);
+  const [focusTransactions, setFocusTransactions] = useState(false);
+  const [restoreOrigin, setRestoreOrigin] = useState("");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching household or source deliberately resets the local editor selection.
   useEffect(() => {
-    setReady(false);
-    setError("");
-    setNotice("");
     setSelected("baseline");
     setEditing(null);
-    const result = Effect.runSync(Effect.either(loadPlanningDevice(household)));
-    if (result._tag === "Left") setError(result.left.message);
-    else {
-      setState(result.right);
-      setReady(true);
+    setDrillStack([]);
+    setFocusTransactions(false);
+  }, [household.id, repository.mode]);
+  useEffect(() => {
+    if (!state.scenarios.some((s) => s.id === selected))
+      setSelected("baseline");
+  }, [state.scenarios, selected]);
+  useEffect(() => {
+    if (ready && focusTransactions && tab === "Cash flow") {
+      document.querySelector<HTMLElement>("#planning-transactions h2")?.focus();
+      setFocusTransactions(false);
     }
-  }, [household]);
-  const persist = (proposed: PlanningState) => {
-    const result = Effect.runSync(
-      Effect.either(savePlanningDevice(state, proposed)),
-    );
-    if (result._tag === "Left") {
-      setError(result.left.message);
-      return false;
+  }, [ready, focusTransactions, tab]);
+  useEffect(() => {
+    if (restoreOrigin && ready) {
+      const element =
+        document.querySelector<HTMLElement>(
+          `[data-planning-drill="${CSS.escape(restoreOrigin)}"]`,
+        ) ?? document.querySelector<HTMLElement>(".wealth-planning h1");
+      element?.focus();
+      setRestoreOrigin("");
     }
-    setState(result.right);
-    setNotice(
-      `Saved on this device · household version ${result.right.version}`,
-    );
-    setError("");
-    return true;
-  };
+  }, [restoreOrigin, ready]);
   const rows = useMemo(
     () => planningRows(household, filter),
     [household, filter],
@@ -137,15 +135,57 @@ export default function PlanningPage() {
   const projection =
     projectionResult._tag === "Right" ? projectionResult.right : [];
   const firstGap = projection.find((p) => p.gap > 0);
-  const forecast = planningForecast(household);
+  const baselineAssumptions = state.scenarios.find(
+    (s) => s.id === "baseline",
+  )!.assumptions;
+  const retiredBaseline =
+    baselineAssumptions.age >= baselineAssumptions.retireAge;
+  const forecastIncome = retiredBaseline
+    ? baselineAssumptions.pension
+    : baselineAssumptions.income;
+  const forecastSip = retiredBaseline ? 0 : baselineAssumptions.sip;
+  const forecast = planningForecast(household, 90, baselineAssumptions);
   const shortfall = forecast.find((p) => p.balance < 0);
-  const drill = (category: string) => {
+  const nextCommitment = forecast.find((p) => p.date.endsWith("-05"));
+  const rememberDrill = (origin: string) =>
+    setDrillStack((stack) => [
+      ...stack.slice(-19),
+      { filter, preset, tab, origin },
+    ]);
+  const drill = (category: string, origin = `category:${category}`) => {
+    rememberDrill(origin);
     setFilter({ ...filter, category });
     setTab("Cash flow");
+    setFocusTransactions(true);
+  };
+  const inspectMonth = (month: string) => {
+    rememberDrill(`month:${month}`);
+    setPreset("custom");
+    setFilter(planningMonthRange(filter, month));
+    setFocusTransactions(true);
+  };
+  const backFromDrill = () => {
+    const previous = drillStack.at(-1);
+    if (!previous) return;
+    setFilter(previous.filter);
+    setPreset(previous.preset);
+    setTab(previous.tab);
+    setDrillStack((stack) => stack.slice(0, -1));
+    setRestoreOrigin(previous.origin);
   };
   const daily = (value: number) =>
     Math.round((value * periodDays) / (365 / 12));
   const alerts = [
+    ...(nextCommitment && forecastSip + household.debt.emi > 0
+      ? [
+          {
+            id: `commitment:${nextCommitment.date}:${forecastSip + household.debt.emi}`,
+            title: `Upcoming planned allocation on ${nextCommitment.date}`,
+            detail: `${money(forecastSip)} SIP plus ${money(household.debt.emi)} EMI under the saved baseline monthly assumptions. This is a forecast assumption, not a bank mandate or pending order.`,
+            category: "",
+          },
+        ]
+      : []),
     ...(projectionResult._tag === "Left"
       ? [
           {
@@ -163,7 +203,7 @@ export default function PlanningPage() {
           c.spending > daily(state.budgets[c.category]!),
       )
       .map((c) => ({
-        id: `budget:${c.category}:${filter.from}:${filter.to}`,
+        id: `budget:${c.category}:${filter.from}:${filter.to}:${filter.account}:${filter.member}:${state.budgets[c.category]}:${c.spending}`,
         title: `${c.category} exceeds the selected-period budget`,
         detail: `${money(c.spending)} recorded versus ${money(daily(state.budgets[c.category]!))} prorated budget. ${rows.filter((p) => p.category === c.category).length} source postings.`,
         category: c.category,
@@ -208,7 +248,7 @@ export default function PlanningPage() {
       : []),
   ];
   return (
-    <main className="wealth-planning">
+    <main className="wealth-planning" aria-busy={busy}>
       <header className="wp-header">
         <a href="/" className="wp-brand">
           <Landmark size={26} />
@@ -225,7 +265,7 @@ export default function PlanningPage() {
       </div>
       <div className="wp-title">
         <div>
-          <h1>A clearer view of your household</h1>
+          <h1 tabIndex={-1}>A clearer view of your household</h1>
           <p>
             Understand what you have, where it goes, and what could come next.
           </p>
@@ -239,6 +279,7 @@ export default function PlanningPage() {
               setFilter(emptyFilter);
             }}
             aria-label="Household"
+            disabled={busy}
           >
             {households.map((h) => (
               <option key={h.id} value={h.id}>
@@ -278,11 +319,7 @@ export default function PlanningPage() {
           </button>
         ))}
       </nav>
-      <p className="wp-storage">
-        Local preview · changes save on this device only. Server persistence and
-        consent-scoped adviser integration are pending shared-file release. No
-        banking officer access is granted here.
-      </p>
+      <PlanningSource repository={repository} />
       <div aria-live="polite">
         {notice && (
           <p className="wp-notice">
@@ -323,6 +360,7 @@ export default function PlanningPage() {
           {tab === "Overview" && (
             <PlanningOverview
               household={household}
+              assumptions={baselineAssumptions}
               totals={totals}
               onCashFlow={() => setTab("Cash flow")}
             />
@@ -362,11 +400,13 @@ export default function PlanningPage() {
                     labels={months}
                     series={[
                       {
+                        id: "recorded-income",
                         name: "Income",
                         values: monthly.map((m) => m.income),
                         color: "#2458d3",
                       },
                       {
+                        id: "recorded-consumption",
                         name: "Consumption",
                         values: monthly.map((m) => m.spending),
                         color: "#9a4b0d",
@@ -401,25 +441,8 @@ export default function PlanningPage() {
                               <button
                                 type="button"
                                 className="secondary"
-                                onClick={() => {
-                                  setPreset("custom");
-                                  setFilter({
-                                    ...filter,
-                                    from: `${m.month}-01`,
-                                    to:
-                                      m.month === "2026-10"
-                                        ? planningAnchor
-                                        : new Date(
-                                            Date.UTC(
-                                              Number(m.month.slice(0, 4)),
-                                              Number(m.month.slice(5)),
-                                              0,
-                                            ),
-                                          )
-                                            .toISOString()
-                                            .slice(0, 10),
-                                  });
-                                }}
+                                data-planning-drill={`month:${m.month}`}
+                                onClick={() => inspectMonth(m.month)}
                               >
                                 Inspect month
                               </button>
@@ -468,7 +491,7 @@ export default function PlanningPage() {
                             >
                               <span
                                 style={{
-                                  width: `${Math.min(100, (c.spending / Math.max(1, daily(state.budgets[c.category] ?? c.spending))) * 100)}%`,
+                                  width: `${Math.max(0, Math.min(100, (c.spending / Math.max(1, daily(state.budgets[c.category] ?? c.spending))) * 100))}%`,
                                 }}
                               />
                             </div>
@@ -482,50 +505,18 @@ export default function PlanningPage() {
                             </small>
                           </td>
                           <td>
-                            <form
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const data = new FormData(e.currentTarget);
-                                persist({
-                                  ...state,
-                                  budgets: {
-                                    ...state.budgets,
-                                    [c.category]: Math.round(
-                                      Number(data.get("budget")) * 100,
-                                    ),
-                                  },
-                                });
-                              }}
-                            >
-                              <label
-                                className="wp-sr"
-                                htmlFor={`budget-${c.category}`}
-                              >
-                                {c.category} monthly budget INR
-                              </label>
-                              <input
-                                id={`budget-${c.category}`}
-                                name="budget"
-                                type="number"
-                                min="0"
-                                max="10000000"
-                                required
-                                defaultValue={
-                                  state.budgets[c.category] === undefined
-                                    ? ""
-                                    : state.budgets[c.category]! / 100
-                                }
-                                key={`${household.id}-${state.version}`}
-                              />
-                              <button type="submit" className="secondary">
-                                Save budget
-                              </button>
-                            </form>
+                            <PlanningBudgetControls
+                              category={c.category}
+                              state={state}
+                              canEdit={canEdit}
+                              persist={persist}
+                            />
                           </td>
                           <td>
                             <button
                               type="button"
                               className="secondary"
+                              data-planning-drill={`category:${c.category}`}
                               onClick={() => drill(c.category)}
                             >
                               View postings
@@ -538,7 +529,17 @@ export default function PlanningPage() {
                 </div>
               </section>
               <section className="wp-panel" id="planning-transactions">
-                <h2>Source transactions</h2>
+                <h2 tabIndex={-1}>Source transactions</h2>
+                {drillStack.length > 0 && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={backFromDrill}
+                  >
+                    <ArrowLeft size={18} />
+                    Back to previous view
+                  </button>
+                )}
                 <p>
                   {filter.category || "All categories"} · {filter.from}–
                   {filter.to}. Filtered consumption total:{" "}
@@ -553,17 +554,20 @@ export default function PlanningPage() {
                 <h2>90-day forecast & recurring commitments</h2>
                 <p>
                   18 October 2026 onwards; independent of recorded filters.
-                  Take-home {money(household.assumptions.income)} on day 1, SIP{" "}
-                  {money(household.assumptions.sip)} and EMI{" "}
-                  {money(household.debt.emi)} on day 5. Living and dependent
-                  costs spread daily at annual cost / 365. No prediction of
-                  market prices, professional invoice timing or unmodeled
-                  seasonal bills.
+                  Income / pension {money(forecastIncome)} on day 1, SIP{" "}
+                  {money(forecastSip)} and EMI {money(household.debt.emi)} on
+                  day 5. Living and dependent costs spread daily at annual cost
+                  / 365. No prediction of market prices, professional invoice
+                  timing or unmodeled seasonal bills. All cash after card
+                  liabilities is treated as available; reserve accounts are not
+                  protected. Career breaks, prepayment and one-off shocks belong
+                  to the annual scenario view.
                 </p>
                 <Trend
                   labels={forecast.map((p) => p.date)}
                   series={[
                     {
+                      id: "forecast-balance",
                       name: "Assumed cash balance",
                       values: forecast.map((p) => p.balance),
                       color: "#2458d3",
@@ -604,6 +608,7 @@ export default function PlanningPage() {
               household={household}
               state={state}
               persist={persist}
+              canEdit={canEdit}
               selected={selected}
               setSelected={setSelected}
               editing={editing}
@@ -618,8 +623,8 @@ export default function PlanningPage() {
               <h2>Insights you can explain</h2>
               <p>
                 Calculated from selected postings and saved model inputs.
-                Acknowledgments persist on this device. No notification or
-                payment is sent.
+                Acknowledgments persist in the selected data source. No
+                notification or payment is sent.
               </p>
               {alerts.map((alert) => (
                 <article
@@ -634,13 +639,17 @@ export default function PlanningPage() {
                     <button
                       type="button"
                       className="secondary"
+                      data-planning-drill={`insight:${alert.id}`}
                       onClick={() => {
-                        if (alert.category) drill(alert.category);
+                        if (alert.category)
+                          drill(alert.category, `insight:${alert.id}`);
                         else
                           setTab(
-                            alert.id.startsWith("goal")
+                            alert.id.startsWith("goal") ||
+                              alert.id.startsWith("calculation")
                               ? "Goals & retirement"
-                              : alert.id === "cash-shortfall"
+                              : alert.id === "cash-shortfall" ||
+                                  alert.id.startsWith("commitment")
                                 ? "Cash flow"
                                 : "Overview",
                           );
@@ -651,6 +660,7 @@ export default function PlanningPage() {
                     <button
                       type="button"
                       className="secondary"
+                      disabled={!canEdit}
                       onClick={() =>
                         persist({
                           ...state,

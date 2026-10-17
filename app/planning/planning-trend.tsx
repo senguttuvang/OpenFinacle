@@ -1,14 +1,21 @@
 import { useId } from "react";
 import { planningMoney as money } from "../../src/domain/planning";
 
-const amount = (minor: number) => money(Math.round(minor));
+const amount = (minor: number) => {
+  const magnitude = Math.abs(minor);
+  const scale =
+    magnitude >= 1000000000 ? 1000000000 : magnitude >= 10000000 ? 10000000 : 0;
+  return scale
+    ? `${minor < 0 ? "−" : ""}₹${(magnitude / scale).toFixed(1)} ${scale === 1000000000 ? "Cr" : "L"}`
+    : money(Math.round(minor));
+};
 export function Trend({
   labels,
   series,
   caption,
 }: {
   labels: string[];
-  series: { name: string; values: number[]; color: string }[];
+  series: { id: string; name: string; values: number[]; color: string }[];
   caption: string;
 }) {
   const id = useId();
@@ -23,14 +30,14 @@ export function Trend({
         {[0, 0.5, 1].map((fraction) => (
           <g key={fraction}>
             <line
-              x1="90"
-              x2="680"
+              x1="140"
+              x2="660"
               y1={y(min + (max - min) * fraction)}
               y2={y(min + (max - min) * fraction)}
               stroke="#dae2ef"
             />
             <text
-              x="82"
+              x="132"
               y={y(min + (max - min) * fraction) + 5}
               textAnchor="end"
             >
@@ -40,11 +47,11 @@ export function Trend({
         ))}
         {series.map((s) => (
           <polyline
-            key={s.name}
+            key={s.id}
             points={s.values
               .map(
                 (value, i) =>
-                  `${90 + (i / Math.max(1, labels.length - 1)) * 580},${y(value)}`,
+                  `${140 + (i / Math.max(1, labels.length - 1)) * 510},${y(value)}`,
               )
               .join(" ")}
             fill="none"
@@ -63,8 +70,8 @@ export function Trend({
             <text
               key={label}
               x={
-                90 +
-                (labels.indexOf(label) / Math.max(1, labels.length - 1)) * 580
+                140 +
+                (labels.indexOf(label) / Math.max(1, labels.length - 1)) * 510
               }
               y="201"
               textAnchor="middle"
@@ -75,9 +82,13 @@ export function Trend({
       </svg>
       <figcaption>
         {caption}
+        <small>
+          Axis labels are rounded; L = lakh, Cr = crore. Exact values are
+          available in the data table.
+        </small>
         <span className="wp-legend">
           {series.map((s) => (
-            <span key={s.name}>
+            <span key={s.id}>
               <i style={{ background: s.color }} />
               {s.name}
             </span>

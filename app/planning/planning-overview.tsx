@@ -1,6 +1,7 @@
 import { ArrowUpRight, ChevronRight } from "lucide-react";
 import {
   planningMoney as money,
+  type PlanningAssumptions,
   type PlanningHousehold,
   planningAnchor,
   planningBalances,
@@ -15,10 +16,16 @@ type Props = {
   household: PlanningHousehold;
   totals: ReturnType<typeof planningTotals>;
   onCashFlow: () => void;
+  assumptions: PlanningAssumptions;
 };
-export function PlanningOverview({ household, totals, onCashFlow }: Props) {
+export function PlanningOverview({
+  household,
+  totals,
+  onCashFlow,
+  assumptions,
+}: Props) {
   const wealth = planningWealth(household);
-  const forecast = planningForecast(household);
+  const forecast = planningForecast(household, 90, assumptions);
   const shortfall = forecast.find((p) => p.balance < 0);
   const history = planningWealthHistory(household);
   return (
@@ -28,8 +35,10 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
           <h2>Household net worth</h2>
           <strong className="wp-total">{money(wealth.net)}</strong>
           <p>
-            Assets {money(wealth.assets)} less home loan{" "}
-            {money(household.debt.principal)}.<br />
+            Gross assets {money(wealth.assets)} less liabilities{" "}
+            {money(wealth.liabilities)}: home loan{" "}
+            {money(household.debt.principal)}, card / overdraft{" "}
+            {money(wealth.cardLiability)}.<br />
             Synthetic valuations as of 17 October 2026 unless stated.
           </p>
         </div>
@@ -44,7 +53,7 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
           </div>
           <div>
             <dt>Home / locked assets</dt>
-            <dd>{money(wealth.assets - wealth.investable)}</dd>
+            <dd>{money(wealth.nonSpendable)}</dd>
           </div>
         </dl>
       </section>
@@ -122,7 +131,7 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
           <table>
             <thead>
               <tr>
-                <th>Asset / source</th>
+                <th>Asset or liability / source</th>
                 <th>Owner / liquidity</th>
                 <th>Value</th>
                 <th>As of</th>
@@ -166,6 +175,23 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
                   <td>{h.asOf}</td>
                 </tr>
               ))}
+              {household.debt.principal > 0 && (
+                <tr>
+                  <td>
+                    Synthetic Cedar Home Finance
+                    <small>
+                      Illustrative loan contract · {household.debt.rate / 100}%
+                      annual rate · EMI {money(household.debt.emi)}
+                    </small>
+                  </td>
+                  <td>
+                    {household.members.join(" + ")}
+                    <small>Joint home-loan liability; counted once</small>
+                  </td>
+                  <td>{money(-household.debt.principal)}</td>
+                  <td>{planningAnchor}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -189,17 +215,17 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
           </div>
         ))}
         <div className="wp-allocation">
-          <span>Net cash</span>
+          <span>Cash assets before card liability</span>
           <div className="wp-bar-track">
             <span
               style={{
-                width: `${Math.max(0, (wealth.cash / wealth.assets) * 100)}%`,
+                width: `${Math.max(0, (wealth.grossCash / wealth.assets) * 100)}%`,
               }}
             />
           </div>
           <strong>
-            {money(wealth.cash)} ·{" "}
-            {((wealth.cash / wealth.assets) * 100).toFixed(1)}%
+            {money(wealth.grossCash)} ·{" "}
+            {((wealth.grossCash / wealth.assets) * 100).toFixed(1)}%
           </strong>
         </div>
       </section>
@@ -217,11 +243,13 @@ export function PlanningOverview({ household, totals, onCashFlow }: Props) {
           labels={history.map((p) => p.date.slice(0, 7))}
           series={[
             {
+              id: "net-worth",
               name: "Net worth",
               values: history.map((p) => p.net),
               color: "#2458d3",
             },
             {
+              id: "investable-holdings",
               name: "Investable holdings",
               values: history.map((p) => p.capital),
               color: "#176045",

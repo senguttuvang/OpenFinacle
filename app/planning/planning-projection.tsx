@@ -4,6 +4,7 @@ import {
   evaluatePlanningProjection,
   planningMoney as money,
   type PlanningHousehold,
+  planningRetirementStart,
 } from "../../src/domain/planning";
 import type {
   PlanningScenario,
@@ -16,7 +17,8 @@ const amount = (minor: number) => money(Math.round(minor));
 type Props = {
   household: PlanningHousehold;
   state: PlanningState;
-  persist: (state: PlanningState) => boolean;
+  persist: (state: PlanningState) => Promise<boolean>;
+  canEdit: boolean;
   selected: string;
   setSelected: (id: string) => void;
   editing: PlanningScenario | null;
@@ -29,6 +31,7 @@ export function PlanningProjection({
   household,
   state,
   persist,
+  canEdit,
   selected,
   setSelected,
   editing,
@@ -58,6 +61,7 @@ export function PlanningProjection({
         </p>
         <button
           type="button"
+          disabled={!canEdit}
           onClick={() =>
             setEditing(selectedResult._tag === "Left" ? scenario : baseline)
           }
@@ -69,9 +73,10 @@ export function PlanningProjection({
             key={editing.id}
             scenario={editing}
             cancel={() => setEditing(null)}
-            save={(s) => {
+            disabled={!canEdit}
+            save={async (s) => {
               if (
-                persist({
+                await persist({
                   ...state,
                   scenarios: state.scenarios.map((item) =>
                     item.id === s.id ? s : item,
@@ -88,7 +93,7 @@ export function PlanningProjection({
   const baselineProjection = baselineResult.right;
   const firstGap = projection.find((p) => p.gap > 0);
   const gap = projection.reduce(
-    (sum, p) => sum + p.gap / (today ? p.deflator : 1),
+    (sum, p) => sum + Math.round(p.gap / (today ? p.deflator : 1)),
     0,
   );
   return (
@@ -102,8 +107,8 @@ export function PlanningProjection({
                 : "Goals and retirement cash flow"}
             </h2>
             <p>
-              Deterministic model india-household-v1 · from 2027 · assumptions,
-              not financial advice.
+              Deterministic model india-household-v1 · annual periods ending 17
+              October, first in 2027 · assumptions, not financial advice.
             </p>
           </div>
           <label className="wp-check">
@@ -132,14 +137,18 @@ export function PlanningProjection({
               ))}
             </select>
           </label>
-          <button type="button" onClick={() => setEditing(scenario)}>
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={() => setEditing(scenario)}
+          >
             Edit assumptions
           </button>
           <button
             type="button"
             className="secondary"
-            disabled={state.scenarios.length >= 20}
-            onClick={() => {
+            disabled={!canEdit || state.scenarios.length >= 20}
+            onClick={async () => {
               const copy = {
                 ...scenario,
                 id: crypto.randomUUID(),
@@ -148,7 +157,7 @@ export function PlanningProjection({
                 assumptions: { ...scenario.assumptions },
               };
               if (
-                persist({
+                await persist({
                   ...state,
                   scenarios: [...state.scenarios, copy],
                 })
@@ -164,8 +173,8 @@ export function PlanningProjection({
           <button
             type="button"
             className="secondary"
-            disabled={state.scenarios.length >= 20}
-            onClick={() => {
+            disabled={!canEdit || state.scenarios.length >= 20}
+            onClick={async () => {
               const copy = {
                 ...baseline,
                 id: crypto.randomUUID(),
@@ -174,7 +183,7 @@ export function PlanningProjection({
                 assumptions: { ...baseline.assumptions },
               };
               if (
-                persist({
+                await persist({
                   ...state,
                   scenarios: [...state.scenarios, copy],
                 })
@@ -190,10 +199,10 @@ export function PlanningProjection({
           <button
             type="button"
             className="secondary"
-            disabled={selected === "baseline"}
-            onClick={() => {
+            disabled={!canEdit || selected === "baseline"}
+            onClick={async () => {
               if (
-                persist({
+                await persist({
                   ...state,
                   scenarios: state.scenarios.filter((s) => s.id !== selected),
                 })
@@ -210,9 +219,10 @@ export function PlanningProjection({
             key={editing.id}
             scenario={editing}
             cancel={() => setEditing(null)}
-            save={(s) => {
+            disabled={!canEdit}
+            save={async (s) => {
               if (
-                persist({
+                await persist({
                   ...state,
                   scenarios: state.scenarios.map((item) =>
                     item.id === s.id ? s : item,
@@ -227,6 +237,10 @@ export function PlanningProjection({
           <div>
             <dt>Retirement age</dt>
             <dd>{scenario.assumptions.retireAge}</dd>
+            <small>
+              Phase starts {planningRetirementStart(scenario.assumptions)} ·
+              annual boundary
+            </small>
           </div>
           <div>
             <dt>First unfunded year</dt>
@@ -251,6 +265,7 @@ export function PlanningProjection({
           labels={projection.map((p) => String(p.year))}
           series={[
             {
+              id: "selected-projection",
               name: scenario.name,
               values: projection.map(
                 (p) => p.closing / (today ? p.deflator : 1),
@@ -258,10 +273,11 @@ export function PlanningProjection({
               color: "#2458d3",
             },
             {
+              id: "baseline-projection",
               name: "Baseline",
-              values: baselineProjection.map(
-                (p) => p.closing / (today ? p.deflator : 1),
-              ),
+              values: baselineProjection
+                .slice(0, projection.length)
+                .map((p) => p.closing / (today ? p.deflator : 1)),
               color: "#8b5599",
             },
           ]}
@@ -314,7 +330,7 @@ export function PlanningProjection({
           <table>
             <thead>
               <tr>
-                <th>Year / age</th>
+                <th>Period end year / start age</th>
                 <th>Income</th>
                 <th>Living / dependent costs</th>
                 <th>Debt paid</th>
@@ -327,7 +343,7 @@ export function PlanningProjection({
             <tbody>
               {projection.map((p, index) => {
                 const divisor = today ? p.deflator : 1;
-                const base = baselineProjection[index]!;
+                const base = baselineProjection[index];
                 return (
                   <tr key={p.year}>
                     <td>
@@ -336,16 +352,36 @@ export function PlanningProjection({
                     </td>
                     <td>{amount(p.income / divisor)}</td>
                     <td>{amount((p.essential + p.discretionary) / divisor)}</td>
-                    <td>{amount(p.debtPayment / divisor)}</td>
+                    <td>
+                      {amount(p.debtPayment / divisor)}
+                      <small>
+                        Remaining {amount(p.debt / divisor)}
+                        {base && (
+                          <>
+                            {" "}
+                            · baseline{" "}
+                            {amount(base.debt / (today ? base.deflator : 1))}
+                          </>
+                        )}
+                      </small>
+                    </td>
                     <td>{amount(p.goals / divisor)}</td>
                     <td>{amount(p.growth / divisor)}</td>
                     <td>
                       {amount(p.closing / divisor)}
                       <small>
-                        Δ{" "}
-                        {amount(
-                          p.closing / divisor -
-                            base.closing / (today ? base.deflator : 1),
+                        {base ? (
+                          <>
+                            Baseline{" "}
+                            {amount(base.closing / (today ? base.deflator : 1))}
+                            <br />Δ{" "}
+                            {amount(
+                              p.closing / divisor -
+                                base.closing / (today ? base.deflator : 1),
+                            )}
+                          </>
+                        ) : (
+                          "Baseline horizon ended"
                         )}
                       </small>
                     </td>
