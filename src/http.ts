@@ -26,6 +26,7 @@ import {
 } from "./application/cards";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
 import { financialView } from "./application/financial-view";
+import { customerProfile } from "./application/profile";
 import {
   actOnServiceCase,
   listServiceCases,
@@ -500,6 +501,8 @@ const handle = (request: Request, env: Environment) =>
         },
       });
     }
+    if (path === "/api/profile" && request.method === "GET")
+      return Response.json(yield* customerProfile(session));
     if (path === "/api/cards" && request.method === "GET") {
       const id = url.searchParams.get("id");
       const key = url.searchParams.get("key");
