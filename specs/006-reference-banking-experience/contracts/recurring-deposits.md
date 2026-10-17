@@ -1,0 +1,35 @@
+# Recurring-deposit plans and installments
+
+Date: 17 October 2026. Execution: Beads `of-9hc.11`. This extends the persistent product boundary in [fixed deposits](deposits.md), not the generic service-case completion flag.
+
+## Evidence and differences
+
+The public [ICICI RD FAQ](https://www.icici.bank.in/personal-banking/deposits/recurring-deposits/recurring-deposit-faqs) and [opening terms](https://www.icici.bank.in/personal-banking/deposits/recurring-deposits/open-rd-tnc) document a fixed monthly amount, ₹500 minimum in ₹100 increments, and 6–120 months in three-month increments. The opening terms describe first funding at opening, subsequent monthly instructions and linked savings debits. They also describe branch nomination and maturity credit. This is public documented evidence, not authenticated page/form/state inspection. Supplied dated Finacle notes mention an irregular-RD report and term-deposit opening/verification/maintenance; these do not prove current bank/version aliases or staff permissions. Do not add an unverified shortcut.
+
+Our field layout, independent authorization, in-app adult nominee, plan label and manual demo-allocation workflow are inferred demonstration choices. Unlike the documented real standing instruction, this simulation never debits savings, establishes a real mandate, settles funds, charges fees or credits maturity proceeds. Interest/tax/penalty, premature closure and renewal servicing require further contracts. Goal labels organize these fixed recurring plans; they do not establish flexible iWish product parity.
+
+## Product and commands
+
+One `demo-recurring` cumulative plan accepts a whole-rupee monthly allocation of ₹500–₹1,00,000 in ₹100 increments, a term of 6–120 months in three-month increments, a subsequent monthly day 1–28, an optional invented plan/goal name up to 80 characters, and an optional adult nominee using the existing nominee contract. Limits and the narrowed day choice are explicit demo rules. The illustrative annual rate is fixed at 6% simple interest. Projected maturity assumes every planned allocation on time; calculate principal plus the sum of month-prorated simple interest and round once to paise. It is an illustration, not posted interest or an advertised bank rate.
+
+Customer validation → review/edit → durable submission creates a plan application. Officer recommendation → independent approver activation creates one immutable schedule of `months` installments. Customer can cancel before recommendation; officer may reject submitted plans; approver may reject recommended plans. Reasons are 5–300 nonblank characters. Rejected/cancelled plans are terminal. Account opening is a prerequisite, but no financial balance is checked for synthetic allocation.
+
+Activation records maker/checker, activation instant, schedule and maturity date atomically with plan history/audit. The first installment is due on the activation's Indian banking date. Subsequent installments are due on the chosen day in each successive calendar month. Maturity is activation's Indian date plus the term, clamped to month-end where necessary. Reads never create schedules, provision products or reset progress.
+
+An active plan lets only the customer explicitly record a **demo allocation** against the earliest unallocated installment whose due date has arrived. Allocation is exactly the fixed monthly amount; no partial, duplicate or future allocation. Each command records its period, original input/key, timestamp and immutable plan event and atomically updates installment allocation and plan progress. Officer/approver have shared enquiry but cannot fabricate customer allocations. A recorded allocation is not a savings debit or an external payment. No background cron or automatically successful standing instruction exists.
+
+Installment read states are `allocated` when its durable allocation exists; otherwise `upcoming`, `due` or `missed`, derived from due date and the injected current Indian date. A missed installment stays allocatable in order; no automatic fee is charged. Fully allocated is a progress condition, not a claim of maturity or payout. History and the original schedule remain available.
+
+## Application and persistence boundary
+
+Keep recurring products in separate `recurring_plans`, `recurring_installments` and immutable `recurring_events` tables. Fineract owns all existing balances/postings; recurring services depend only on the workflow Store port and injected clock. SQL event/projection guards atomically create/update plan, schedule, allocation and audit, rejecting stale versions, untracked edits and history deletion. Failure in any effect rolls back the entire command. No old FD/profile/card records are replayed or reset.
+
+Authenticated `GET /api/recurring-deposits` lists relationship-owned applications/plans; `?id=` returns terms, progress, schedule, immutable history and role/state actions; `?key=` reconciles the original stable command reference. `POST /api/recurring-deposits` submits strict terms with `Idempotency-Key`; `/action` accepts the displayed id/version, action, note and period only for allocation. Reject unknown/irrelevant fields. Same-key/same-actor/same-payload replay returns current state with confirmed key; conflicting input/actor fails. Version/race failures never overwrite progress. Bank and product identity are checked before UI success.
+
+Browser submission/action recovery follows FD: persist original role/input/key before sending, preserve it across reload, block new writes after unverified/lost responses, inspect key explicitly before retry/discard, and fail closed if storage is unavailable. Read/list failure must retain the inspection reference. Review/edit retains draft choices. Never show a success toast without a validated product response.
+
+## Delivery and acceptance
+
+Finacle4 owns serial implementation. First deliver domain rules, schedule/quote and atomic persistence/API with integration tests; then customer/staff origination, authorization, installment recording, shared holdings/history and recovery; then protected migration, exact-source release and live synthetic verification. Reuse the approved Operate visual system and large-text option. No new framework, resource or paid plan is needed.
+
+Domain/integration checks cover amount/term/day/nominee bounds, month/Indian-midnight schedule, quote rounding, ownership, independent authorization, immutable terms/schedule/history, replay/conflicts, competing decisions/allocations, due/missed/ordered allocation, atomic audit failure, and zero core calls/financial mutations. Browser checks cover validation/review/edit, interrupted-response reload, officer/approver role consistency, saved allocation/history, storage/read failures, keyboard focus, mobile and enlarged text. Run the full exact-source gate and production-export browser suite before PR integration, then verify the deployed source/readiness and one shared synthetic plan without resetting existing scenarios. This remains incomplete until those checks and live evidence exist; reference parity remains open independently.
