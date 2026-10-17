@@ -20,6 +20,13 @@ import {
 } from "./application/banking";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
 import { financialView } from "./application/financial-view";
+import {
+  actOnServiceCase,
+  listServiceCases,
+  serviceCase,
+  serviceCaseForKey,
+  submitServiceCase,
+} from "./application/service-cases";
 import type { Bank } from "./domain/banking";
 import {
   type Account,
@@ -30,6 +37,7 @@ import {
   type Session,
 } from "./domain/banking";
 import { Core, Store } from "./domain/ports";
+import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
 
@@ -488,6 +496,62 @@ const handle = (request: Request, env: Environment) =>
     }
     if (path === "/api/service-catalog" && request.method === "GET")
       return Response.json({ services: serviceCatalog });
+    if (path === "/api/service-cases" && request.method === "GET") {
+      const id = url.searchParams.get("id");
+      const key = url.searchParams.get("key");
+      if (
+        (id !== null && (!id || id.length > 100)) ||
+        (id !== null && key !== null)
+      )
+        return yield* Effect.fail(
+          failure("Choose a valid request reference.", 400),
+        );
+      return Response.json(
+        id
+          ? yield* serviceCase(session, id)
+          : key !== null
+            ? yield* serviceCaseForKey(session, key)
+            : yield* listServiceCases(
+                session,
+                Number(url.searchParams.get("offset") ?? 0),
+                url.searchParams.get("query") ?? "",
+              ),
+      );
+    }
+    if (path === "/api/service-cases" && request.method === "POST") {
+      const input = yield* parse(
+        request,
+        Schema.Struct({
+          code: Schema.String,
+          fields: Schema.Record({ key: Schema.String, value: Schema.String }),
+        }),
+      );
+      return Response.json(
+        yield* submitServiceCase(
+          session,
+          input.code,
+          input.fields,
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
+    }
+    if (path === "/api/service-cases/action" && request.method === "POST") {
+      const input = yield* parse(
+        request,
+        Schema.Struct({
+          id: Schema.String,
+          version: Schema.Number,
+          action: Schema.Literal(...caseActions),
+          note: Schema.optional(Schema.String),
+          fields: Schema.optional(
+            Schema.Record({ key: Schema.String, value: Schema.String }),
+          ),
+        }),
+      );
+      return Response.json(
+        yield* actOnServiceCase(session, { ...input, note: input.note ?? "" }),
+      );
+    }
     if (path === "/api/requests" && request.method === "POST") {
       const input = yield* parse(
         request,
@@ -515,13 +579,22 @@ const handle = (request: Request, env: Environment) =>
     if (path === "/api/requests/resolve" && request.method === "POST") {
       yield* requireStaff(session);
       const input = yield* parse(request, Schema.Struct({ id: Schema.String }));
-      const record = yield* store.one<ServiceRequest>(
+      const record = yield* store.one<
+        ServiceRequest & { request_key?: string | null }
+      >(
         "SELECT * FROM service_requests WHERE id=? AND bank_id=?",
         input.id,
         session.bank_id,
       );
       if (!record)
         return yield* Effect.fail(failure("Request not found.", 404));
+      if (record.request_key)
+        return yield* Effect.fail(
+          failure(
+            "Process this request through its service case workflow, including any independent authorization.",
+            409,
+          ),
+        );
       if (["fixed_deposit", "personal_loan"].includes(record.kind))
         return yield* Effect.fail(
           failure(

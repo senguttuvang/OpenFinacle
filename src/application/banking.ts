@@ -437,7 +437,7 @@ export const dashboard = (session: Session, refresh = true) =>
       bank.id,
     );
     const requests = yield* store.all(
-      "SELECT * FROM service_requests WHERE bank_id=? ORDER BY created_at DESC",
+      "SELECT id,bank_id,kind,detail,status,created_at FROM service_requests WHERE bank_id=? ORDER BY created_at DESC",
       bank.id,
     );
     return {

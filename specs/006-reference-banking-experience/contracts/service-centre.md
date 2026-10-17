@@ -26,6 +26,10 @@ Preserve existing request records and outcomes when introducing richer fields/hi
 
 ## Acceptance evidence
 
+The case API uses authenticated `GET /api/service-cases` for paginated search, `GET /api/service-cases?id=...` for scoped detail/history, `GET /api/service-cases?key=...` to inspect a submission after an uncertain transport response, `POST /api/service-cases` for structured submission with an `Idempotency-Key`, and `POST /api/service-cases/action` for explicit versioned actions. Detail/action responses contain the current request, ordered history and allowed actions for the authenticated role/current state. The original submitted payload remains immutable even after a customer supplies revised information; retrying its original submission cannot create another case.
+
+Migration 0005 adds fields and history without deleting existing requests. Imported history is marked as unavailable before import, rather than invented. SQLite triggers record field/detail snapshots and audit metadata in the same statement as a successful transition. Managed cases reject unversioned updates and submission-identity changes at storage level, so an older simple resolve path cannot silently bypass the workflow after a rollback. Keep the additive schema on rollback; never reset shared cases. Back up the remote workflow database before applying this migration. The customer/staff UI layer must be released with the workflow before claiming a completed journey.
+
 Domain tests cover unsupported/extra fields, missing values, allowed choices, invalid calendar dates, dependent ranges, formats and limits. Case tests must cover ownership, roles, sensitive approval, invalid/stale transitions, idempotency conflicts, persistence and history/audit consistency. UI tests must cover discovery/search, form/review/edit, submission/outcome, request and deliverable tracking, staff processing and keyboard/mobile behavior using synthetic data.
 
 The catalogue foundation alone is not a completed service journey. Execution and remaining work are tracked in Beads `of-9hc.1` under the reconstruction feature.
