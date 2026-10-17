@@ -206,7 +206,7 @@ test("HTTP planning adapter preserves role and ownership boundary", async () => 
   const setup = await run(
     planningRequest(
       new Request(
-        `https://synthetic.invalid/api/planning/initialize?household=${household}`,
+        `https://synthetic.invalid/api/planning/initialize?household=${household}&relationship=${customer.bank_id}`,
         {
           method: "POST",
           headers: { "Idempotency-Key": "planning-http-init" },
@@ -220,7 +220,7 @@ test("HTTP planning adapter preserves role and ownership boundary", async () => 
   const get = await run(
     planningRequest(
       new Request(
-        `https://synthetic.invalid/api/planning?household=${household}`,
+        `https://synthetic.invalid/api/planning?household=${household}&relationship=${customer.bank_id}`,
       ),
       customer,
       "true",
@@ -234,7 +234,7 @@ test("HTTP planning adapter preserves role and ownership boundary", async () => 
       await outcome(
         planningRequest(
           new Request(
-            `https://synthetic.invalid/api/planning?household=${household}`,
+            `https://synthetic.invalid/api/planning?household=${household}&relationship=${customer.bank_id}`,
           ),
           { ...customer, role: "officer" },
           "true",
@@ -245,11 +245,64 @@ test("HTTP planning adapter preserves role and ownership boundary", async () => 
   const disabled = await run(
     planningRequest(
       new Request(
-        `https://synthetic.invalid/api/planning?household=${household}`,
+        `https://synthetic.invalid/api/planning?household=${household}&relationship=${customer.bank_id}`,
       ),
       customer,
       "false",
     ).pipe(Effect.flip),
   );
   expect(disabled.status).toBe(403);
+});
+
+test("audit application failure rolls back setup and permits the same unrecorded reference", async () => {
+  db.exec(
+    "CREATE TRIGGER planning_injected_failure BEFORE INSERT ON planning_households BEGIN SELECT RAISE(ABORT,'Injected planning write failure'); END",
+  );
+  expect(
+    (
+      await outcome(
+        initializePlanning(customer, household, "planning-atomic-setup"),
+      )
+    )._tag,
+  ).toBe("Left");
+  expect(db.query("SELECT COUNT(*) AS n FROM planning_events").get()).toEqual({
+    n: 0,
+  });
+  expect(
+    db.query("SELECT COUNT(*) AS n FROM planning_households").get(),
+  ).toEqual({ n: 0 });
+  db.exec("DROP TRIGGER planning_injected_failure");
+  expect(
+    (
+      await run(
+        initializePlanning(customer, household, "planning-atomic-setup"),
+      )
+    ).version,
+  ).toBe(0);
+});
+test("unsupported saved snapshots fail visibly and are preserved rather than reseeded", async () => {
+  const initial = await run(
+    initializePlanning(customer, household, "planning-future-data"),
+  );
+  const original = JSON.stringify({
+    ...initial,
+    unsupportedFutureField: "preserve this record",
+  });
+  db.run(
+    "UPDATE planning_households SET state=? WHERE bank_id=? AND household_id=?",
+    [original, customer.bank_id, household],
+  );
+  const failed = await run(readPlanning(customer, household).pipe(Effect.flip));
+  expect(failed.status).toBe(503);
+  expect(
+    db
+      .query(
+        "SELECT state FROM planning_households WHERE bank_id=? AND household_id=?",
+      )
+      .get(customer.bank_id, household),
+  ).toEqual({ state: original });
+  expect(
+    (await outcome(initializePlanning(customer, household, "no-silent-reseed")))
+      ._tag,
+  ).toBe("Left");
 });
