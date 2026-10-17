@@ -33,7 +33,6 @@ import {
   BankingError,
   type DocumentRecord,
   RoleSchema,
-  type ServiceRequest,
   type Session,
 } from "./domain/banking";
 import { Core, Store } from "./domain/ports";
@@ -553,63 +552,16 @@ const handle = (request: Request, env: Environment) =>
         yield* actOnServiceCase(session, { ...input, note: input.note ?? "" }),
       );
     }
-    if (path === "/api/requests" && request.method === "POST") {
-      const input = yield* parse(
-        request,
-        Schema.Struct({
-          kind: Schema.Literal(
-            "chequebook",
-            "debit_card",
-            "address_change",
-            "fixed_deposit",
-            "personal_loan",
-          ),
-          detail: Schema.String,
-        }),
+    if (
+      request.method === "POST" &&
+      ["/api/requests", "/api/requests/resolve"].includes(path)
+    )
+      return yield* Effect.fail(
+        failure(
+          "Use the service centre to submit or process a versioned request with its required review and authorization.",
+          409,
+        ),
       );
-      const id = crypto.randomUUID();
-      yield* store.run(
-        "INSERT INTO service_requests(id,bank_id,kind,detail) VALUES(?,?,?,?)",
-        id,
-        session.bank_id,
-        input.kind,
-        input.detail.slice(0, 1000),
-      );
-      return Response.json({ id, status: "open" });
-    }
-    if (path === "/api/requests/resolve" && request.method === "POST") {
-      yield* requireStaff(session);
-      const input = yield* parse(request, Schema.Struct({ id: Schema.String }));
-      const record = yield* store.one<
-        ServiceRequest & { request_key?: string | null }
-      >(
-        "SELECT * FROM service_requests WHERE id=? AND bank_id=?",
-        input.id,
-        session.bank_id,
-      );
-      if (!record)
-        return yield* Effect.fail(failure("Request not found.", 404));
-      if (record.request_key)
-        return yield* Effect.fail(
-          failure(
-            "Process this request through its service case workflow, including any independent authorization.",
-            409,
-          ),
-        );
-      if (["fixed_deposit", "personal_loan"].includes(record.kind))
-        return yield* Effect.fail(
-          failure(
-            "This application requires a product workflow and cannot be marked fulfilled here.",
-            409,
-          ),
-        );
-      yield* store.run(
-        "UPDATE service_requests SET status='fulfilled' WHERE id=? AND bank_id=?",
-        input.id,
-        session.bank_id,
-      );
-      return Response.json({ status: "fulfilled" });
-    }
     return yield* Effect.fail(failure("Route not found.", 404));
   });
 
