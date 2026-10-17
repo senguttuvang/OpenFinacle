@@ -45,17 +45,19 @@ import { api } from "./api";
 import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
-import {
-  RetailAccount,
-  RetailOverview,
-  RetailProfile,
-} from "./retail-overview";
+import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
 
 const Cards = dynamic(() => import("./cards").then((module) => module.Cards), {
   loading: () => <p role="status">Loading card workspace…</p>,
 });
+const RetailProfile = dynamic(
+  () => import("./customer-profile").then((module) => module.CustomerProfile),
+  {
+    loading: () => <p role="status">Loading profile workspace…</p>,
+  },
+);
 
 const roles: Record<Role, { name: string; person: string; initials: string }> =
   {
@@ -792,7 +794,18 @@ export default function Page() {
             <RetailAccount data={data} navigate={setView} />
           )}
           {view === "profile" && (
-            <RetailProfile data={data} navigate={setView} />
+            <RetailProfile
+              data={data}
+              openAccount={() => setView("application")}
+              openServices={() => {
+                setServiceSearch("Account changes");
+                setView("services");
+              }}
+              openCase={(reference) => {
+                setServiceSearch(`case:${reference}`);
+                setView("services");
+              }}
+            />
           )}
           {view === "overview" && !retail && !staff && (
             <>
@@ -1884,7 +1897,12 @@ export default function Page() {
           {view === "services" && (
             <ServiceCentre
               key={data.bank.id + data.role + serviceSearch}
-              initialSearch={serviceSearch}
+              initialSearch={
+                serviceSearch.startsWith("case:") ? "" : serviceSearch
+              }
+              initialRequest={
+                serviceSearch.startsWith("case:") ? serviceSearch.slice(5) : ""
+              }
               data={data}
               busy={busy}
               perform={perform}

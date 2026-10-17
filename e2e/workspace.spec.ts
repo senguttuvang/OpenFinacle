@@ -136,7 +136,9 @@ test("card controls review, recover a lost response after reload and share staff
     .fill("Synthetic card temporarily misplaced");
   await button("Review change").click();
   await button("Confirm card change").click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(
+    page.locator(".card-workspace").getByRole("alert"),
+  ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await expect(
