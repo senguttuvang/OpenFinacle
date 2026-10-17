@@ -20,6 +20,8 @@ test("state rejects household leaks, invalid versions and assumptions, preserves
     ),
   };
   const next = Effect.runSync(transitionPlanningState(state, changed));
+  expect(Effect.runSync(Effect.either(validatePlanningState({ ...state, unexpectedFutureField: "preserve me" }, h.id)))._tag).toBe("Left");
+  expect(Effect.runSync(Effect.either(transitionPlanningState(state, { ...changed, scenarios: changed.scenarios.map((s) => ({ ...s, version: 25 })) }))))._tag).toBe("Left");
   expect(next.version).toBe(1);
   expect(
     next.scenarios.find((s) => s.id === "baseline")!.assumptions.sipStep,
