@@ -432,8 +432,26 @@ test("request listing is scoped, paginated and treats search wildcards literally
     2,
   );
   expect((await run(listServiceCases(customer, 0, "cheque"))).total).toBe(27);
+  await run(
+    submit(
+      "email_change",
+      { email: "sample@example.test", explanation: "Synthetic email update" },
+      "non-delivery-request",
+    ),
+  );
+  const deliveries = await run(listServiceCases(customer, 0, "", true));
+  expect(deliveries.total).toBe(27);
+  expect(
+    deliveries.requests.every((record) => record.delivery_status === "pending"),
+  ).toBe(true);
+  expect(
+    (await run(listServiceCases(customer, 25, "", true))).requests,
+  ).toHaveLength(2);
+  expect((await run(listServiceCases(customer, 0, "email", true))).total).toBe(
+    0,
+  );
   expect((await run(listServiceCases(customer, 0, "%"))).total).toBe(0);
-  expect((await run(listServiceCases(customer, 0, "_"))).total).toBe(0);
+  expect((await run(listServiceCases(customer, 0, "_"))).total).toBe(1);
   expect(await denied(listServiceCases(customer, -1, ""))).toMatchObject({
     status: 400,
   });
