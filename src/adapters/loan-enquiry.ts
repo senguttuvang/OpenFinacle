@@ -87,13 +87,16 @@ const Loan = Schema.Struct({
   isInterestRecalculationEnabled: Schema.Literal(false),
   isFloatingInterestRate: Schema.Literal(false),
   status: Schema.Struct({
-    id: Schema.Literal(100, 200, 300),
+    id: Schema.Literal(100, 200, 300, 400),
     pendingApproval: Schema.Boolean,
     waitingForDisbursal: Schema.Boolean,
     active: Schema.Boolean,
     closed: Schema.Literal(false),
   }),
   timeline: Schema.Struct({
+    submittedOnDate: loanCoreDateParts,
+    approvedOnDate: Schema.optional(Schema.NullOr(loanCoreDateParts)),
+    withdrawnOnDate: Schema.optional(Schema.NullOr(loanCoreDateParts)),
     expectedDisbursementDate: loanCoreDateParts,
     actualDisbursementDate: Schema.optional(Schema.NullOr(loanCoreDateParts)),
   }),
@@ -165,15 +168,31 @@ export const loanEnquiryLayer = Layer.effect(
             ),
           );
         const expected = yield* date(raw.timeline.expectedDisbursementDate);
+        const submitted = yield* date(raw.timeline.submittedOnDate);
+        const approved = raw.timeline.approvedOnDate
+          ? yield* date(raw.timeline.approvedOnDate)
+          : null;
+        const withdrawn = raw.timeline.withdrawnOnDate
+          ? yield* date(raw.timeline.withdrawnOnDate)
+          : null;
         const principal = yield* loanCoreMinor(raw.principal);
         if (
           principal !== terms.principal * 100 ||
           raw.proposedPrincipal !== terms.principal ||
-          (raw.status.id !== 100 &&
+          ((raw.status.id === 200 || raw.status.id === 300) &&
+            raw.approvedPrincipal !== terms.principal) ||
+          (raw.approvedPrincipal != null &&
             raw.approvedPrincipal !== terms.principal) ||
           raw.numberOfRepayments !== terms.months ||
           raw.termFrequency !== terms.months ||
           expected !== lookup.expected_disbursement_date ||
+          submitted !== expected ||
+          (raw.status.id === 200 || raw.status.id === 300
+            ? approved !== expected
+            : approved !== null) ||
+          (raw.status.id === 400
+            ? !withdrawn || withdrawn < submitted
+            : withdrawn !== null) ||
           raw.status.pendingApproval !== (raw.status.id === 100) ||
           raw.status.waitingForDisbursal !== (raw.status.id === 200) ||
           raw.status.active !== (raw.status.id === 300)
@@ -234,10 +253,15 @@ export const loanEnquiryLayer = Layer.effect(
             ? "active"
             : raw.status.id === 200
               ? "approved"
-              : "registered",
+              : raw.status.id === 400
+                ? "withdrawn"
+                : "registered",
           principal_minor: principal,
           annual_rate_bps: 1200,
           expected_disbursement_date: expected,
+          submitted_on_date: submitted,
+          approved_on_date: approved,
+          withdrawn_on_date: withdrawn,
           actual_disbursement_date: actual,
           principal_disbursed_minor: raw.summary
             ? yield* loanCoreMinor(raw.summary.principalDisbursed)

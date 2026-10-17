@@ -4,6 +4,7 @@ import { loanEngineLayer } from "../src/adapters/loan-engine";
 import { BankingError } from "../src/domain/banking";
 import { LoanEngine, type LoanQuoteInput } from "../src/domain/loan-engine";
 import { Core } from "../src/domain/ports";
+import { inventedLoanProduct as product } from "./fixtures/loan-product";
 
 const input: LoanQuoteInput = {
   owner: {
@@ -24,39 +25,6 @@ const input: LoanQuoteInput = {
   expected_disbursement_date: "2026-10-17",
 };
 // Independently invented DTOs exercise translation, not real core pricing evidence.
-const product = {
-  id: 11,
-  shortName: "OFPL",
-  currency: { code: "INR", decimalPlaces: 2 },
-  minPrincipal: 10000,
-  maxPrincipal: 500000,
-  minNumberOfRepayments: 12,
-  maxNumberOfRepayments: 36,
-  repaymentEvery: 1,
-  repaymentFrequencyType: { id: 2 },
-  interestRatePerPeriod: 1,
-  interestRateFrequencyType: { id: 2 },
-  amortizationType: { id: 1 },
-  interestType: { id: 0 },
-  interestCalculationPeriodType: { id: 1 },
-  transactionProcessingStrategyCode: "mifos-standard-strategy",
-  accountingRule: { id: 2 },
-  multiDisburseLoan: false,
-  isInterestRecalculationEnabled: false,
-  canDefineInstallmentAmount: false,
-  allowVariableInstallments: false,
-  isLinkedToFloatingInterestRates: false,
-  isFloatingInterestRateCalculationAllowed: false,
-  canUseForTopup: false,
-  enableDownPayment: false,
-  enableAutoRepaymentForDownPayment: false,
-  isEqualAmortization: false,
-  isRatesEnabled: false,
-  interestRecognitionOnDisbursementDate: false,
-  loanScheduleType: { id: 0, code: "CUMULATIVE" },
-  loanScheduleProcessingType: { id: 0, code: "HORIZONTAL" },
-  charges: [],
-};
 const account = {
   id: 13,
   clientId: 12,

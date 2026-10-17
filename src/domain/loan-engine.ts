@@ -35,10 +35,13 @@ export interface CoreLoanSnapshot {
   id: number;
   external_id: string;
   owner: LoanOwner;
-  status: "registered" | "approved" | "active";
+  status: "registered" | "approved" | "active" | "withdrawn";
   principal_minor: number;
   annual_rate_bps: number;
   expected_disbursement_date: string;
+  submitted_on_date: string;
+  approved_on_date: string | null;
+  withdrawn_on_date: string | null;
   actual_disbursement_date: string | null;
   principal_disbursed_minor: number | null;
   principal_outstanding_minor: number | null;
