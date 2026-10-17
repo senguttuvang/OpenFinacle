@@ -38,12 +38,15 @@ let postings: { path: string; body: unknown; key?: string }[];
 let coreFailure: BankingError | undefined;
 let failSeedTransfer = false;
 let lastBalance = 10000;
+let beforeCoreWrite: (() => void) | undefined;
+let beforeStoreWrite: ((sql: string) => void) | undefined;
 beforeEach(async () => {
   db?.close();
   db = new Database(":memory:");
   db.exec(await Bun.file("migrations/0001_workflows.sql").text());
   db.exec(await Bun.file("migrations/0002_reversal_guard.sql").text());
   db.exec(await Bun.file("migrations/0003_customer_journey.sql").text());
+  db.exec(await Bun.file("migrations/0012_core_write_claims.sql").text());
   db.run("INSERT INTO settings(key,value) VALUES('cash_payment_type','1')");
   db.run(
     "INSERT INTO banks(id,status,customer_client,customer_account,recipient_client,recipient_account,employer_client,employer_account) VALUES('bank-one','ready',1,101,2,102,3,103)",
@@ -58,6 +61,8 @@ beforeEach(async () => {
   coreFailure = undefined;
   failSeedTransfer = false;
   lastBalance = 10000;
+  beforeCoreWrite = undefined;
+  beforeStoreWrite = undefined;
 });
 const layers = () =>
   Layer.merge(
@@ -67,7 +72,10 @@ const layers = () =>
       one: <T>(sql: string, ...values: (string | number | null)[]) =>
         Effect.sync(() => db.query(sql).get(...values) as T | null),
       run: (sql: string, ...values: (string | number | null)[]) =>
-        Effect.sync(() => db.run(sql, values).changes),
+        Effect.sync(() => {
+          beforeStoreWrite?.(sql);
+          return db.run(sql, values).changes;
+        }),
     }),
     Layer.succeed(Core, {
       request: <T>(
@@ -77,6 +85,7 @@ const layers = () =>
         key?: string,
       ) =>
         Effect.gen(function* () {
+          if (method !== "GET") beforeCoreWrite?.();
           if (coreFailure) return yield* Effect.fail(coreFailure);
           if (failSeedTransfer && path === "accounttransfers")
             return yield* Effect.fail(
@@ -128,6 +137,124 @@ const run = <A>(
 const failureOf = <A>(
   task: Effect.Effect<A, BankingError, CoreService | StoreService>,
 ) => Effect.runPromise(task.pipe(Effect.provide(layers()), Effect.flip));
+
+const reserveLoan = (id = "invented-loan") =>
+  db.run(
+    "INSERT INTO core_write_claims(id,owner_kind,owner_id,bank_id,account_id,origin,status,version,created_at,updated_at) VALUES(?,'loan',?,'bank-one',101,'loan','executing',0,'2026-10-18T00:00:00Z','2026-10-18T00:00:00Z')",
+    [`loan:${id}`, id],
+  );
+
+test("unresolved loan operations block new cash and pending approval until an explicit confirmed outcome", async () => {
+  const cash = await run(
+    createCommand(
+      officer,
+      { kind: "deposit", amount: 1000 },
+      "cash-before-loan",
+    ),
+  );
+  reserveLoan();
+  for (const state of ["executing", "uncertain"]) {
+    expect(
+      (
+        await failureOf(
+          createCommand(
+            officer,
+            { kind: "deposit", amount: 1000 },
+            `cash-during-${state}`,
+          ),
+        )
+      ).status,
+    ).toBe(409);
+    expect((await failureOf(executeCommand(approver, cash.id))).status).toBe(
+      409,
+    );
+    expect(postings).toHaveLength(0);
+    if (state === "executing")
+      db.run(
+        "UPDATE core_write_claims SET status='uncertain',version=version+1 WHERE owner_kind='loan'",
+      );
+  }
+  const other = await run(
+    createCommand(
+      { ...officer, bank_id: "other-bank" },
+      { kind: "deposit", amount: 1000 },
+      "other-bank-cash",
+    ),
+  );
+  expect(other.status).toBe("pending");
+  db.run(
+    "UPDATE core_write_claims SET status='confirmed',version=version+1 WHERE owner_kind='loan'",
+  );
+  expect((await run(executeCommand(approver, cash.id))).status).toBe("posted");
+  await run(executeCommand(approver, cash.id));
+  expect(postings).toHaveLength(1);
+});
+
+test("cash reservation and history exist before Core dispatch and exclude a racing loan owner", async () => {
+  const cash = await run(
+    createCommand(
+      officer,
+      { kind: "deposit", amount: 1000 },
+      "cash-before-core",
+    ),
+  );
+  let inspected = false;
+  beforeCoreWrite = () => {
+    inspected = true;
+    expect(
+      db.query("SELECT owner_id,status,version FROM core_write_claims").get(),
+    ).toEqual({ owner_id: cash.id, status: "executing", version: 0 });
+    expect(
+      db.query("SELECT status FROM core_write_claim_events").all(),
+    ).toEqual([{ status: "executing" }]);
+    expect(() => reserveLoan()).toThrow();
+  };
+  await run(executeCommand(approver, cash.id));
+  expect(inspected).toBe(true);
+  expect(
+    db
+      .query("SELECT status FROM core_write_claim_events ORDER BY version")
+      .all(),
+  ).toEqual([{ status: "executing" }, { status: "confirmed" }]);
+  expect(() => reserveLoan()).not.toThrow();
+});
+
+for (const boundary of ["create", "execute"] as const)
+  test(`a loan reservation winning the ${boundary} write race prevents cash dispatch atomically`, async () => {
+    const input = { kind: "deposit" as const, amount: 1000 };
+    const cash =
+      boundary === "execute"
+        ? await run(createCommand(officer, input, "cash-race-existing"))
+        : undefined;
+    let injected = false;
+    beforeStoreWrite = (sql) => {
+      if (
+        injected ||
+        !sql.startsWith(
+          boundary === "create"
+            ? "INSERT OR IGNORE INTO commands"
+            : "UPDATE commands SET status='executing'",
+        )
+      )
+        return;
+      injected = true;
+      reserveLoan();
+    };
+    const error = await failureOf(
+      cash
+        ? executeCommand(approver, cash.id)
+        : createCommand(officer, input, "cash-race-new"),
+    );
+    expect(injected).toBe(true);
+    expect(error.status).toBe(409);
+    expect(postings).toHaveLength(0);
+    expect(db.query("SELECT status FROM commands").all()).toEqual(
+      cash ? [{ status: "pending" }] : [],
+    );
+    expect(
+      db.query("SELECT owner_kind,status FROM core_write_claims").all(),
+    ).toEqual([{ owner_kind: "loan", status: "executing" }]);
+  });
 
 test("savings-product setup uses the product API contract without an unsupported date format", async () => {
   await run(bootstrap);
@@ -481,6 +608,12 @@ describe("financial command lifecycle", () => {
       expect(
         db.query("SELECT status FROM commands WHERE id=?").get(command.id),
       ).toEqual({ status: "uncertain" });
+      expect(
+        db
+          .query("SELECT status FROM core_write_claims WHERE owner_id=?")
+          .get(command.id),
+      ).toEqual({ status: "uncertain" });
+      expect(() => reserveLoan()).toThrow();
       coreFailure = undefined;
       const replay = await run(executeCommand(approver, command.id));
       expect(replay.status).toBe("uncertain");
@@ -513,6 +646,10 @@ describe("financial command lifecycle", () => {
         .query("SELECT status FROM commands WHERE key=?")
         .get("insufficient-0001"),
     ).toEqual({ status: "failed" });
+    expect(db.query("SELECT status FROM core_write_claims").get()).toEqual({
+      status: "failed",
+    });
+    expect(() => reserveLoan()).not.toThrow();
   });
   test("customer cannot initiate a cash deposit", async () => {
     expect(
