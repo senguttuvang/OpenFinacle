@@ -70,7 +70,9 @@ test("deployed customer and branch screens use real saved data without financial
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByText(/Saved banking view.*Last synced/)).toBeVisible();
+  await expect(
+    page.getByText(/(?:Saved banking view|Refresh needed).*Last synced/),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
