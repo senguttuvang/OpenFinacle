@@ -139,8 +139,11 @@ test("cash-flow projection and debt never invent funding on depletion or prepaym
     sip: 0,
   });
   expect(zero[0]?.closing).toBe(0);
-  expect(zero[0]?.gap).toBe(102000000);
+  expect(zero[0]?.gap).toBe(109200000);
   const normal = planningProjection(household, assumptions);
+  expect(normal[0]!.essential / normal[0]!.deflator).toBe(
+    assumptions.essential * 12,
+  );
   const broken = planningProjection(household, {
     ...assumptions,
     breakMonths: 12,

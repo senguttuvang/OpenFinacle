@@ -278,18 +278,20 @@ export const planningProjection = (
       income = Math.round((income * (12 - breakMonths)) / 12);
     const essential = Math.round(
       (a.essential * 12 + (i < a.dependentYears ? a.dependent * 12 : 0)) *
-        (1 + a.essentialInflation / 10000) ** i,
+        (1 + a.essentialInflation / 10000) ** (i + 1),
     );
     const discretionary = Math.round(
       (a.discretionary * 12 + a.rentChange * 12) *
-        (1 + a.discretionaryInflation / 10000) ** i,
+        (1 + a.discretionaryInflation / 10000) ** (i + 1),
     );
     const amortized = planningAmortize(debt, 12);
     debt = { ...debt, principal: amortized.principal };
     const debtPayment = amortized.interest + amortized.paidPrincipal;
     const goals =
       (year === a.educationYear
-        ? Math.round(a.education * (1 + a.essentialInflation / 10000) ** i)
+        ? Math.round(
+            a.education * (1 + a.essentialInflation / 10000) ** (i + 1),
+          )
         : 0) + (year === a.breakYear ? a.medicalShock : 0);
     const returnRate =
       a.adverseSequence && retired && age - a.retireAge < 3
