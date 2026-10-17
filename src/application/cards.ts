@@ -4,6 +4,7 @@ import {
   allowedCardActions,
   Card,
   type CardCommand,
+  CardDetail,
   CardEvent,
   cardTransition,
 } from "../domain/cards";
@@ -72,12 +73,12 @@ export const cardDetail = (
         row,
       ),
     );
-    return {
+    return yield* parse(CardDetail, {
       card,
       history,
       actions: allowedCardActions(card, session.role),
       confirmed_key: confirmedKey,
-    };
+    });
   });
 
 export const cardForKey = (session: Session, key: string) =>

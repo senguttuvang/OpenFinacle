@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import { BankingError, type Role } from "./banking";
 
-export const CardSettings = Schema.Struct({
+const CardSettings = Schema.Struct({
   atm: Schema.Boolean,
   pos: Schema.Boolean,
   online: Schema.Boolean,
@@ -19,7 +19,7 @@ export const Card = Schema.Struct({
   updated_at: Schema.String,
 });
 export type Card = typeof Card.Type;
-export const cardActions = ["settings", "hold", "resume", "block"] as const;
+const cardActions = ["settings", "hold", "resume", "block"] as const;
 export const CardCommand = Schema.Struct({
   id: Schema.NonEmptyString,
   version: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
