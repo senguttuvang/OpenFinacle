@@ -52,6 +52,7 @@ beforeEach(async () => {
     "INSERT INTO banks(id,status,customer_account) VALUES('card-bank','ready',101),('unopened','ready',0),('other','ready',202)",
   );
   db.exec(await Bun.file("migrations/0007_cards.sql").text());
+  db.exec(await Bun.file("migrations/0011_card_replacements.sql").text());
   interfere = undefined;
 });
 const failure = () =>

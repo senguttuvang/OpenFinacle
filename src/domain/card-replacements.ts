@@ -142,6 +142,8 @@ export const replacementCard = (
   status: "held",
   version: 0,
   updated_at: timestamp,
+  activation_required: true,
+  replacement_id: request.id,
   settings: {
     atm: false,
     pos: false,
@@ -248,6 +250,7 @@ export const replacementTransition = (
             ? {
                 ...card,
                 status: "active" as const,
+                activation_required: false,
                 version: card.version + 1,
                 updated_at: timestamp,
               }
