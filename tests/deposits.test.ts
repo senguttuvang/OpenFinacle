@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
-import { beforeEach, expect, test } from "bun:test";
-import { Effect, Layer } from "effect";
+import { beforeEach, expect, mock, test } from "bun:test";
+import { Effect, Layer, Schema } from "effect";
+import type { Environment } from "../src/adapters/environment";
 import {
   actOnDeposit,
   depositDetail,
@@ -10,12 +11,16 @@ import {
 } from "../src/application/deposits";
 import { BankingError, type Session } from "../src/domain/banking";
 import {
-  type DepositTerms,
+  DepositTerms,
   maturityDate,
   maturityMinor,
 } from "../src/domain/deposits";
 import { Store, type StoreService } from "../src/domain/ports";
 
+mock.module("@cloudflare/containers", () => ({
+  getContainer: (namespace: unknown) => namespace,
+}));
+const { handleRequest } = await import("../src/http");
 let db: Database;
 let interfere: (() => void) | undefined;
 const customer: Session = {
@@ -93,7 +98,6 @@ const action = (
 ) => ({ id, version, action: command, note: "Synthetic reviewed instruction" });
 
 test("deposit creates persistent product application; independent activation creates holding without financial effects", async () => {
-  expect(maturityMinor(terms)).toBe(1060000);
   expect((await run(listDeposits(customer))).deposits).toEqual([]);
   const first = await submit();
   const id = first.deposit.id;
@@ -283,4 +287,178 @@ test("audit failure rolls back submission/activation and preserves retry identit
   expect(
     await denied(depositForKey(customer, "activate-failure")),
   ).toMatchObject({ status: 404 });
+});
+test("stale/competing actions cannot overwrite decisions; history and terms resist direct mutation", async () => {
+  const { deposit } = await submit();
+  interfere = () =>
+    db.run(
+      "INSERT INTO deposit_events(id,bank_id,deposit_id,command_key,command_payload,actor,action,note,terms,status,version,created_at) VALUES('competing','deposit-bank',?,'competing-cancel','{}','customer','cancel','Customer cancelled',?,'cancelled',1,'2026-10-17')",
+      [deposit.id, JSON.stringify(terms)],
+    );
+  expect(
+    await denied(
+      actOnDeposit(
+        officer,
+        action(deposit.id, 0, "recommend"),
+        "competing-recommend",
+      ),
+    ),
+  ).toMatchObject({ status: 409 });
+  expect((await run(depositDetail(customer, deposit.id))).deposit.status).toBe(
+    "cancelled",
+  );
+  expect(
+    await denied(
+      actOnDeposit(
+        officer,
+        action(deposit.id, 0, "recommend"),
+        "stale-recommend",
+      ),
+    ),
+  ).toMatchObject({ status: 409 });
+  expect(() =>
+    db.run("UPDATE synthetic_deposits SET status='active' WHERE id=?", [
+      deposit.id,
+    ]),
+  ).toThrow("immutable command");
+  expect(() =>
+    db.run("UPDATE synthetic_deposits SET terms='{}' WHERE id=?", [deposit.id]),
+  ).toThrow("immutable command");
+  expect(() =>
+    db.run("DELETE FROM deposit_events WHERE deposit_id=?", [deposit.id]),
+  ).toThrow("immutable");
+  expect(() =>
+    db.run("DELETE FROM synthetic_deposits WHERE id=?", [deposit.id]),
+  ).toThrow("immutable");
+});
+test("product boundaries, nominee normalization, leap dates and deterministic simple-interest illustration", async () => {
+  for (const input of [
+    { ...terms, amount: 999 },
+    { ...terms, amount: 1000001 },
+    { ...terms, amount: 1000.5 },
+    { ...terms, months: 7 },
+    { ...terms, product: "real-core" },
+    { ...terms, rate: 50 },
+    { ...terms, nominee: { name: "A", relationship: "parent" } },
+  ])
+    expect(
+      Schema.decodeUnknownEither(DepositTerms, { onExcessProperty: "error" })(
+        input,
+      )._tag,
+    ).toBe("Left");
+  expect(maturityMinor({ ...terms, months: 6 })).toBe(1030000);
+  expect(maturityMinor({ ...terms, amount: 1000, months: 24 })).toBe(112000);
+  expect(maturityDate("2026-08-31T09:00:00Z", 6)).toBe("2027-02-28");
+  expect(maturityDate("2023-08-31T09:00:00Z", 6)).toBe("2024-02-29");
+  expect(maturityDate("2026-08-31T19:00:00Z", 6)).toBe("2027-03-01");
+  expect(
+    await denied(
+      submitDeposit(
+        { ...customer, bank_id: "unopened" },
+        terms,
+        "unopened-deposit",
+      ),
+    ),
+  ).toMatchObject({ status: 409 });
+  expect(
+    await denied(submitDeposit(officer, terms, "staff-deposit-one")),
+  ).toMatchObject({ status: 403 });
+  expect(await denied(submitDeposit(customer, terms, "bad"))).toMatchObject({
+    status: 400,
+  });
+  expect(
+    await denied(
+      submitDeposit(
+        customer,
+        { ...terms, nominee: { name: "  ", relationship: "parent" } },
+        "empty-nominee-one",
+      ),
+    ),
+  ).toMatchObject({ status: 400 });
+  const saved = await run(
+    submitDeposit(
+      customer,
+      {
+        ...terms,
+        nominee: { name: "  Example Parent  ", relationship: "parent" },
+      },
+      "nominee-deposit-one",
+    ),
+  );
+  expect(saved.deposit.terms.nominee?.name).toBe("Example Parent");
+});
+test("HTTP deposits enforce strict inputs, authentication/demo/ownership and never access financial core", async () => {
+  const token = "synthetic-deposit-session";
+  const hash = new Bun.CryptoHasher("sha256").update(token).digest("hex");
+  db.run(
+    "INSERT INTO sessions(token_hash,bank_id,role,expires_at) VALUES(?,'deposit-bank','customer',?)",
+    [hash, Number.MAX_SAFE_INTEGER],
+  );
+  let coreCalls = 0;
+  const env = {
+    DB: {
+      prepare: (sql: string) => {
+        let values: (string | number | null)[] = [];
+        return {
+          bind(...args: (string | number | null)[]) {
+            values = args;
+            return this;
+          },
+          first: async () => db.query(sql).get(...values),
+          all: async () => ({ results: db.query(sql).all(...values) }),
+          run: async () => ({ meta: { changes: db.run(sql, values).changes } }),
+        };
+      },
+    } as unknown as D1Database,
+    CORE: {
+      fetch: async () => {
+        coreCalls++;
+        throw new Error("No deposit core effects");
+      },
+    } as unknown as Environment["CORE"],
+    DOCUMENTS: {} as R2Bucket,
+    ASSETS: {} as Fetcher,
+    CORE_DATABASE: "unused",
+    CORE_PASSWORD: "unused",
+    ADMIN_TOKEN: "unused",
+    APP_REVISION: "deposit-tests",
+    DEMO_MODE: "true",
+  } satisfies Environment;
+  const http = (path: string, body?: unknown, cookie = true) =>
+    handleRequest(
+      new Request(`https://demo.test/api${path}`, {
+        method: body === undefined ? "GET" : "POST",
+        headers: {
+          ...(cookie ? { Cookie: `of_session=${token}` } : {}),
+          Origin: "https://demo.test",
+          "Content-Type": "application/json",
+          "Idempotency-Key": path.endsWith("/action")
+            ? "http-deposit-action"
+            : "http-deposit-command",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }),
+      env,
+    );
+  expect((await http("/deposits", undefined, false)).status).toBe(401);
+  expect((await http("/deposits", { ...terms, rate: 20 })).status).toBe(400);
+  const response = await http("/deposits", terms);
+  expect(response.status).toBe(200);
+  const saved = (await response.json()) as { deposit: { id: string } };
+  expect(
+    (await http("/deposits/action", action(saved.deposit.id, 0, "activate")))
+      .status,
+  ).toBe(403);
+  db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  expect((await http(`/deposits?id=${saved.deposit.id}`)).status).toBe(404);
+  expect((await http("/deposits?key=http-deposit-command")).status).toBe(404);
+  expect(
+    (
+      await handleRequest(new Request("https://demo.test/api/deposits"), {
+        ...env,
+        DEMO_MODE: "false",
+      })
+    ).status,
+  ).toBe(503);
+  expect(coreCalls).toBe(0);
 });

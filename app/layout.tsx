@@ -9,6 +9,7 @@ import "./command-menu.css";
 import "./branch.css";
 import "./service-centre.css";
 import "./cards.css";
+import "./deposits.css";
 import "./banking-surfaces.css";
 import "./banking-design.css";
 import "./persona-select.css";
