@@ -116,3 +116,51 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
   });
   expect(errors).toEqual([]);
 });
+
+test("partial-month drilldown preserves source totals and restores filters and keyboard focus on back", async ({
+  page,
+}) => {
+  await page.goto("/planning");
+  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByLabel("From", { exact: true }).fill("2026-07-20");
+  await page.getByLabel("Through", { exact: true }).fill("2026-08-05");
+  await page
+    .getByLabel("Account", { exact: true })
+    .selectOption("synthetic-nila-card");
+  await page.getByLabel("Member", { exact: true }).selectOption("Nila");
+  await page.getByLabel("Category", { exact: true }).selectOption("Groceries");
+  await page.getByLabel("Merchant search").fill("Fresh Basket");
+  await page
+    .getByText("Monthly values and drill-down", { exact: true })
+    .click();
+  const month = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "2026-07", exact: true }) });
+  const parentTotal = await month.getByRole("cell").nth(2).innerText();
+  const inspect = month.getByRole("button", {
+    name: "Inspect month",
+    exact: true,
+  });
+  await inspect.click();
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue(
+    "2026-07-20",
+  );
+  await expect(page.getByLabel("Through", { exact: true })).toHaveValue(
+    "2026-07-31",
+  );
+  await expect(page.locator("#planning-transactions p strong")).toHaveText(
+    parentTotal,
+  );
+  await expect(page.getByLabel("Merchant search")).toHaveValue("Fresh Basket");
+  await page
+    .getByRole("button", { name: "Back to previous view", exact: true })
+    .click();
+  await expect(page.getByLabel("Through", { exact: true })).toHaveValue(
+    "2026-08-05",
+  );
+  await expect(page.getByLabel("Account", { exact: true })).toHaveValue(
+    "synthetic-nila-card",
+  );
+  await expect(page.getByLabel("Member", { exact: true })).toHaveValue("Nila");
+  await expect(inspect).toBeFocused();
+});
