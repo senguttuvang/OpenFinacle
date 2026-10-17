@@ -10,6 +10,7 @@ import "./branch.css";
 import "./service-centre.css";
 import "./cards.css";
 import "./deposits.css";
+import "./card-replacements.css";
 import "./deposit-products.css";
 import "./banking-surfaces.css";
 import "./banking-design.css";
