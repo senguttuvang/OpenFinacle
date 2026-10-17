@@ -22,9 +22,9 @@ export const loadPlanningDevice = (h: PlanningHousehold) =>
         }),
     });
     if (raw === null) return initialPlanningState(h);
-    const value = yield* Schema.decodeUnknown(Schema.parseJson(PlanningState))(
-      raw,
-    ).pipe(
+    const value = yield* Schema.decodeUnknown(Schema.parseJson(PlanningState), {
+      onExcessProperty: "error",
+    })(raw).pipe(
       Effect.mapError(
         () =>
           new PlanningError({
@@ -49,6 +49,7 @@ export const savePlanningDevice = (current: State, proposed: State) =>
     if (raw !== null) {
       const saved = yield* Schema.decodeUnknown(
         Schema.parseJson(PlanningState),
+        { onExcessProperty: "error" },
       )(raw).pipe(
         Effect.mapError(
           () =>
