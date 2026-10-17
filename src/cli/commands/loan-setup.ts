@@ -16,7 +16,7 @@ import {
   loanAdminRevision,
   loanAdminToken,
 } from "../loan-admin";
-import { loanSetupReport } from "../loan-setup-report";
+import { loanAdminHttpFailure, loanSetupReport } from "../loan-setup-report";
 
 export const loanSetup = Command.make(
   "loan-setup",
@@ -43,13 +43,7 @@ export const loanSetup = Command.make(
         json: Effect.Effect<unknown, unknown>;
       }) =>
         Effect.gen(function* () {
-          if (response.status !== 200)
-            return yield* Effect.fail(
-              new Error(
-                `Loan administration HTTP ${response.status}. Read the saved checkpoint and inspect the original result before any create; response details are suppressed.`,
-              ),
-            );
-          return yield* response.json.pipe(
+          const data = yield* response.json.pipe(
             Effect.mapError(
               () =>
                 new Error(
@@ -57,6 +51,11 @@ export const loanSetup = Command.make(
                 ),
             ),
           );
+          if (response.status !== 200)
+            return yield* Effect.fail(
+              loanAdminHttpFailure(response.status, data),
+            );
+          return data;
         });
       const health = yield* HttpClient.get(`${origin}/api/health`).pipe(
         Effect.mapError(
@@ -130,7 +129,7 @@ export const loanSetup = Command.make(
             monthly_expenses: 10000,
           },
         }).pipe(
-          Effect.flatMap(
+          Effect.flatMap((input) =>
             Schema.decodeUnknown(
               Schema.Struct({
                 expected_disbursement_date: Schema.String,
@@ -138,13 +137,14 @@ export const loanSetup = Command.make(
                 application_created: Schema.Literal(false),
                 financial_posted: Schema.Literal(false),
               }),
-            ),
-          ),
-          Effect.mapError(
-            () =>
-              new Error(
-                "Core quote verification failed; no loan application or financial posting was requested.",
+            )(input).pipe(
+              Effect.mapError(
+                () =>
+                  new Error(
+                    "Core quote verification failed; no loan application or financial posting was requested.",
+                  ),
               ),
+            ),
           ),
         );
         return yield* Console.log(
