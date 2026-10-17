@@ -173,6 +173,8 @@ test("loan quotes verify product/account then use only the core schedule calcula
       body: {
         locale: "en",
         dateFormat: "yyyy-MM-dd",
+        loanType: "individual",
+        submittedOnDate: "2026-10-17",
         productId: 11,
         clientId: 12,
         principal: 12000,
@@ -270,6 +272,16 @@ test("malformed schedules, hidden charges, repeat disbursements and fractional p
     { ...schedule, totalInterestCharged: 1200.001 },
     { ...schedule, totalRepaymentExpected: 13200.01 },
     { ...schedule, periods: rows.slice(1) },
+    {
+      ...schedule,
+      periods: rows.map((row, i) =>
+        i === 1 ? { ...row, period: undefined } : row,
+      ),
+    },
+    {
+      ...schedule,
+      periods: rows.map((row, i) => (i === 1 ? { ...row, period: null } : row)),
+    },
     { ...schedule, periods: [rows[0], ...rows] },
     {
       ...schedule,
@@ -362,5 +374,37 @@ test("core failures never synthesize a quote or retry a calculator request", asy
     expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(
       path.startsWith("loans?") ? 1 : 0,
     );
+  }
+});
+
+test("pinned Core disbursement headers omit a repayment number and carry nullable unused zero components", async () => {
+  for (const period of [undefined, null]) {
+    const h = harness({
+      "loans?command=calculateLoanSchedule": {
+        ...schedule,
+        periods: [
+          {
+            ...schedule.periods[0],
+            period,
+            principalDue: null,
+            interestDue: null,
+            penaltyChargesDue: null,
+          },
+          ...schedule.periods
+            .slice(1)
+            .map((row) => ({ ...row, principalDisbursed: null })),
+        ],
+      },
+    });
+    const result = await h.run();
+    expect(result).toMatchObject({
+      currency: "INR",
+      principal_minor: 1200000,
+      interest_minor: 120000,
+      repayment_minor: 1320000,
+    });
+    expect(result.installments).toHaveLength(12);
+    expect(result.installments[0].period).toBe(1);
+    expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(1);
   }
 });

@@ -57,6 +57,15 @@ const configurationFields = [
   "loanScheduleProcessingType",
   "repaymentStartDateType",
   "charges",
+  "loanType",
+  "submittedOnDate",
+  "expectedDisbursementDate",
+  "clientId",
+  "productId",
+  "loanTermFrequency",
+  "loanTermFrequencyType",
+  "period",
+  "dueDate",
   "fundSourceAccountId",
   "loanPortfolioAccountId",
   "transfersInSuspenseAccountId",
@@ -76,9 +85,26 @@ const configurationFields = [
   "incomeFromGoodwillCreditFeesAccountId",
   "incomeFromGoodwillCreditPenaltyAccountId",
 ];
+const loanValidationHints = (failure: string) => ({
+  validation_fields: configurationFields.filter((field) =>
+    new RegExp(`\\b${field}\\b`).test(failure),
+  ),
+  validation_checks: [
+    ...(/not supported|unsupported/i.test(failure)
+      ? ["unsupported-parameter"]
+      : []),
+    ...(/mandatory|required|not.*null|not.*blank/i.test(failure)
+      ? ["required-field"]
+      : []),
+    ...(/invalid|must|between|greater than|less than|out of range/i.test(
+      failure,
+    )
+      ? ["invalid-value"]
+      : []),
+  ],
+});
 export const loanSetupReport = (state: LoanSetupState) => {
   const last = state.events.at(-1);
-  const failure = last?.status === "failed" ? last.message : "";
   return {
     version: state.version,
     next: loanSetupNext(state),
@@ -86,21 +112,24 @@ export const loanSetupReport = (state: LoanSetupState) => {
     history_events: state.events.length,
     complete: loanSetupNext(state) === null,
     last_status: last?.status ?? null,
-    validation_fields: configurationFields.filter((field) =>
-      new RegExp(`\\b${field}\\b`).test(failure),
-    ),
-    validation_checks: [
-      ...(/not supported|unsupported/i.test(failure)
-        ? ["unsupported-parameter"]
-        : []),
-      ...(/mandatory|required|not.*null|not.*blank/i.test(failure)
-        ? ["required-field"]
-        : []),
-      ...(/invalid|must|between|greater than|less than|out of range/i.test(
-        failure,
-      )
-        ? ["invalid-value"]
-        : []),
-    ],
+    ...loanValidationHints(last?.status === "failed" ? last.message : ""),
   };
+};
+export const loanAdminHttpFailure = (status: number, input: unknown) => {
+  const uncertain =
+    typeof input === "object" &&
+    input !== null &&
+    "uncertain" in input &&
+    input.uncertain === true;
+  const message =
+    !uncertain &&
+    typeof input === "object" &&
+    input !== null &&
+    "error" in input &&
+    typeof input.error === "string"
+      ? input.error
+      : "";
+  return new Error(
+    `Loan administration HTTP ${status}; ${JSON.stringify({ uncertain, ...loanValidationHints(message) })}. Read the saved checkpoint and inspect before any create; no request was retried.`,
+  );
 };

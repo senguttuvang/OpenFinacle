@@ -75,15 +75,16 @@ export const loanCoreDateParts = Schema.Tuple(
   Schema.Number.pipe(Schema.int(), Schema.between(1, 31)),
 );
 const Disbursement = Schema.Struct({
-  period: Schema.Literal(0),
+  // Pinned disbursementOnlyPeriod leaves its repayment number unset.
+  period: Schema.optional(Schema.NullOr(Schema.Literal(0))),
   dueDate: loanCoreDateParts,
   principalDisbursed: nonnegative,
   feeChargesDue: Schema.Literal(0),
   totalDueForPeriod: Schema.Literal(0),
   // Fineract's disbursement period omits these zero components in some schedules.
-  penaltyChargesDue: Schema.optional(Schema.Literal(0)),
-  interestDue: Schema.optional(Schema.Literal(0)),
-  principalDue: Schema.optional(Schema.Literal(0)),
+  penaltyChargesDue: Schema.optional(Schema.NullOr(Schema.Literal(0))),
+  interestDue: Schema.optional(Schema.NullOr(Schema.Literal(0))),
+  principalDue: Schema.optional(Schema.NullOr(Schema.Literal(0))),
 });
 const Repayment = Schema.Struct({
   period: Schema.Number.pipe(Schema.int(), Schema.between(1, 36)),
@@ -93,7 +94,7 @@ const Repayment = Schema.Struct({
   feeChargesDue: Schema.Literal(0),
   penaltyChargesDue: Schema.Literal(0),
   totalDueForPeriod: nonnegative,
-  principalDisbursed: Schema.optional(Schema.Literal(0)),
+  principalDisbursed: Schema.optional(Schema.NullOr(Schema.Literal(0))),
 });
 const Schedule = Schema.Struct({
   currency,
@@ -145,7 +146,10 @@ export const normalizeCoreLoanSchedule = (
     );
     const first = raw.periods[0];
     if (
-      first?.period !== 0 ||
+      !first ||
+      (first.period !== null &&
+        first.period !== undefined &&
+        first.period !== 0) ||
       !("principalDisbursed" in first) ||
       loanCoreCalendar(first.dueDate) !== request.expected_disbursement_date ||
       first.principalDisbursed !== request.terms.principal ||
@@ -161,9 +165,13 @@ export const normalizeCoreLoanSchedule = (
       Effect.gen(function* () {
         if (
           row.period === 0 ||
+          row.period === null ||
+          row.period === undefined ||
           !("principalDue" in row) ||
           row.principalDue === undefined ||
-          row.interestDue === undefined
+          row.principalDue === null ||
+          row.interestDue === undefined ||
+          row.interestDue === null
         )
           return yield* Effect.fail(
             invalid(
@@ -248,6 +256,8 @@ export const loanEngineLayer = Layer.effect(
             "loans?command=calculateLoanSchedule",
             {
               ...dateFields(),
+              loanType: "individual",
+              submittedOnDate: date,
               productId: owner.product_id,
               clientId: owner.client_id,
               principal: terms.principal,

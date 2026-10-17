@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { loanSetupReport } from "../src/cli/loan-setup-report";
+import {
+  loanAdminHttpFailure,
+  loanSetupReport,
+} from "../src/cli/loan-setup-report";
 import type { LoanSetupState } from "../src/domain/loan-setup";
 
 const failed: LoanSetupState = {
@@ -76,5 +79,36 @@ test("empty, confirmed and uncertain setup outcomes never emit validation detail
       validation_checks: [],
     });
     expect(JSON.stringify(result)).not.toContain("private-example-value");
+  }
+});
+
+test("HTTP quote failures preserve status and public validation hints without exposing response values or uncertain details", () => {
+  const body = {
+    error:
+      "loanType and submittedOnDate are required. Authorization: invented-private-value",
+    uncertain: false,
+  };
+  const error = loanAdminHttpFailure(422, body);
+  expect(error.message).toContain("HTTP 422");
+  expect(error.message).toContain(
+    '"validation_fields":["loanType","submittedOnDate"]',
+  );
+  expect(error.message).toContain("required-field");
+  expect(error.message).not.toContain("invented-private-value");
+  expect(error.message).not.toContain("Authorization");
+  expect(error.message).not.toContain(body.error);
+  const uncertain = loanAdminHttpFailure(503, { ...body, uncertain: true });
+  expect(uncertain.message).toContain('"uncertain":true');
+  expect(uncertain.message).toContain('"validation_fields":[]');
+  expect(uncertain.message).not.toContain("loanType");
+  for (const input of [
+    null,
+    undefined,
+    "invented-private-value",
+    { error: { secret: "invented-private-value" } },
+  ]) {
+    const result = loanAdminHttpFailure(503, input);
+    expect(result.message).toContain('"validation_fields":[]');
+    expect(result.message).not.toContain("invented-private-value");
   }
 });
