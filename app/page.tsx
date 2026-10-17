@@ -55,7 +55,7 @@ const Cards = dynamic(() => import("./cards").then((module) => module.Cards), {
   loading: () => <p role="status">Loading card workspace…</p>,
 });
 const Deposits = dynamic(
-  () => import("./deposits").then((module) => module.Deposits),
+  () => import("./deposit-workspace").then((module) => module.DepositWorkspace),
   {
     loading: () => <p role="status">Loading deposit workspace…</p>,
   },
@@ -1894,6 +1894,8 @@ export default function Page() {
               role={data.role}
               busy={busy}
               perform={perform}
+              accountOpened={Boolean(data.account)}
+              openAccount={() => setView("application")}
             />
           )}
           {view === "cards" && (

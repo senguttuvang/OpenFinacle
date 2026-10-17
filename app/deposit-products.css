@@ -1,0 +1,10 @@
+.deposit-product-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 0 20px;
+}
+.deposit-product-switch button[aria-pressed="true"] {
+  color: white;
+  background: var(--teal);
+}
