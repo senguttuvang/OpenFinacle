@@ -173,3 +173,10 @@ test("migration backup paths reject readable files, symbolic links and directori
     await rm(sandbox, { recursive: true, force: true });
   }
 });
+
+test("backup verification rejects an interior statement failure even when later SQL succeeds", async () => {
+  const dump = `${sql}\nINSERT INTO banks VALUES('synthetic-only');\nSELECT 1;`;
+  const error = await denied(verifyWorkflowDump(dump));
+  expect(error.message).toContain("did not restore");
+  expect(error.message).not.toContain("synthetic-only");
+});
