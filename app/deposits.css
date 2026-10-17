@@ -1,0 +1,86 @@
+.deposit-workspace {
+  overflow-wrap: anywhere;
+}
+.deposit-form {
+  margin: 24px 0;
+  max-width: 48rem;
+}
+.deposit-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.deposit-form legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.deposit-form label {
+  display: grid;
+  gap: 8px;
+}
+.deposit-form .deposit-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+}
+.deposit-form input:not([type="radio"]),
+.deposit-form select,
+.deposit-form textarea {
+  width: 100%;
+  max-width: 32rem;
+  min-height: 50px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+}
+.deposit-form input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--teal);
+  flex-shrink: 0;
+}
+.deposit-form textarea {
+  min-height: 100px;
+}
+.deposit-form p {
+  max-width: 65ch;
+}
+.deposit-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0;
+}
+.deposit-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.deposit-list span,
+.deposit-list small {
+  display: block;
+  margin-top: 6px;
+}
+.deposit-facts dd {
+  margin: 6px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.deposit-detail {
+  margin-top: 28px;
+}
+@media (max-width: 600px) {
+  .deposit-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
