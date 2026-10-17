@@ -42,6 +42,8 @@ import {
 } from "../src/domain/banking";
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
+import { CommandMenu } from "./command-menu";
+import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import {
   RetailAccount,
   RetailOverview,
@@ -49,31 +51,6 @@ import {
 } from "./retail-overview";
 import { initializeTelemetry } from "./telemetry";
 
-type View =
-  | "overview"
-  | "accounts"
-  | "profile"
-  | "application"
-  | "transfer"
-  | "statements"
-  | "services"
-  | "cash"
-  | "approvals"
-  | "operations"
-  | "audit";
-const labels: Record<View, string> = {
-  overview: "Overview",
-  accounts: "My accounts",
-  profile: "My profile",
-  application: "Account opening",
-  transfer: "Pay & transfer",
-  statements: "Statements",
-  services: "Service requests",
-  cash: "Cash & salary",
-  approvals: "Approval inbox",
-  operations: "Bank operations",
-  audit: "Activity & audit",
-};
 const roles: Record<Role, { name: string; person: string; initials: string }> =
   {
     customer: { name: "Customer", person: "Mira Krishnan", initials: "MK" },
@@ -381,18 +358,8 @@ export default function Page() {
   const transactions = [...(account?.transactions ?? [])].sort(
     (a, b) => b.id - a.id,
   );
-  const customerNav: View[] = retail
-    ? ["overview", "accounts", "transfer", "statements", "services", "profile"]
-    : ["overview", "application", "transfer", "statements", "services"];
-  const staffNav: View[] = [
-    "overview",
-    data.bank.journey === "existing" ? "accounts" : "application",
-    "cash",
-    "approvals",
-    "operations",
-    "services",
-    "audit",
-  ];
+  const navigation = navigationFor(role, data.bank.journey);
+  const customerNav = navigation.map((item) => item.view);
   const journeySteps = [
     Boolean(data.application),
     data.application?.status === "approved",
@@ -516,12 +483,14 @@ export default function Page() {
           aria-label="Main navigation"
           style={retail ? { display: "none" } : undefined}
         >
-          {(staff ? staffNav : customerNav).map((item) => {
+          {navigation.map(({ view: item, label, alias }) => {
             const Icon = navIcons[item];
             return (
               <button
                 type="button"
                 className={view === item ? "nav-item active" : "nav-item"}
+                aria-current={view === item ? "page" : undefined}
+                aria-label={label}
                 key={item}
                 onClick={() => {
                   setView(item);
@@ -529,7 +498,8 @@ export default function Page() {
                 }}
               >
                 <Icon size={19} />
-                <span>{labels[item]}</span>
+                <span>{label}</span>
+                {alias && <kbd className="nav-code">{alias}</kbd>}
                 {item === "approvals" && pending.length > 0 && (
                   <b>{pending.length}</b>
                 )}
@@ -674,6 +644,15 @@ export default function Page() {
             <strong>{labels[view]}</strong>
           </div>
           <div className="topbar-right">
+            <CommandMenu
+              role={role}
+              journey={data.bank.journey}
+              busy={busy}
+              navigate={(destination) => {
+                setView(destination);
+                setSearch("");
+              }}
+            />
             <span className="sandbox-label">
               <ShieldCheck size={14} /> Demo environment
             </span>
