@@ -5,6 +5,7 @@ import {
   PlanningAssumptions,
   type PlanningHousehold,
   planningAmortize,
+  planningAnchor,
   planningBalances,
   planningDay,
   planningForecast,
@@ -99,7 +100,7 @@ test("minor-unit model filters, balance identity, calendar boundaries and foreca
   });
   expect(planningDay("2024-02-28", 1)).toBe("2024-02-29");
   const rows = planningRows(household, {
-    ...planningRange("month"),
+    ...planningRange("month", planningAnchor),
     category: "Food",
     merchant: "groceries",
     account: "cash",
