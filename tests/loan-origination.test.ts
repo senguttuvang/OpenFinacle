@@ -18,6 +18,7 @@ import {
   advanceLoanSetup,
   loanSetupStatus,
 } from "../src/application/loan-setup";
+import { savedLoanStatement } from "../src/application/loan-statements";
 import { verifySqliteScript } from "../src/cli/sqlite-script";
 import { type Bank, BankingError, type Session } from "../src/domain/banking";
 import {
@@ -25,6 +26,7 @@ import {
   type LoanEngineService,
   LoanEnquiry,
   type LoanEnquiryService,
+  type LoanLookup,
 } from "../src/domain/loan-engine";
 import {
   LoanCatalogue,
@@ -47,6 +49,7 @@ import {
   Store,
   type StoreService,
 } from "../src/domain/ports";
+import { inventedLoanStatement } from "./fixtures/loan-statement";
 import {
   workflowQuote,
   workflowQuotedAt,
@@ -132,6 +135,20 @@ type Env =
   | LoanEngineService
   | LoanWriterService
   | LoanEnquiryService;
+const inspectOwnedLoan = (input: LoanLookup) =>
+  Effect.gen(function* () {
+    coreReads.push("owned-loan-enquiry");
+    if (failCoreReads)
+      return yield* Effect.fail(
+        new BankingError({ message: "Loan enquiry unavailable", status: 503 }),
+      );
+    const result = coreState.get(input.external_id);
+    if (!result)
+      return yield* Effect.fail(
+        new BankingError({ message: "Loan absent", status: 404 }),
+      );
+    return structuredClone(result.loan);
+  });
 const layer = () =>
   Layer.mergeAll(
     Layer.succeed(Store, {
@@ -265,23 +282,11 @@ const layer = () =>
         }),
     }),
     Layer.succeed(LoanEnquiry, {
-      inspect: (input) =>
-        Effect.gen(function* () {
-          coreReads.push("owned-loan-enquiry");
-          if (failCoreReads)
-            return yield* Effect.fail(
-              new BankingError({
-                message: "Loan enquiry unavailable",
-                status: 503,
-              }),
-            );
-          const result = coreState.get(input.external_id);
-          if (!result)
-            return yield* Effect.fail(
-              new BankingError({ message: "Loan absent", status: 404 }),
-            );
-          return structuredClone(result.loan);
-        }),
+      inspect: inspectOwnedLoan,
+      statement: (input) =>
+        Effect.sync(() => coreReads.push("owned-loan-statement")).pipe(
+          Effect.flatMap(() => inspectOwnedLoan(input)),
+        ),
       confirmDisbursement: () =>
         Effect.fail(
           new BankingError({
@@ -695,16 +700,57 @@ test("confirmed posting and failed balance synchronization remain separate and s
   const detail = await approved();
   failCoreReads = true;
   const active = await act(detail, "disburse", approver);
+  expect(active.core?.snapshot.statement).toBeUndefined();
+  expect(
+    (await denied(savedLoanStatement(customer, active.loan.id))).status,
+  ).toBe(409);
   expect(active.loan.status).toBe("active");
   expect(active.financial_view_stale).toBe(true);
   expect(
     (await run(refreshLoanCoreView(customer, active.loan.id))).core?.stale,
   ).toBe(true);
   failCoreReads = false;
+  const holding = coreState.get(`of-loan-${active.loan.id}`);
+  if (!holding) throw new Error("Missing invented active holding");
+  coreState.set(`of-loan-${active.loan.id}`, {
+    ...holding,
+    loan: {
+      ...holding.loan,
+      statement: inventedLoanStatement(holding.loan),
+    },
+  });
   time += 1000;
   const fresh = await run(refreshLoanCoreView(customer, active.loan.id));
   expect(fresh.loan.version).toBe(active.loan.version);
   expect(fresh.core?.stale).toBe(false);
+  expect(fresh.core?.snapshot.statement?.transactions).toHaveLength(1);
+  expect(coreReads).toContain("owned-loan-statement");
+  const reads = coreReads.length;
+  const file = await run(savedLoanStatement(customer, active.loan.id));
+  expect(fresh.loan.core_id).toBe(file.core_id);
+  expect(file.csv).toContain('"Disbursement"');
+  expect(file.csv).toContain('"Total repaid","0.00"');
+  expect(coreReads).toHaveLength(reads);
+  time += 300001;
+  expect(
+    (await run(savedLoanStatement(approver, active.loan.id))).csv,
+  ).toContain('"Stale saved observation"');
+  expect(coreReads).toHaveLength(reads);
+  expect(
+    (
+      await denied(
+        savedLoanStatement(
+          { ...customer, bank_id: "another-bank" },
+          active.loan.id,
+        ),
+      )
+    ).status,
+  ).toBe(404);
+  failCoreReads = true;
+  const retained = await run(refreshLoanCoreView(customer, active.loan.id));
+  expect(retained.core?.stale).toBe(true);
+  expect(retained.core?.snapshot.statement?.transactions).toHaveLength(1);
+  failCoreReads = false;
   await run(financialView(bank(), true));
   expect(
     (await run(savedLoanDetail(customer, active.loan.id))).financial_view_stale,

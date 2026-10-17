@@ -19,6 +19,7 @@ import {
   loanCoreMinor,
   normalizeCoreLoanSchedule,
 } from "./loan-engine";
+import { normalizeLoanStatement } from "./loan-statements";
 
 const id = Schema.Number.pipe(Schema.int(), Schema.positive());
 const opaque = Schema.String.pipe(Schema.pattern(/^[a-zA-Z0-9_-]{8,100}$/));
@@ -179,27 +180,25 @@ export const loanEnquiryLayer = Layer.effect(
   LoanEnquiry,
   Effect.gen(function* () {
     const core = yield* Core;
-    const inspect = (input: LoanLookup) =>
+    const readOwned = (input: LoanLookup) =>
       Effect.gen(function* () {
         const lookup = yield* decode(Lookup, input, 400);
         const terms = yield* normalizeLoanTerms(lookup.terms);
-        const raw = yield* decode(
-          Loan,
-          yield* core
-            .request(
-              "GET",
-              `loans/external-id/${encodeURIComponent(lookup.external_id)}?associations=repaymentSchedule,transactions,charges,linkedAccount`,
-            )
-            .pipe(
-              Effect.mapError((error) =>
-                invalid(
-                  "Core loan read unavailable; inspect the original instruction.",
-                  error.status,
-                  ["core-read"],
-                ),
+        const response = yield* core
+          .request(
+            "GET",
+            `loans/external-id/${encodeURIComponent(lookup.external_id)}?associations=repaymentSchedule,transactions,charges,linkedAccount`,
+          )
+          .pipe(
+            Effect.mapError((error) =>
+              invalid(
+                "Core loan read unavailable; inspect the original instruction.",
+                error.status,
+                ["core-read"],
               ),
             ),
-        );
+          );
+        const raw = yield* decode(Loan, response);
         if (
           raw.externalId !== lookup.external_id ||
           (lookup.core_id !== undefined && raw.id !== lookup.core_id) ||
@@ -342,10 +341,18 @@ export const loanEnquiryLayer = Layer.effect(
               : null,
           disbursements,
         };
-        return snapshot;
+        return { snapshot, response };
       });
+    const inspect = (input: LoanLookup) =>
+      readOwned(input).pipe(Effect.map((value) => value.snapshot));
     return {
       inspect,
+      statement: (input: LoanLookup) =>
+        Effect.gen(function* () {
+          const { snapshot, response } = yield* readOwned(input);
+          const statement = yield* normalizeLoanStatement(response, snapshot);
+          return { ...snapshot, statement };
+        }),
       confirmDisbursement: (
         input: LoanLookup & { transaction_external_id: string },
       ) =>

@@ -32,6 +32,7 @@ const routes = new Set([
   "/api/loans/action",
   "/api/loans/inspect",
   "/api/loans/refresh",
+  "/api/loans/statement",
   "/api/service-cases",
   "/api/service-cases/action",
   "/api/requests",

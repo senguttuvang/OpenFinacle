@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect";
 import { loanEnquiryLayer } from "../src/adapters/loan-enquiry";
 import { BankingError } from "../src/domain/banking";
 import { LoanEnquiry, type LoanLookup } from "../src/domain/loan-engine";
+import { loanStatementCsv } from "../src/domain/loan-statements";
 import { Core } from "../src/domain/ports";
 
 const lookup: LoanLookup = {
@@ -206,12 +207,182 @@ const harness = (
     }).pipe(Effect.provide(loanEnquiryLayer), Effect.provide(core));
   return {
     calls,
+    statement: () =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          return yield* (yield* LoanEnquiry).statement(lookup);
+        }).pipe(Effect.provide(loanEnquiryLayer), Effect.provide(core)),
+      ),
+    statementDenied: () =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          return yield* (yield* LoanEnquiry).statement(lookup);
+        }).pipe(
+          Effect.provide(loanEnquiryLayer),
+          Effect.provide(core),
+          Effect.flip,
+        ),
+      ),
     inspect: (input = lookup) => Effect.runPromise(task(false, input)),
     proof: () => Effect.runPromise(task(true)),
     denied: (proof = false, input = lookup, transactionId = external) =>
       Effect.runPromise(task(proof, input, transactionId).pipe(Effect.flip)),
   };
 };
+
+const statementRaw = {
+  ...raw,
+  summary: {
+    ...raw.summary,
+    currency,
+    principalPaid: 0,
+    interestPaid: 0,
+    totalRepayment: 0,
+    interestOutstanding: 1200,
+    feeChargesPaid: 0,
+    penaltyChargesPaid: 0,
+    feeChargesOutstanding: 0,
+    penaltyChargesOutstanding: 0,
+  },
+  transactions: [
+    {
+      ...transaction,
+      loanId: 21,
+      externalLoanId: lookup.external_id,
+      principalPortion: 0,
+      interestPortion: 0,
+      feeChargesPortion: 0,
+      penaltyChargesPortion: 0,
+      overpaymentPortion: 0,
+      unrecognizedIncomePortion: 0,
+      reversedOnDate: null,
+    },
+  ],
+};
+test("an explicit statement uses one owned read, preserves manual reversals and other Core types, and exports only normalized source facts", async () => {
+  const disbursement = statementRaw.transactions[0];
+  const h = harness({
+    ...statementRaw,
+    transactions: [
+      disbursement,
+      {
+        ...disbursement,
+        id: 32,
+        type: { id: 2 },
+        date: [2026, 10, 18],
+        amount: 1100,
+        principalPortion: 1000,
+        interestPortion: 100,
+        manuallyReversed: true,
+        reversedOnDate: [2026, 10, 19],
+      },
+      {
+        ...disbursement,
+        id: 33,
+        type: { id: 77 },
+        date: [2026, 10, 19],
+        amount: 0,
+      },
+    ],
+  });
+  const result = await h.statement();
+  expect(h.calls).toEqual([{ method: "GET", path: loanPath }]);
+  expect(result.statement?.transactions).toHaveLength(3);
+  expect(result.statement?.transactions[1]).toMatchObject({
+    type_id: 2,
+    amount_minor: 110000,
+    principal_minor: 100000,
+    interest_minor: 10000,
+    manually_reversed: true,
+    reversed_on_date: "2026-10-19",
+  });
+  expect(result.statement?.repayment_minor).toBe(0);
+  if (!result.statement) throw new Error("Expected normalized statement");
+  const csv = loanStatementCsv(
+    result.statement,
+    result.id,
+    Date.UTC(2026, 9, 19),
+    true,
+  );
+  expect(csv).toContain('"Stale saved observation"');
+  expect(csv).toContain('"INR"');
+  expect(csv).toContain(
+    '"32","Repayment","2026-10-18","1100.00","1000.00","100.00"',
+  );
+  expect(csv).toContain('"33","Other Core transaction (type 77)"');
+  expect(csv).not.toContain(lookup.external_id);
+  expect(csv).not.toContain(external);
+  expect(csv).toEndWith("\r\n");
+});
+test("statement ownership, completeness, exact components, dates and Core summary fail closed without affecting ordinary original proof", async () => {
+  const row = statementRaw.transactions[0];
+  const invalid = [
+    raw,
+    { ...statementRaw, transactions: [{ ...row, type: { id: 2 }, amount: 0 }] },
+    { ...statementRaw, transactions: [] },
+    { ...statementRaw, transactions: [row, row] },
+    { ...statementRaw, transactions: [{ ...row, loanId: 99 }] },
+    {
+      ...statementRaw,
+      transactions: [{ ...row, externalLoanId: "foreign-loan" }],
+    },
+    {
+      ...statementRaw,
+      transactions: [{ ...row, currency: { code: "USD", decimalPlaces: 2 } }],
+    },
+    {
+      ...statementRaw,
+      transactions: [{ ...row, principalPortion: undefined }],
+    },
+    { ...statementRaw, transactions: [{ ...row, interestPortion: 0.001 }] },
+    { ...statementRaw, transactions: [{ ...row, feeChargesPortion: -1 }] },
+    { ...statementRaw, transactions: [{ ...row, type: { id: 3 } }] },
+    { ...statementRaw, transactions: [{ ...row, date: [2026, 2, 30] }] },
+    { ...statementRaw, transactions: [{ ...row, date: [2026, 10, 16] }] },
+    {
+      ...statementRaw,
+      transactions: [{ ...row, reversedOnDate: [2026, 10, 18] }],
+    },
+    {
+      ...statementRaw,
+      transactions: [
+        row,
+        {
+          ...row,
+          id: 32,
+          type: { id: 2 },
+          amount: 1100,
+          principalPortion: 1000,
+        },
+      ],
+    },
+    {
+      ...statementRaw,
+      summary: { ...statementRaw.summary, totalRepayment: 1 },
+    },
+    {
+      ...statementRaw,
+      summary: { ...statementRaw.summary, interestOutstanding: 1199 },
+    },
+    {
+      ...statementRaw,
+      summary: { ...statementRaw.summary, feeChargesPaid: 1 },
+    },
+    {
+      ...statementRaw,
+      transactions: Array.from({ length: 1001 }, (_, i) => ({
+        ...row,
+        id: i + 1,
+      })),
+    },
+  ];
+  for (const response of invalid) {
+    const h = harness(response);
+    expect((await h.statementDenied()).status).toBe(503);
+    expect(h.calls).toEqual([{ method: "GET", path: loanPath }]);
+  }
+  expect(await harness(raw).proof()).toMatchObject({ transaction_id: 31 });
+});
 
 test("read-only proof diagnostics select static schema checks and discard response values and transport messages", async () => {
   const marker = "invented-private-response-marker";

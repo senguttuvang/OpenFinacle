@@ -1,5 +1,6 @@
 import { Context, type Effect, Schema } from "effect";
 import type { BankingError } from "./banking";
+import { LoanStatement } from "./loan-statements";
 import { LoanOwner, LoanQuote, LoanSchedule, type LoanTerms } from "./loans";
 
 export interface LoanQuoteInput {
@@ -53,7 +54,37 @@ export const CoreLoanSnapshot = Schema.Struct({
   outstanding_minor: Schema.NullOr(minor),
   schedule: Schema.NullOr(LoanSchedule),
   disbursements: Schema.Array(LoanDisbursement),
-});
+  statement: Schema.optional(LoanStatement),
+}).pipe(
+  Schema.filter(
+    (loan) =>
+      !loan.statement ||
+      (loan.status === "active" &&
+        loan.statement.principal_outstanding_minor ===
+          loan.principal_outstanding_minor &&
+        loan.statement.outstanding_minor === loan.outstanding_minor &&
+        loan.statement.transactions.filter(
+          (row) => row.type_id === 1 && !row.manually_reversed,
+        ).length === 1 &&
+        loan.statement.transactions.some(
+          (row) =>
+            row.type_id === 1 &&
+            !row.manually_reversed &&
+            row.amount_minor === loan.principal_minor &&
+            row.date === loan.actual_disbursement_date &&
+            loan.disbursements.some(
+              (disbursement) =>
+                disbursement.id === row.id &&
+                !disbursement.reversed &&
+                disbursement.amount_minor === row.amount_minor &&
+                disbursement.date === row.date,
+            ),
+        ) &&
+        loan.statement.transactions.every(
+          (row) => row.date >= loan.submitted_on_date,
+        )),
+  ),
+);
 export type CoreLoanSnapshot = typeof CoreLoanSnapshot.Type;
 interface LoanDisbursementProof {
   loan: CoreLoanSnapshot;
@@ -64,6 +95,9 @@ interface LoanDisbursementProof {
 }
 export interface LoanEnquiryService {
   inspect: (input: LoanLookup) => Effect.Effect<CoreLoanSnapshot, BankingError>;
+  statement: (
+    input: LoanLookup,
+  ) => Effect.Effect<CoreLoanSnapshot, BankingError>;
   confirmDisbursement: (
     input: LoanLookup & { transaction_external_id: string },
   ) => Effect.Effect<LoanDisbursementProof, BankingError>;
