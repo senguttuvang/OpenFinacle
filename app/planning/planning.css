@@ -394,16 +394,19 @@
 }
 .wp-chart {
   margin: 24px 0 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 .wp-chart svg {
   width: 100%;
+  min-width: 680px;
   min-height: 170px;
   display: block;
   overflow: visible;
 }
 .wp-chart text {
   font:
-    13px "IBM Plex Sans",
+    16px "IBM Plex Sans",
     sans-serif;
   fill: #52627a;
 }
