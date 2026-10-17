@@ -5,6 +5,7 @@ import {
   PlanningAssumptions,
   type PlanningHousehold,
   planningAmortize,
+  planningAnchor,
   planningBalances,
   planningDay,
   planningForecast,
@@ -99,7 +100,7 @@ test("minor-unit model filters, balance identity, calendar boundaries and foreca
   });
   expect(planningDay("2024-02-28", 1)).toBe("2024-02-29");
   const rows = planningRows(household, {
-    ...planningRange("month"),
+    ...planningRange("month", planningAnchor),
     category: "Food",
     merchant: "groceries",
     account: "cash",
@@ -116,6 +117,32 @@ test("minor-unit model filters, balance identity, calendar boundaries and foreca
   );
 });
 test("cash-flow projection and debt never invent funding on depletion or prepayment", () => {
+  const overdrawn = {
+    ...household,
+    postings: [],
+    holdings: [],
+    accounts: [
+      {
+        id: "cash",
+        label: "Overdrawn synthetic cash",
+        owners: "Synthetic owner",
+        opening: -10000,
+      },
+    ],
+    debt: { principal: 1000000, rate: 0, emi: 0 },
+  };
+  const deficit = planningProjection(overdrawn, {
+    ...assumptions,
+    income: 0,
+    essential: 0,
+    discretionary: 0,
+    sip: 0,
+    prepayment: 100000,
+  });
+  expect(deficit[0]?.opening).toBe(-10000);
+  expect(deficit[0]?.growth).toBe(0);
+  expect(deficit[0]?.gap).toBe(10000);
+  expect(deficit[0]?.debt).toBe(1000000);
   expect(
     evaluatePlanningProjection(household, {
       ...assumptions,
@@ -139,8 +166,11 @@ test("cash-flow projection and debt never invent funding on depletion or prepaym
     sip: 0,
   });
   expect(zero[0]?.closing).toBe(0);
-  expect(zero[0]?.gap).toBe(102000000);
+  expect(zero[0]?.gap).toBe(109200000);
   const normal = planningProjection(household, assumptions);
+  expect(normal[0]!.essential / normal[0]!.deflator).toBe(
+    assumptions.essential * 12,
+  );
   const broken = planningProjection(household, {
     ...assumptions,
     breakMonths: 12,
