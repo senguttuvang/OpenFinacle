@@ -12,6 +12,8 @@ Retail access provides no evidence of ICICI's staff portal. Staff capability fam
 
 Read the recent Codex conversation 01a13e5e-8956-7f60-962d-1fc35b56fee3 and current Upwork-V2 revision ab76b5668bcd5f804cf0a1b39f0acac4ba022086 after successful JetBrains indexing. The owner's final direction removed the separate custom React shell and retained styled native Payload administration. specs/003-native-admin/spec.md, src/platform/admin/Views.tsx and DESIGN.md confirm that supported custom views preserve native navigation, collection forms, identity and access enforcement. Reusable lessons: one shell, explicit operational states, domain-shaped screens and actual totals. No Upwork records, proprietary styles or authentication are copied.
 
+Coverage limit: two focused searches of the indexed SenG-Vault revision c07e4ef1 retrieved legacy billing notes rather than a current portal brief. Untracked Upwork channel paths concerned profile revisions and were not used as portal evidence. Portal conclusions therefore rely on the current repository and the identified original conversation; this is not an exhaustive absence claim about vault history.
+
 ## Alternatives and decision
 
 Payload native admin saves work for editable documents, versioned records, permissions and conventional collections. Its custom views can accommodate specialist screens, but they need explicit authorization checks. OpenFinacle currently has a static Next client and an existing Effect/Worker workflow owner; adding Payload creates a new server runtime, identity and persistence boundary to operate. It would not supply teller posting logic or replace Fineract. Retain it as an option for a distinct content/document administration requirement.

@@ -60,11 +60,10 @@ export function RetailOverview({ data, navigate }: Props) {
             <div
               className="portfolio-ring"
               role="img"
-              aria-label="Portfolio consists of savings"
+              aria-label="Savings account"
             >
               <Landmark size={26} />
               <span>Savings</span>
-              <strong>100%</strong>
             </div>
             <div className="retail-total">
               <span>Total account balance</span>
