@@ -234,4 +234,77 @@ test("fixed deposit preserves review/edit, reconciles lost submission and activa
     path: "/tmp/finacle4-deposit-mobile-xl.png",
     fullPage: true,
   });
+  await page.setViewportSize({ width: 640, height: 900 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/finacle4-deposit-200-text.png",
+    fullPage: true,
+  });
+});
+test("unverified deposit response stays locked; only confirmed missing key enables safe discard", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  let malformed = true;
+  let sent = 0;
+  await page.route("**/api/**", (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/deposits" && request.method() === "POST") {
+      sent++;
+      return route.fulfill({ json: { unverified: true } });
+    }
+    if (url.pathname === "/api/deposits" && url.searchParams.has("key"))
+      return malformed
+        ? route.fulfill({ json: {} })
+        : route.fulfill({
+            status: 404,
+            json: { error: "No recorded instruction" },
+          });
+    return route.fulfill({
+      json:
+        url.pathname === "/api/dashboard"
+          ? data
+          : url.pathname === "/api/deposits"
+            ? { deposits: [] }
+            : {},
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
+  await page
+    .getByRole("button", { name: "Review application", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Submit demo application" }).click();
+  await expect(
+    page.locator(".deposit-workspace").getByRole("alert"),
+  ).toContainText("could not be verified");
+  await page
+    .getByRole("button", { name: "Check saved instruction", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Retry original instruction" }),
+  ).toHaveCount(0);
+  malformed = false;
+  await page
+    .getByRole("button", { name: "Check saved instruction", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Retry original instruction" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Discard unrecorded instruction" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Open a demo fixed deposit" }),
+  ).toBeEnabled();
+  expect(sent).toBe(1);
 });
