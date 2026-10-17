@@ -210,7 +210,7 @@ export function RetailOverview({ data, navigate }: Props) {
               <p>
                 {pending.length
                   ? "Check with the branch approver before retrying a payment."
-                  : "Your latest payments and account activity are up to date."}
+                  : "No instructions are waiting for action. Account values reflect the last synchronization."}
               </p>
             </div>
           </div>
