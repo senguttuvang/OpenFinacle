@@ -25,6 +25,13 @@ import {
   listCards,
 } from "./application/cards";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
+import {
+  actOnDeposit,
+  depositDetail,
+  depositForKey,
+  listDeposits,
+  submitDeposit,
+} from "./application/deposits";
 import { financialView } from "./application/financial-view";
 import { customerProfile } from "./application/profile";
 import {
@@ -43,6 +50,7 @@ import {
   type Session,
 } from "./domain/banking";
 import { CardCommand } from "./domain/cards";
+import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { Core, Store } from "./domain/ports";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
@@ -501,6 +509,37 @@ const handle = (request: Request, env: Environment) =>
         },
       });
     }
+    if (path === "/api/deposits" && request.method === "GET") {
+      const id = url.searchParams.get("id");
+      const key = url.searchParams.get("key");
+      if (id !== null && key !== null)
+        return yield* Effect.fail(
+          failure("Choose a deposit or command reference."),
+        );
+      return Response.json(
+        key !== null
+          ? yield* depositForKey(session, key)
+          : id !== null
+            ? yield* depositDetail(session, id)
+            : yield* listDeposits(session),
+      );
+    }
+    if (path === "/api/deposits" && request.method === "POST")
+      return Response.json(
+        yield* submitDeposit(
+          session,
+          yield* parse(request, DepositTerms, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
+    if (path === "/api/deposits/action" && request.method === "POST")
+      return Response.json(
+        yield* actOnDeposit(
+          session,
+          yield* parse(request, DepositCommand, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
     if (path === "/api/profile" && request.method === "GET")
       return Response.json(yield* customerProfile(session));
     if (path === "/api/cards" && request.method === "GET") {
