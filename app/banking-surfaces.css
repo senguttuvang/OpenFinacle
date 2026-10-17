@@ -1,0 +1,534 @@
+.branch-metrics {
+  gap: 18px;
+}
+.branch-metric {
+  min-height: 170px;
+  padding: 22px;
+  border: 0;
+  background: #e7eeff;
+}
+.branch-metric:nth-child(2) {
+  background: #fff0d9;
+}
+.branch-metric:nth-child(3) {
+  background: #e0f3ee;
+}
+.branch-metric:nth-child(4) {
+  background: #f0e8ff;
+}
+.branch-metric-top svg {
+  color: #244c9f;
+}
+.branch-metric:nth-child(2) svg {
+  color: #8a580e;
+}
+.branch-metric:nth-child(3) svg {
+  color: #126957;
+}
+.branch-metric:nth-child(4) svg {
+  color: #7044a8;
+}
+.branch-metric > strong {
+  font-size: 2.22rem;
+  letter-spacing: -0.03em;
+}
+.branch-columns {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+}
+.branch-filters {
+  flex-wrap: wrap;
+}
+.branch-filters button {
+  min-height: 44px;
+}
+.branch-filters button > span {
+  font-size: 0.72rem;
+}
+.branch-queue-tools {
+  flex-wrap: wrap;
+}
+.branch-queue-tools .search-box {
+  width: 240px;
+}
+.branch-table td {
+  padding-block: 20px;
+}
+.branch-table .branch-open {
+  min-width: 44px;
+  min-height: 44px;
+}
+.branch-relationship {
+  background: #173d86;
+  padding: 26px;
+}
+.branch-relationship h2 {
+  font-size: 1.44rem;
+}
+.branch-relationship :is(p, dt) {
+  color: #d4e3ff;
+  font-size: 0.89rem;
+}
+.branch-relationship :is(dd, button) {
+  font-size: 0.89rem;
+}
+.branch-customer-icon {
+  background: #3059a0;
+  color: white;
+  border: 0;
+}
+.branch-relationship > button {
+  color: #143b80;
+  background: white;
+  min-height: 50px;
+}
+.branch-operation-grid > button {
+  background: #f4f7fd;
+  padding: 20px;
+  min-height: 130px;
+}
+.app-shell.customer-retail .main-shell {
+  margin: 0;
+  width: 100%;
+}
+.app-shell.customer-retail .sidebar {
+  position: absolute;
+  top: 198px;
+  left: 24px;
+  width: 236px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+.app-shell.customer-retail .content {
+  margin-left: 292px;
+  padding-right: 32px;
+  max-width: 1700px;
+}
+.customer-retail .retail-brand {
+  font-size: 1.4rem;
+  color: var(--ink);
+}
+.retail-brand small {
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  left: 52px;
+}
+.customer-retail .topbar {
+  border-top: 4px solid #2458d3;
+}
+.retail-navigation {
+  min-height: 66px;
+  gap: 4px;
+  overflow-x: auto;
+  justify-content: flex-start;
+  padding-inline: 24px;
+}
+.retail-navigation button {
+  font-size: 0.94rem;
+  min-height: 64px;
+  padding-inline: 20px;
+  white-space: nowrap;
+}
+.retail-navigation button.active {
+  background: #edf2ff;
+  color: #174abb;
+  border-bottom-color: #2458d3;
+}
+.retail-shortcuts button {
+  font-size: 0.89rem;
+  padding: 17px;
+}
+.retail-dashboard {
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 24px;
+}
+.retail-primary-column,
+.retail-secondary-column {
+  gap: 24px;
+}
+.retail-portfolio {
+  background: #173d86;
+  border: 0;
+}
+.retail-portfolio-body {
+  padding: 44px 28px 30px;
+}
+.portfolio-ring {
+  background: #3059a0;
+  border: 0;
+  color: white;
+}
+.portfolio-ring span {
+  font-size: 0.72rem;
+}
+.retail-total > strong {
+  font-size: clamp(2rem, 3.3vw, 3rem);
+}
+.retail-total > span,
+.retail-total > small,
+.retail-account-line span,
+.retail-account-line small {
+  font-size: 0.89rem;
+  color: #d4e3ff;
+}
+.retail-account-line strong,
+.retail-account-line > button {
+  font-size: 0.89rem;
+}
+.retail-portfolio .text-link {
+  color: #e0f0ff;
+}
+.retail-panel-title .text-link {
+  font-size: 0.78rem;
+}
+.retail-action-strip {
+  background: #244b90;
+}
+.retail-action-strip button {
+  font-size: 0.83rem;
+  min-height: 94px;
+}
+.retail-action-strip button svg {
+  color: #c5e9ff;
+  width: 24px;
+  height: 24px;
+}
+.retail-account-active {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0d6a54;
+}
+.retail-support-banner {
+  background: #e2f4ee;
+  border: 0;
+}
+.retail-support-banner > button {
+  font-size: 0.83rem;
+}
+.retail-help-card {
+  background: #fff0db;
+  border: 0;
+}
+.retail-help-card p {
+  color: #705019;
+}
+.retail-payee-card .avatar {
+  width: 60px;
+  height: 60px;
+  font-size: 1rem;
+  background: #f1e7ff;
+  color: #6a3d96;
+}
+.retail-payee-card > p {
+  font-size: 0.83rem;
+}
+.retail-kicker,
+.retail-support-banner span {
+  display: none;
+}
+.account-workspace {
+  display: grid;
+  gap: 24px;
+}
+.account-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.account-balance {
+  display: flex;
+  flex-direction: column;
+  background: #173d86;
+  color: white;
+  border-radius: 16px;
+  padding: 28px;
+  min-width: 0;
+}
+.account-balance-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 600;
+}
+.account-balance-title h2 {
+  font-size: 1.11rem;
+  color: white;
+  letter-spacing: -0.015em;
+}
+.welcome-copy > p {
+  font-size: 1.05rem;
+}
+.welcome
+  :is(
+    .journey-options > span,
+    .welcome-note,
+    .welcome-footer,
+    .welcome .primary
+  ) {
+  font-size: 0.89rem;
+}
+.welcome
+  :is(.floating-proof, .floating-proof small, .card-bottom, .art-caption) {
+  font-size: 0.78rem;
+}
+.account-balance > p {
+  margin-top: 28px;
+  color: #d4e3ff;
+  font-size: 0.94rem;
+}
+.account-balance > strong {
+  font:
+    650 clamp(1.8rem, 3.6vw, 2.8rem) "Manrope Variable",
+    sans-serif;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.account-balance-note {
+  font-size: 0.83rem;
+  color: #d4e3ff;
+  margin-top: 8px;
+}
+.account-statement {
+  margin-top: 28px;
+  padding: 16px 0 0;
+  border-top: 1px solid #5675aa;
+  background: transparent;
+  color: white;
+  font-size: 0.89rem;
+  justify-content: flex-start;
+  min-height: 50px;
+  flex-wrap: wrap;
+}
+.account-statement > svg:last-child {
+  margin-left: auto;
+}
+.account-identity {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+}
+.account-person-icon {
+  display: grid;
+  place-items: center;
+  color: #68419d;
+  background: #eee6fa;
+  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+}
+.account-identity > div {
+  min-width: 0;
+  flex: 1;
+}
+.account-identity h2 {
+  font-size: 1.45rem;
+  margin: 4px 0 8px;
+  overflow-wrap: anywhere;
+}
+.account-identity p,
+.account-identity > div > span {
+  font-size: 0.89rem;
+  color: var(--muted);
+}
+.account-identity .retail-account-active {
+  background: #e0f3eb;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.account-identity-note {
+  flex-basis: 100%;
+  align-self: flex-end;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.account-information .panel-heading {
+  color: var(--ink);
+}
+.account-information .panel-heading > svg {
+  color: #6984ac;
+}
+.account-information h3 {
+  font-size: 1.22rem;
+}
+.account-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 36px;
+  margin: 0;
+}
+.account-facts > div {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.account-facts dt {
+  font-size: 0.83rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.account-facts dd {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.account-information .button-row {
+  padding-top: 4px;
+}
+.centre-dialog {
+  font-size: 1rem;
+}
+.centre-dialog :is(label, input, textarea, select, .centre-note) {
+  font-size: 0.94rem;
+}
+.centre-dialog-heading h2 {
+  font-size: 1.44rem;
+}
+.centre-dialog h3,
+.centre-case-list h3,
+.centre-groups h3 {
+  font-size: 1rem;
+}
+.centre-close {
+  min-width: 48px;
+  min-height: 48px;
+}
+.centre-case-list code,
+.centre-case-heading code,
+.centre-status,
+.centre-timeline small {
+  font-size: 0.78rem;
+}
+.centre-entrypoints > button {
+  background: #edf2ff;
+}
+.centre-entrypoints > button:nth-child(2) {
+  background: #e5f4ee;
+}
+.centre-entrypoints > button:nth-child(3) {
+  background: #fff1dc;
+}
+.centre-reconcile {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.command-search [cmdk-input],
+[cmdk-item] {
+  font-size: 1rem;
+}
+[cmdk-item] {
+  min-height: 52px;
+}
+[cmdk-group-heading],
+.command-footer {
+  font-size: 0.78rem;
+}
+.app-shell .card-workspace button {
+  font-size: 0.94rem;
+  min-height: 50px;
+}
+.card-form input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+}
+.card-summary strong {
+  font-size: 1.45rem;
+}
+.app-shell .info-panel {
+  background: #e8efff;
+  border-color: var(--line);
+}
+.app-shell .info-panel > p {
+  font-size: 0.94rem;
+  color: var(--muted);
+}
+.app-shell .empty-state h3 {
+  font-size: 1.11rem;
+}
+.app-shell .quick-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.app-shell .quick-item {
+  min-width: 0;
+}
+.app-shell .quick-item strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1300px) {
+  .branch-columns,
+  .retail-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .branch-secondary,
+  .retail-secondary-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .retail-help-card {
+    grid-column: 1 / -1;
+  }
+  .branch-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-shell .topbar {
+    flex-wrap: wrap;
+  }
+  .app-shell .topbar-right {
+    margin-left: auto;
+  }
+  .account-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1000px) {
+  .app-shell .sidebar {
+    width: 246px;
+    padding-inline: 14px;
+  }
+  .app-shell .main-shell {
+    margin-left: 246px;
+    width: calc(100% - 246px);
+  }
+  .app-shell .nav-code {
+    display: none;
+  }
+  .app-shell.customer-retail .content {
+    margin-left: 0;
+    padding-left: 24px;
+  }
+  .app-shell.customer-retail .sidebar {
+    position: static;
+    width: 100%;
+    padding: 16px 24px 0;
+  }
+  .customer-retail .retail-shortcuts {
+    display: none;
+  }
+  .app-shell.customer-retail .sidebar-bottom {
+    position: static;
+    padding: 0;
+    margin: 0;
+  }
+  .customer-retail .demo-help {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .customer-retail .demo-help > p,
+  .customer-retail .core-status,
+  .customer-retail .demo-help > svg {
+    display: none;
+  }
+  .customer-retail .role-select {
+    flex: 1;
+  }
+}

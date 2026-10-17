@@ -255,57 +255,102 @@ export function RetailAccount({ data, navigate }: Props) {
   const account = data.account;
   if (!account) return null;
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <h2>Everyday Savings</h2>
-          <p>Your account details and balances</p>
-        </div>
-        <span className="retail-account-active">
-          <CheckCircle2 size={15} />
-          {account.status.value}
-        </span>
-      </div>
-      <div className="detail-grid">
-        {Object.entries({
-          "Account holder": account.clientName,
-          "Account number": account.accountNo,
-          "Account type": "Everyday Savings",
-          Currency: account.currency?.code ?? "INR",
-          Branch: "Adyar · Chennai (demo)",
-          "Account balance": formatMoney(account.summary?.accountBalance ?? 0),
-          "Available balance": formatMoney(
-            account.summary?.availableBalance ??
-              account.summary?.accountBalance ??
-              0,
-          ),
-          "Debit status": account.subStatus?.value ?? "No restrictions",
-        }).map(([label, value]) => (
-          <div key={label}>
-            <small>{label}</small>
-            <strong>{value}</strong>
+    <section className="account-workspace" aria-label="Savings account details">
+      <div className="account-summary">
+        <div className="account-balance">
+          <div className="account-balance-title">
+            <Landmark size={24} />
+            <h2>Everyday Savings</h2>
           </div>
-        ))}
+          <p>Available to use</p>
+          <strong data-testid="account-available-balance">
+            {formatMoney(
+              account.summary?.availableBalance ??
+                account.summary?.accountBalance ??
+                0,
+            )}
+          </strong>
+          <span className="account-balance-note">
+            Indian Rupee · {account.currency?.code ?? "INR"}
+          </span>
+          <button
+            type="button"
+            className="account-statement"
+            onClick={() => navigate("statements")}
+          >
+            <FileText size={20} /> View account statement{" "}
+            <ArrowRight size={19} />
+          </button>
+        </div>
+        <div className="account-identity">
+          <span className="account-person-icon">
+            <Users size={28} />
+          </span>
+          <div>
+            <p>Account holder</p>
+            <h2>{account.clientName}</h2>
+            <span>A/C {account.accountNo}</span>
+          </div>
+          <span className="retail-account-active">
+            <CheckCircle2 size={18} />
+            {account.status.value}
+          </span>
+          <p className="account-identity-note">
+            Everyday banking, connected to your branch.
+          </p>
+        </div>
       </div>
-      <div className="button-row">
-        <button
-          type="button"
-          className="primary"
-          onClick={() =>
-            navigate(data.role === "customer" ? "transfer" : "cash")
-          }
-        >
-          {data.role === "customer" ? "Transfer money" : "Go to cash desk"}{" "}
-          <ArrowRight size={15} />
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => navigate("statements")}
-        >
-          <ArrowDownToLine size={16} />
-          View account statement
-        </button>
+      <div className="panel account-information">
+        <div className="panel-heading">
+          <div>
+            <h3>Account information</h3>
+            <p>The details behind your everyday banking</p>
+          </div>
+          <Landmark size={24} aria-hidden="true" />
+        </div>
+        <dl className="account-facts">
+          {Object.entries({
+            "Account holder": account.clientName,
+            "Account number": account.accountNo,
+            "Account type": "Everyday Savings",
+            Currency: account.currency?.code ?? "INR",
+            Branch: "Adyar · Chennai (demo)",
+            "Account balance": formatMoney(
+              account.summary?.accountBalance ?? 0,
+            ),
+            "Available balance": formatMoney(
+              account.summary?.availableBalance ??
+                account.summary?.accountBalance ??
+                0,
+            ),
+            "Debit status": account.subStatus?.value ?? "No restrictions",
+          }).map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="button-row">
+          <button
+            type="button"
+            className="primary"
+            onClick={() =>
+              navigate(data.role === "customer" ? "transfer" : "cash")
+            }
+          >
+            {data.role === "customer" ? "Transfer money" : "Go to cash desk"}{" "}
+            <ArrowRight size={15} />
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => navigate("statements")}
+          >
+            <ArrowDownToLine size={16} />
+            View account statement
+          </button>
+        </div>
       </div>
     </section>
   );

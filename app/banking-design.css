@@ -382,7 +382,15 @@ svg {
   background: transparent;
 }
 .app-shell.customer-retail .content {
-  margin-left: 272px;
+  margin-left: 292px;
+}
+@media (min-width: 801px) and (max-width: 1000px) {
+  .app-shell.customer-retail .content {
+    margin-left: 0;
+  }
+  .app-shell.customer-retail .sidebar {
+    width: 100%;
+  }
 }
 @media (max-width: 800px) {
   .app-shell {
@@ -513,6 +521,12 @@ svg {
   }
   .account-identity {
     gap: 14px;
+  }
+  .account-identity > div {
+    flex: 1 1 calc(100% - 78px);
+  }
+  .app-shell.customer-retail .sidebar {
+    width: 100%;
   }
   .account-identity .retail-account-active {
     margin-left: 78px;

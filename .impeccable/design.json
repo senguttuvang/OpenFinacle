@@ -1,0 +1,11 @@
+{
+  "name": "OpenFinacle banking workspace",
+  "mode": "operate",
+  "tokens": {
+    "color": { "ink": "#172b4d", "muted": "#52627a", "action": "#2458d3", "account": "#173d86", "workspace": "#f2f5fc", "line": "#dae2ef" },
+    "type": { "body": "IBM Plex Sans", "heading": "Manrope Variable", "comfortableRoot": "112.5%", "largeRoot": "137.5%" },
+    "radius": "16px",
+    "primaryControlHeight": "50px"
+  },
+  "source": "app/banking-design.css and app/banking-surfaces.css"
+}
