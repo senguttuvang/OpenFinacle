@@ -31,6 +31,8 @@ const attentionStates = new Set([
   "failed",
   "opening_exception",
   "open",
+  "in_progress",
+  "needs_information",
   "needs_changes",
 ]);
 const readable = (value: string) => value.replaceAll("_", " ");
@@ -49,7 +51,14 @@ export function BranchOverview({
   const exceptions = data.commands.filter((item) =>
     ["uncertain", "failed"].includes(item.status),
   );
-  const openRequests = data.requests.filter((item) => item.status === "open");
+  const openRequests = data.requests.filter((item) =>
+    ["open", "in_progress", "needs_information", "awaiting_approval"].includes(
+      item.status,
+    ),
+  );
+  const serviceApprovals = data.requests.filter(
+    (item) => item.status === "awaiting_approval",
+  ).length;
   const items: QueueItem[] = [
     ...(application
       ? [
@@ -89,7 +98,9 @@ export function BranchOverview({
       .includes(query.toLowerCase()),
   );
   const approvalCount =
-    pending.length + Number(application?.status === "awaiting_approval");
+    pending.length +
+    Number(application?.status === "awaiting_approval") +
+    serviceApprovals;
   const exceptionCount =
     exceptions.length + Number(application?.status === "opening_exception");
   const metrics = [
@@ -99,7 +110,11 @@ export function BranchOverview({
       icon: ShieldCheck,
       destination: (application?.status === "awaiting_approval"
         ? "application"
-        : "approvals") as View,
+        : pending.length
+          ? "approvals"
+          : serviceApprovals
+            ? "services"
+            : "approvals") as View,
       detail: "Independent review required",
     },
     {

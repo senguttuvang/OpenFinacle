@@ -62,6 +62,7 @@ export const listServiceCases = (
   session: Session,
   offset: number,
   query: string,
+  deliveries = false,
 ) =>
   Effect.gen(function* () {
     if (
@@ -77,7 +78,8 @@ export const listServiceCases = (
     const store = yield* Store;
     const search = `%${query.trim().replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
     const where =
-      "bank_id=? AND (id LIKE ? ESCAPE '\\' OR kind LIKE ? ESCAPE '\\' OR detail LIKE ? ESCAPE '\\')";
+      "bank_id=? AND (id LIKE ? ESCAPE '\\' OR kind LIKE ? ESCAPE '\\' OR detail LIKE ? ESCAPE '\\')" +
+      (deliveries ? " AND delivery_status NOT IN ('none','not_recorded')" : "");
     const values = [session.bank_id, search, search, search];
     const count = yield* store.one<{ total: number }>(
       `SELECT COUNT(*) AS total FROM service_requests WHERE ${where}`,
