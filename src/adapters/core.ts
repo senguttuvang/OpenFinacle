@@ -4,6 +4,7 @@ import { BankingError } from "../domain/banking";
 import { Core } from "../domain/ports";
 import { safeCoreRoute } from "../domain/telemetry";
 import { coreCommandKey } from "./core-command-key";
+import { coreHttpFailure } from "./core-failure";
 import type { Environment } from "./environment";
 
 interface CoreFailure {
@@ -86,18 +87,17 @@ export const coreLayer = (env: Environment, requestId = "internal") =>
           });
           if (!response.ok)
             return yield* Effect.fail(
-              new BankingError({
-                message:
-                  data.errors
-                    ?.map((e) => e.defaultUserMessage)
-                    .filter(Boolean)
-                    .join("; ") ||
+              coreHttpFailure(
+                method,
+                response.status,
+                data.errors
+                  ?.map((e) => e.defaultUserMessage)
+                  .filter(Boolean)
+                  .join("; ") ||
                   data.defaultUserMessage ||
                   data.error ||
                   `Banking operation declined (${response.status}).`,
-                status: response.status >= 500 ? 503 : 422,
-                uncertain: response.status >= 500 && method !== "GET",
-              }),
+              ),
             );
           return data as T;
         }).pipe(

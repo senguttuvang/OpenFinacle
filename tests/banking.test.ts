@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Effect, Layer } from "effect";
+import { coreHttpFailure } from "../src/adapters/core-failure";
 import {
   bootstrap,
   createCommand,
@@ -460,38 +461,42 @@ describe("financial command lifecycle", () => {
       db.query("SELECT status FROM commands WHERE id=?").get(command.id),
     ).toEqual({ status: "rejected" });
   });
-  test("uncertain core failures stay uncertain and cannot be blindly replayed", async () => {
-    const command = await run(
-      createCommand(
-        officer,
-        { kind: "deposit", amount: 1000 },
-        "uncertain-0001",
-      ),
-    );
-    coreFailure = new BankingError({
-      message: "Connection lost after dispatch",
-      status: 503,
-      uncertain: true,
+  for (const status of [409, 503])
+    test(`core HTTP ${status} leaves instructions uncertain and blocks replay and later writes`, async () => {
+      const command = await run(
+        createCommand(
+          officer,
+          { kind: "deposit", amount: 1000 },
+          "uncertain-0001",
+        ),
+      );
+      coreFailure = coreHttpFailure(
+        "POST",
+        status,
+        "The original core command may still be processing",
+      );
+      expect(
+        (await failureOf(executeCommand(approver, command.id))).uncertain,
+      ).toBe(true);
+      expect(
+        db.query("SELECT status FROM commands WHERE id=?").get(command.id),
+      ).toEqual({ status: "uncertain" });
+      coreFailure = undefined;
+      const replay = await run(executeCommand(approver, command.id));
+      expect(replay.status).toBe("uncertain");
+      expect(
+        (
+          await failureOf(
+            createCommand(
+              officer,
+              { kind: "deposit", amount: 1000 },
+              "new-key-after-uncertainty",
+            ),
+          )
+        ).status,
+      ).toBe(409);
+      expect(postings).toHaveLength(0);
     });
-    expect(
-      (await failureOf(executeCommand(approver, command.id))).uncertain,
-    ).toBe(true);
-    coreFailure = undefined;
-    const replay = await run(executeCommand(approver, command.id));
-    expect(replay.status).toBe("uncertain");
-    expect(
-      (
-        await failureOf(
-          createCommand(
-            officer,
-            { kind: "deposit", amount: 1000 },
-            "new-key-after-uncertainty",
-          ),
-        )
-      ).status,
-    ).toBe(409);
-    expect(postings).toHaveLength(0);
-  });
   test("declined transfer records failure without reporting success", async () => {
     lastBalance = 10;
     const error = await failureOf(
