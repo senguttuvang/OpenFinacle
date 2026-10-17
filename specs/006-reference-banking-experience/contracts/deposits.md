@@ -1,0 +1,25 @@
+# Fixed-deposit origination and holdings
+
+Evidence date: 17 October 2026. Deposits navigation was observed in the retail reference. The fields, product, rate, limits, nominee policy and staff workflow below are **inferred demonstration rules**, not observed ICICI forms or verified Finacle operations. No real-bank instruction is authorized. Execution: Beads `of-9hc.8`.
+
+## Ownership and funding decision
+
+Use an explicit persistent synthetic adapter in D1. Fineract remains the sole owner of savings balances and postings. This product uses a demo allocation, with no source-account debit, balance check, lien, external settlement or core call. Present that boundary beside the form, review and holding. Never include these holdings in the core account balance. This is a deliberately separate product simulation, not a fallback after core failure. Real-core deposit integration would require a new verified funding and reconciliation contract.
+
+One cumulative product, `demo-cumulative`, accepts whole rupees from 1,000 through 1,000,000, and terms of 6, 12 or 24 months. Its illustrative fixed annual rate is 6%, simple interest prorated by months, rounded once to the nearest paise. The server chooses the rate and computes the maturity illustration; clients cannot supply rates, dates or status. This is neither an advertised bank rate nor a compound-interest/tax calculation. Maturity instruction is return principal and interest, or renew principal; it records intent only. No automatic maturity, renewal, payout, tax deduction or savings credit is implemented here.
+
+An adult nominee can be recorded with an invented name and relationship, or the customer explicitly selects no nominee. Minor nominations, joint ownership, certificates and deposit servicing require subsequent contracts. Collect no actual bank identifiers, credentials or documents.
+
+## States, commands and persistence
+
+Customer submits after validation and review/edit. Submission creates a persistent product application with immutable terms, a stable reference and initial history; it does not activate a holding. An officer may recommend or reject a submitted application. An approver may independently activate or reject a recommended application. Customer may cancel only before recommendation. Notes require 5–300 nonblank characters for staff decisions/cancellation. Activated, rejected and cancelled states are terminal in this slice. Maker is the officer persona and checker is the approver persona; persona switching remains a demonstration control, not production identity.
+
+Activation atomically changes the product to active, records the officer and checker, fixes the activation date, maturity date and illustrated maturity amount, and appends immutable history/audit. Maturity is the activation's Indian banking date plus the term in calendar months, clamped to the last day when necessary. No real financial account changes. Failed storage/audit rolls back the entire command. No enquiry provisions or resets products. Products survive reloads, role/journey changes and releases.
+
+Authenticated `GET /api/deposits` lists the relationship's applications/holdings, newest first. `?id=...` supplies detail, history and server-selected permitted actions. `?key=...` reconciles a stable command key. `POST /api/deposits` accepts only product terms and requires `Idempotency-Key`. `POST /api/deposits/action` accepts id, displayed version, action and note with its own stable key. Unknown fields fail. All reads/writes enforce relationship ownership. Same-key/same-input/same-actor replay returns current state with the confirmed key; different input/actor conflicts. Optimistic versions prevent stale or concurrent writes. SQL event/projection guards enforce immutable terms, history and atomic application/audit.
+
+Before sending, the browser stores the complete original instruction, role and key in relationship-scoped session storage. Any unverified/lost response keeps it locked across reload. Explicit key inspection precedes retry or discard; only a confirmed missing key permits those options. Malformed responses never show success. Storage failure blocks sending. Refresh keeps the recovery instruction. Draft/edit never posts.
+
+## Traceability and verification plan
+
+Spec 006 P1 customer/branch journeys and B-01–B-06 map to `src/domain/deposits.ts` (validation, quotes, transitions), `src/application/deposits.ts` (owned reads, stable commands), migration 0009 (persistent products, atomic events/audit), and `app/deposits.tsx` (customer/staff form, review, tracking and recovery). Integration tests must prove role/ownership/version/replay, failed audit rollback, no financial mutations/core calls, truthful funding, terminal guards and activation projection. Browser tests cover review/edit, reload recovery, shared staff authorization, holding/history, mobile and extra-large reading. Full exact-source gates and protected migration/deployment follow the existing release contract. Reference form/state/API comparison remains open; this contract is not a parity claim.
