@@ -42,6 +42,7 @@ import {
 } from "../src/domain/banking";
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
+import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import {
@@ -724,7 +725,7 @@ export default function Page() {
               <h1>
                 {view === "overview"
                   ? staff
-                    ? "A clear view of your branch."
+                    ? "Branch overview"
                     : retail
                       ? `Welcome back, ${(account?.clientName ?? "Mira").split(" ")[0]}`
                       : `Good things ahead, ${(data.application?.name ?? "Mira").split(" ")[0]}.`
@@ -733,7 +734,7 @@ export default function Page() {
               <p>
                 {view === "overview"
                   ? staff
-                    ? "Every application, approval and transaction. One connected workspace."
+                    ? "Your work queues, customer context and operational controls."
                     : retail
                       ? "Here's an overview of your relationship with us."
                       : "Your money, your next step, and everything in between."
@@ -782,13 +783,16 @@ export default function Page() {
           {view === "overview" && retail && (
             <RetailOverview data={data} navigate={setView} />
           )}
+          {view === "overview" && staff && (
+            <BranchOverview data={data} navigate={setView} />
+          )}
           {view === "accounts" && (
             <RetailAccount data={data} navigate={setView} />
           )}
           {view === "profile" && (
             <RetailProfile data={data} navigate={setView} />
           )}
-          {view === "overview" && !retail && (
+          {view === "overview" && !retail && !staff && (
             <>
               <div className="overview-grid">
                 <section className="balance-card">
