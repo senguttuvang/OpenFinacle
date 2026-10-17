@@ -19,6 +19,13 @@ import {
   submitApplication,
 } from "./application/banking";
 import {
+  actOnCardReplacement,
+  cardReplacementDetail,
+  cardReplacementForKey,
+  listCardReplacements,
+  submitCardReplacement,
+} from "./application/card-replacements";
+import {
   cardDetail,
   cardForKey,
   changeCard,
@@ -57,6 +64,10 @@ import {
   RoleSchema,
   type Session,
 } from "./domain/banking";
+import {
+  ReplacementCommand,
+  ReplacementTerms,
+} from "./domain/card-replacements";
 import { CardCommand } from "./domain/cards";
 import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
@@ -602,6 +613,40 @@ const handle = (request: Request, env: Environment) =>
         yield* actOnDeposit(
           session,
           yield* parse(request, DepositCommand, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
+    if (path === "/api/card-replacements" && request.method === "GET") {
+      const id = url.searchParams.get("id");
+      const key = url.searchParams.get("key");
+      if (
+        (id !== null && (!id || id.length > 100)) ||
+        (id !== null && key !== null)
+      )
+        return yield* Effect.fail(
+          failure("Choose a valid replacement or command reference."),
+        );
+      return Response.json(
+        key !== null
+          ? yield* cardReplacementForKey(session, key)
+          : id !== null
+            ? yield* cardReplacementDetail(session, id)
+            : yield* listCardReplacements(session),
+      );
+    }
+    if (path === "/api/card-replacements" && request.method === "POST")
+      return Response.json(
+        yield* submitCardReplacement(
+          session,
+          yield* parse(request, ReplacementTerms, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
+    if (path === "/api/card-replacements/action" && request.method === "POST")
+      return Response.json(
+        yield* actOnCardReplacement(
+          session,
+          yield* parse(request, ReplacementCommand, false, true),
           request.headers.get("Idempotency-Key") ?? "",
         ),
       );

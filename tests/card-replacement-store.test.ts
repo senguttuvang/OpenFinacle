@@ -1,6 +1,14 @@
 import { Database } from "bun:sqlite";
-import { beforeEach, expect, test } from "bun:test";
-import { Effect, Layer, Schema } from "effect";
+import { beforeEach, expect, mock, test } from "bun:test";
+import { Effect, Layer, Schema, TestClock, TestContext } from "effect";
+import type { Environment } from "../src/adapters/environment";
+import {
+  actOnCardReplacement,
+  cardReplacementDetail,
+  cardReplacementForKey,
+  listCardReplacements,
+  submitCardReplacement,
+} from "../src/application/card-replacements";
 import {
   cardDetail,
   cardForKey,
@@ -11,7 +19,7 @@ import { BankingError, type Role, type Session } from "../src/domain/banking";
 import {
   Replacement,
   type ReplacementCommand,
-  type ReplacementDetail,
+  ReplacementDetail,
   ReplacementEvent,
   ReplacementTerms,
   replacementActions,
@@ -19,7 +27,13 @@ import {
 } from "../src/domain/card-replacements";
 import { Store, type StoreService } from "../src/domain/ports";
 
+mock.module("@cloudflare/containers", () => ({
+  getContainer: (namespace: unknown) => namespace,
+}));
+const { handleRequest } = await import("../src/http");
+
 let db: Database;
+let writeFailure: "before" | "after" | null = null;
 const timestamp = "2026-10-17T09:00:00Z";
 const customer: Session = {
   bank_id: "replacement-bank",
@@ -38,6 +52,7 @@ beforeEach(async () => {
   db?.close();
   db = new Database(":memory:");
   db.exec("PRAGMA foreign_keys=ON");
+  writeFailure = null;
   for (const migration of [
     "0001_workflows.sql",
     "0002_reversal_guard.sql",
@@ -68,11 +83,30 @@ const layer = () => {
         catch: failure,
       }),
     run: (sql: string, ...values: (string | number | null)[]) =>
-      Effect.try({ try: () => db.run(sql, values).changes, catch: failure }),
+      Effect.try({
+        try: () => {
+          const inject = sql.startsWith("INSERT INTO card_replacement_events")
+            ? writeFailure
+            : null;
+          if (inject) writeFailure = null;
+          if (inject === "before")
+            throw new Error("Injected pre-write failure");
+          const changes = db.run(sql, values).changes;
+          if (inject === "after")
+            throw new Error("Injected lost write acknowledgement");
+          return changes;
+        },
+        catch: failure,
+      }),
   });
 };
 const run = <A, E>(task: Effect.Effect<A, E, StoreService>) =>
-  Effect.runPromise(task.pipe(Effect.provide(layer())));
+  Effect.runPromise(
+    Effect.gen(function* () {
+      yield* TestClock.setTime(Date.parse(timestamp));
+      return yield* task;
+    }).pipe(Effect.provide(layer()), Effect.provide(TestContext.TestContext)),
+  );
 const denied = <A>(task: Effect.Effect<A, BankingError, StoreService>) =>
   run(Effect.flip(task));
 const submit = (id = "example-replacement", input = terms) =>
@@ -409,5 +443,269 @@ test("card references reconcile across both stores and SQL refuses a conflicting
   expect((await run(cardDetail(customer, id))).card).toMatchObject({
     status: "held",
     version: 0,
+  });
+});
+
+test("application commands share owned current state and replay original inputs after source retirement", async () => {
+  expect((await run(listCardReplacements(customer))).replacements).toEqual([]);
+  const officer = { ...customer, role: "officer" as const };
+  const approver = { ...customer, role: "approver" as const };
+  const submitted = await run(
+    submitCardReplacement(customer, terms, "app-submit-key"),
+  );
+  const id = submitted.replacement.id;
+  const input = (
+    action: ReplacementCommand["action"],
+    version: number,
+  ): ReplacementCommand => ({
+    id,
+    version,
+    action,
+    note: "Reviewed synthetic command",
+    ...(action === "issue" ? { source_version: 0 } : {}),
+    ...(action === "activate" ? { card_version: 0 } : {}),
+  });
+  expect(
+    await denied(
+      submitCardReplacement(customer, terms, "duplicate-source-key"),
+    ),
+  ).toMatchObject({ status: 409 });
+  expect(
+    await denied(cardReplacementDetail({ ...customer, bank_id: "other" }, id)),
+  ).toMatchObject({ status: 404 });
+  await run(
+    actOnCardReplacement(officer, input("recommend", 0), "app-recommend-key"),
+  );
+  expect(
+    await denied(
+      actOnCardReplacement(officer, input("issue", 1), "self-issue-key"),
+    ),
+  ).toMatchObject({ status: 403 });
+  const issued = await run(
+    actOnCardReplacement(approver, input("issue", 1), "app-issue-key"),
+  );
+  expect(issued.card).toMatchObject({
+    status: "held",
+    activation_required: true,
+  });
+  expect(
+    (
+      await run(
+        submitCardReplacement(
+          customer,
+          { ...terms, address: ` ${terms.address} ` },
+          "app-submit-key",
+        ),
+      )
+    ).replacement.id,
+  ).toBe(id);
+  expect(
+    (
+      await run(
+        actOnCardReplacement(approver, input("issue", 1), "app-issue-key"),
+      )
+    ).replacement.version,
+  ).toBe(2);
+  expect(
+    await denied(
+      actOnCardReplacement(
+        approver,
+        { ...input("issue", 1), note: "Different original payload" },
+        "app-issue-key",
+      ),
+    ),
+  ).toMatchObject({ status: 409 });
+  expect(
+    await denied(
+      cardReplacementForKey({ ...customer, bank_id: "other" }, "app-issue-key"),
+    ),
+  ).toMatchObject({ status: 404 });
+  await run(
+    actOnCardReplacement(officer, input("dispatch", 2), "app-dispatch-key"),
+  );
+  await run(
+    actOnCardReplacement(officer, input("deliver", 3), "app-deliver-key"),
+  );
+  const active = await run(
+    actOnCardReplacement(customer, input("activate", 4), "app-activate-key"),
+  );
+  expect(active).toMatchObject({
+    replacement: { status: "activated", version: 5 },
+    source: { status: "blocked" },
+    card: { status: "active", activation_required: false },
+  });
+  expect(active.history).toHaveLength(6);
+  expect(
+    (await run(cardReplacementForKey(customer, "app-submit-key")))
+      .confirmed_key,
+  ).toBe("app-submit-key");
+  expect((await run(cardReplacementDetail(officer, id))).card).toEqual(
+    active.card,
+  );
+  expect(db.query("SELECT COUNT(*) AS n FROM commands").get()).toEqual({
+    n: 0,
+  });
+});
+
+test("a lost store acknowledgement reconciles once while a pre-write failure leaves no request or key", async () => {
+  writeFailure = "before";
+  expect(
+    await denied(submitCardReplacement(customer, terms, "failed-write-key")),
+  ).toMatchObject({ status: 503 });
+  expect(
+    await denied(cardReplacementForKey(customer, "failed-write-key")),
+  ).toMatchObject({ status: 404 });
+  expect((await run(listCardReplacements(customer))).replacements).toEqual([]);
+  writeFailure = "after";
+  const saved = await run(
+    submitCardReplacement(customer, terms, "lost-ack-key"),
+  );
+  expect(saved.confirmed_key).toBe("lost-ack-key");
+  expect(saved.history).toHaveLength(1);
+  expect((await run(listCardReplacements(customer))).replacements).toHaveLength(
+    1,
+  );
+  expect(
+    (await run(submitCardReplacement(customer, terms, "lost-ack-key")))
+      .replacement.id,
+  ).toBe(saved.replacement.id);
+  expect(
+    db.query("SELECT COUNT(*) AS n FROM card_replacement_events").get(),
+  ).toEqual({ n: 1 });
+});
+
+test("HTTP replacement routes enforce strict role/owned/versioned commands and no core access", async () => {
+  const token = "synthetic-replacement-session";
+  const hash = new Bun.CryptoHasher("sha256").update(token).digest("hex");
+  db.run(
+    "INSERT INTO sessions(token_hash,bank_id,role,expires_at) VALUES(?,'replacement-bank','customer',?)",
+    [hash, Number.MAX_SAFE_INTEGER],
+  );
+  let coreCalls = 0;
+  const env = {
+    DB: {
+      prepare: (sql: string) => {
+        let values: (string | number | null)[] = [];
+        return {
+          bind(...args: (string | number | null)[]) {
+            values = args;
+            return this;
+          },
+          first: async () => db.query(sql).get(...values),
+          all: async () => ({ results: db.query(sql).all(...values) }),
+          run: async () => ({ meta: { changes: db.run(sql, values).changes } }),
+        };
+      },
+    } as unknown as D1Database,
+    CORE: {
+      fetch: async () => {
+        coreCalls++;
+        throw new Error("No replacement core effect");
+      },
+    } as unknown as Environment["CORE"],
+    DOCUMENTS: {} as R2Bucket,
+    ASSETS: {} as Fetcher,
+    CORE_DATABASE: "unused",
+    CORE_PASSWORD: "unused",
+    ADMIN_TOKEN: "unused",
+    APP_REVISION: "replacement-tests",
+    DEMO_MODE: "true",
+  } satisfies Environment;
+  const http = (
+    path: string,
+    body?: unknown,
+    key = "http-replacement-key",
+    cookie = true,
+  ) =>
+    handleRequest(
+      new Request(`https://demo.test/api${path}`, {
+        method: body === undefined ? "GET" : "POST",
+        headers: {
+          ...(cookie ? { Cookie: `of_session=${token}` } : {}),
+          Origin: "https://demo.test",
+          "Content-Type": "application/json",
+          "Idempotency-Key": key,
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }),
+      env,
+    );
+  expect(
+    (await http("/card-replacements", undefined, "unused-key", false)).status,
+  ).toBe(401);
+  expect((await http("/card-replacements", { ...terms, fee: 99 })).status).toBe(
+    400,
+  );
+  expect((await http("/card-replacements", terms, "bad")).status).toBe(400);
+  const response = await http("/card-replacements", terms);
+  expect(response.status).toBe(200);
+  const saved = Schema.decodeUnknownSync(ReplacementDetail)(
+    await response.json(),
+  );
+  const id = saved.replacement.id;
+  expect(
+    (await http(`/card-replacements?id=${id}&key=http-replacement-key`)).status,
+  ).toBe(400);
+  const input = {
+    id,
+    version: 0,
+    action: "recommend",
+    note: "HTTP synthetic review",
+  };
+  expect(
+    (await http("/card-replacements/action", input, "customer-recommend-key"))
+      .status,
+  ).toBe(403);
+  db.run("UPDATE sessions SET role='officer' WHERE token_hash=?", [hash]);
+  expect(
+    (
+      await http(
+        "/card-replacements/action",
+        { ...input, status: "recommended" },
+        "extra-field-key",
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (await http("/card-replacements/action", input, "http-recommend-key"))
+      .status,
+  ).toBe(200);
+  const issue = { ...input, action: "issue", version: 1, source_version: 0 };
+  expect(
+    (await http("/card-replacements/action", issue, "self-http-issue-key"))
+      .status,
+  ).toBe(403);
+  db.run("UPDATE sessions SET role='approver' WHERE token_hash=?", [hash]);
+  expect(
+    (
+      await http(
+        "/card-replacements/action",
+        { ...issue, card_version: 0 },
+        "irrelevant-version-key",
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (await http("/card-replacements/action", issue, "http-issue-key")).status,
+  ).toBe(200);
+  expect((await http("/card-replacements?key=http-issue-key")).status).toBe(
+    200,
+  );
+  db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  expect((await http(`/card-replacements?id=${id}`)).status).toBe(404);
+  expect((await http("/card-replacements?key=http-issue-key")).status).toBe(
+    404,
+  );
+  expect(
+    (
+      await handleRequest(
+        new Request("https://demo.test/api/card-replacements"),
+        { ...env, DEMO_MODE: "false" },
+      )
+    ).status,
+  ).toBe(503);
+  expect(coreCalls).toBe(0);
+  expect(db.query("SELECT COUNT(*) AS n FROM commands").get()).toEqual({
+    n: 0,
   });
 });
