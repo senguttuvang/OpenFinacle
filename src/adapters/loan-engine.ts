@@ -69,14 +69,14 @@ const Savings = Schema.Struct({
   currency,
   status: Schema.Struct({ active: Schema.Literal(true) }),
 });
-const dateParts = Schema.Tuple(
+export const loanCoreDateParts = Schema.Tuple(
   Schema.Number.pipe(Schema.int(), Schema.between(2000, 9999)),
   Schema.Number.pipe(Schema.int(), Schema.between(1, 12)),
   Schema.Number.pipe(Schema.int(), Schema.between(1, 31)),
 );
 const Disbursement = Schema.Struct({
   period: Schema.Literal(0),
-  dueDate: dateParts,
+  dueDate: loanCoreDateParts,
   principalDisbursed: nonnegative,
   feeChargesDue: Schema.Literal(0),
   totalDueForPeriod: Schema.Literal(0),
@@ -87,7 +87,7 @@ const Disbursement = Schema.Struct({
 });
 const Repayment = Schema.Struct({
   period: Schema.Number.pipe(Schema.int(), Schema.between(1, 36)),
-  dueDate: dateParts,
+  dueDate: loanCoreDateParts,
   principalDue: nonnegative,
   interestDue: nonnegative,
   feeChargesDue: Schema.Literal(0),
@@ -116,7 +116,7 @@ const decode = <A, I>(
   Schema.decodeUnknown(schema)(input).pipe(
     Effect.mapError(() => invalid(message, status)),
   );
-const minor = (value: number) => {
+export const loanCoreMinor = (value: number) => {
   const scaled = value * 100;
   const rounded = Math.round(scaled);
   return Number.isSafeInteger(rounded) &&
@@ -128,12 +128,15 @@ const minor = (value: number) => {
         invalid("The core loan amount cannot be verified to INR paise."),
       );
 };
-const calendar = (parts: readonly number[]) =>
+export const loanCoreCalendar = (parts: readonly number[]) =>
   parts
     .map((value, index) => String(value).padStart(index === 0 ? 4 : 2, "0"))
     .join("-");
 
-const normalizedSchedule = (input: unknown, request: LoanQuoteInput) =>
+export const normalizeCoreLoanSchedule = (
+  input: unknown,
+  request: LoanQuoteInput,
+) =>
   Effect.gen(function* () {
     const raw = yield* decode(
       Schedule,
@@ -144,7 +147,7 @@ const normalizedSchedule = (input: unknown, request: LoanQuoteInput) =>
     if (
       first?.period !== 0 ||
       !("principalDisbursed" in first) ||
-      calendar(first.dueDate) !== request.expected_disbursement_date ||
+      loanCoreCalendar(first.dueDate) !== request.expected_disbursement_date ||
       first.principalDisbursed !== request.terms.principal ||
       raw.totalPrincipalDisbursed !== request.terms.principal ||
       raw.periods.length !== request.terms.months + 1
@@ -169,19 +172,19 @@ const normalizedSchedule = (input: unknown, request: LoanQuoteInput) =>
           );
         return {
           period: row.period,
-          due_date: calendar(row.dueDate),
-          principal_minor: yield* minor(row.principalDue),
-          interest_minor: yield* minor(row.interestDue),
-          total_minor: yield* minor(row.totalDueForPeriod),
+          due_date: loanCoreCalendar(row.dueDate),
+          principal_minor: yield* loanCoreMinor(row.principalDue),
+          interest_minor: yield* loanCoreMinor(row.interestDue),
+          total_minor: yield* loanCoreMinor(row.totalDueForPeriod),
         };
       }),
     );
     return yield* validateLoanSchedule(
       {
         currency: "INR",
-        principal_minor: yield* minor(raw.totalPrincipalExpected),
-        interest_minor: yield* minor(raw.totalInterestCharged),
-        repayment_minor: yield* minor(raw.totalRepaymentExpected),
+        principal_minor: yield* loanCoreMinor(raw.totalPrincipalExpected),
+        interest_minor: yield* loanCoreMinor(raw.totalInterestCharged),
+        repayment_minor: yield* loanCoreMinor(raw.totalRepaymentExpected),
         installments,
       },
       request.terms,
@@ -261,7 +264,7 @@ export const loanEngineLayer = Layer.effect(
               transactionProcessingStrategyCode: "mifos-standard-strategy",
             },
           );
-          return yield* normalizedSchedule(schedule, {
+          return yield* normalizeCoreLoanSchedule(schedule, {
             owner,
             terms,
             expected_disbursement_date: date,
