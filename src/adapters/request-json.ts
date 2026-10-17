@@ -5,6 +5,7 @@ export const parseJsonRequest = <A, I>(
   request: Request,
   schema: Schema.Schema<A, I, never>,
   allowEmptyObject = false,
+  rejectUnknown = false,
 ) =>
   Effect.gen(function* () {
     const text = yield* Effect.tryPromise({
@@ -27,7 +28,9 @@ export const parseJsonRequest = <A, I>(
       catch: () =>
         new BankingError({ message: "Send valid JSON.", status: 400 }),
     });
-    return yield* Schema.decodeUnknown(schema)(data).pipe(
+    return yield* Schema.decodeUnknown(schema, {
+      onExcessProperty: rejectUnknown ? "error" : "ignore",
+    })(data).pipe(
       Effect.mapError(
         () =>
           new BankingError({
