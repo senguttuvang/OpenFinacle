@@ -17,7 +17,7 @@ const currency = Schema.Struct({
   code: Schema.Literal("INR"),
   decimalPlaces: Schema.Literal(2),
 });
-const Product = Schema.Struct({
+export const coreLoanProductShape = Schema.Struct({
   id: positiveId,
   shortName: Schema.Literal("OFPL"),
   currency,
@@ -223,7 +223,7 @@ export const loanEngineLayer = Layer.effect(
             { concurrency: 2 },
           );
           const product = yield* decode(
-            Product,
+            coreLoanProductShape,
             result.product,
             "The configured core loan product does not match the demo contract. Ask the operator to inspect product setup.",
           );
