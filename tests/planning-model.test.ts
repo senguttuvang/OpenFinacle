@@ -13,6 +13,7 @@ import {
   planningMoney,
   planningProjection,
   planningRange,
+  planningRetirementStart,
   planningRows,
   planningTotals,
   planningWealth,
@@ -117,6 +118,12 @@ test("minor-unit model filters, balance identity, calendar boundaries and foreca
   );
 });
 test("cash-flow projection and debt never invent funding on depletion or prepayment", () => {
+  expect(planningRetirementStart({ age: 40, retireAge: 60 })).toBe(
+    "2046-10-18",
+  );
+  expect(planningRetirementStart({ age: 65, retireAge: 60 })).toBe(
+    "2021-10-18",
+  );
   const overdrawn = {
     ...household,
     postings: [],

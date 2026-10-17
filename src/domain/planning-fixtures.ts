@@ -84,7 +84,7 @@ export const planningHouseholds = (): PlanningHousehold[] =>
       age: persona.age,
       retireAge: 60,
       longevity: 90,
-      income: paise(persona.income),
+      income: paise(persona.income * (index === 2 ? 0.85 : 1)),
       essential: paise(persona.essential),
       discretionary: paise(persona.discretionary),
       pension: paise(persona.pension),

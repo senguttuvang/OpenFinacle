@@ -3,6 +3,7 @@ import {
   planningAmortize,
   planningBalances,
   planningForecast,
+  planningMonthRange,
   planningProjection,
   planningRange,
   planningRows,
@@ -92,6 +93,21 @@ describe("synthetic household planning", () => {
     expect(totals.principal).toBeGreaterThan(0);
   });
   test("FY boundaries, date/account/member/category/merchant filters reconcile detail", () => {
+    const parent = {
+      ...all,
+      from: "2026-07-20",
+      to: "2026-08-05",
+      account: h.accounts[0]!.id,
+      member: "Nila",
+    };
+    expect(planningMonthRange(parent, "2026-07")).toEqual({
+      ...parent,
+      to: "2026-07-31",
+    });
+    expect(planningMonthRange(parent, "2026-08")).toEqual({
+      ...parent,
+      from: "2026-08-01",
+    });
     expect(planningRange("fy", "2026-03-31")).toEqual({
       from: "2025-04-01",
       to: "2026-03-31",
@@ -168,6 +184,28 @@ describe("synthetic household planning", () => {
     expect(planningWealth(h).investable).toBeLessThan(planningWealth(h).assets);
   });
   test("forecast is future assumptions and has daily balance identity", () => {
+    const wealth = planningWealth(h);
+    expect(wealth.assets - wealth.liabilities).toBe(wealth.net);
+    expect(wealth.grossCash - wealth.cardLiability).toBe(wealth.cash);
+    const alternate = planningForecast(h, 90, { ...h.assumptions, income: 0 });
+    const normal = planningForecast(h);
+    const retired = planningForecast(h, 90, {
+      ...h.assumptions,
+      retireAge: h.assumptions.age,
+      pension: 0,
+    });
+    expect(
+      retired
+        .filter((row) => row.date.endsWith("-01"))
+        .every((row) => row.income === 0),
+    ).toBe(true);
+    expect(
+      normal.find((row) => row.date.endsWith("-05"))!.expense -
+        retired.find((row) => row.date.endsWith("-05"))!.expense,
+    ).toBe(h.assumptions.sip);
+    expect(normal.at(-1)!.balance - alternate.at(-1)!.balance).toBe(
+      h.assumptions.income * 3,
+    );
     const rows = planningForecast(h);
     expect(rows).toHaveLength(90);
     expect(rows[0]!.date).toBe("2026-10-18");

@@ -42,7 +42,7 @@ export const initialPlanningState = (h: PlanningHousehold): PlanningState => ({
     },
     {
       id: "retire-early",
-      name: "Retire five years earlier",
+      name: "Earlier retirement",
       version: 0,
       assumptions: {
         ...h.assumptions,
@@ -123,16 +123,12 @@ export const validatePlanningState = (value: unknown, household: string) =>
           }),
         );
       if (
-        state.scenarios.some(
-          (s) =>
-            s.assumptions.longevity < s.assumptions.age ||
-            s.assumptions.retireAge < s.assumptions.age,
-        )
+        state.scenarios.some((s) => s.assumptions.longevity < s.assumptions.age)
       )
         return Effect.fail(
           new PlanningError({
             message:
-              "Retirement and longevity ages must not precede current age.",
+              "The planning horizon must not precede current age; an earlier retirement age is valid for an already-retired household.",
             status: 400,
           }),
         );

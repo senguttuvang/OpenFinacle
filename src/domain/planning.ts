@@ -99,6 +99,13 @@ export const planningDay = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000)
     .toISOString()
     .slice(0, 10);
+export const planningRetirementStart = (
+  assumptions: Pick<PlanningAssumptions, "age" | "retireAge">,
+) =>
+  planningDay(
+    `${Number(planningAnchor.slice(0, 4)) + assumptions.retireAge - assumptions.age}${planningAnchor.slice(4)}`,
+    1,
+  );
 export const planningRange = (
   preset: string,
   anchor = planningAnchor,
@@ -134,6 +141,22 @@ export const planningRows = (
       (!filter.merchant ||
         p.merchant.toLowerCase().includes(filter.merchant.toLowerCase())),
   );
+export const planningMonthRange = (
+  filter: PlanningFilter,
+  month: string,
+): PlanningFilter => {
+  const first = `${month}-01`;
+  const last = new Date(
+    Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0),
+  )
+    .toISOString()
+    .slice(0, 10);
+  return {
+    ...filter,
+    from: first > filter.from ? first : filter.from,
+    to: last < filter.to ? last : filter.to,
+  };
+};
 export const planningTotals = (rows: readonly PlanningPosting[]) =>
   rows.reduce(
     (sum, row) => ({
@@ -162,12 +185,31 @@ export const planningBalances = (
         .reduce((n, p) => n + p.minor, 0),
   }));
 export const planningWealth = (h: PlanningHousehold) => {
-  const cash = planningBalances(h).reduce((n, a) => n + a.closing, 0);
-  const assets = h.holdings.reduce((n, a) => n + a.minor, cash);
+  const balances = planningBalances(h);
+  const cash = balances.reduce((n, a) => n + a.closing, 0);
+  const grossCash = balances.reduce((n, a) => n + Math.max(0, a.closing), 0);
+  const cardLiability = balances.reduce(
+    (n, a) => n + Math.max(0, -a.closing),
+    0,
+  );
+  const liabilities = h.debt.principal + cardLiability;
+  const assets = h.holdings.reduce((n, a) => n + a.minor, grossCash);
   const investable = h.holdings
     .filter((a) => a.liquidity === "investable")
     .reduce((n, a) => n + a.minor, cash);
-  return { cash, assets, net: assets - h.debt.principal, investable };
+  const nonSpendable = h.holdings
+    .filter((a) => a.liquidity === "home" || a.liquidity === "locked")
+    .reduce((n, a) => n + a.minor, 0);
+  return {
+    cash,
+    grossCash,
+    cardLiability,
+    liabilities,
+    nonSpendable,
+    assets,
+    net: assets - liabilities,
+    investable,
+  };
 };
 /** Explicit synthetic valuation reconstruction; never a claim of observed returns. */
 export const planningWealthHistory = (h: PlanningHousehold) => {
@@ -377,8 +419,13 @@ export const evaluatePlanningProjection = (
       }),
     ),
   );
-export const planningForecast = (h: PlanningHousehold, days = 90) => {
+export const planningForecast = (
+  h: PlanningHousehold,
+  days = 90,
+  assumptions: PlanningAssumptions = h.assumptions,
+) => {
   let balance = planningWealth(h).cash;
+  const retired = assumptions.age >= assumptions.retireAge;
   const rows: {
     date: string;
     income: number;
@@ -388,15 +435,17 @@ export const planningForecast = (h: PlanningHousehold, days = 90) => {
   for (let i = 1; i <= days; i++) {
     const date = planningDay(planningAnchor, i);
     const day = Number(date.slice(8));
-    const income = day === 1 ? h.assumptions.income : 0;
+    const income =
+      day === 1 ? (retired ? assumptions.pension : assumptions.income) : 0;
     const expense =
       Math.round(
-        ((h.assumptions.essential +
-          h.assumptions.discretionary +
-          h.assumptions.dependent) *
+        ((assumptions.essential +
+          assumptions.discretionary +
+          assumptions.rentChange +
+          (assumptions.dependentYears > 0 ? assumptions.dependent : 0)) *
           12) /
           365,
-      ) + (day === 5 ? h.debt.emi + h.assumptions.sip : 0);
+      ) + (day === 5 ? h.debt.emi + (retired ? 0 : assumptions.sip) : 0);
     balance += income - expense;
     rows.push({ date, income, expense, balance });
   }

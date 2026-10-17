@@ -12,6 +12,17 @@ import {
 const h = planningHouseholds()[0]!;
 test("state rejects household leaks, invalid versions and assumptions, preserves independent snapshots", () => {
   const state = initialPlanningState(h);
+  const alreadyRetired = {
+    ...state,
+    scenarios: state.scenarios.map((s) => ({
+      ...s,
+      assumptions: { ...s.assumptions, age: 65, retireAge: 60 },
+    })),
+  };
+  expect(
+    Effect.runSync(Effect.either(validatePlanningState(alreadyRetired, h.id)))
+      ._tag,
+  ).toBe("Right");
   const changed = {
     ...state,
     budgets: { Groceries: 400000 },
