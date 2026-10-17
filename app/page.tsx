@@ -795,6 +795,7 @@ export default function Page() {
           )}
           {view === "profile" && (
             <RetailProfile
+              key={data.bank.id + data.role}
               data={data}
               openAccount={() => setView("application")}
               openServices={() => {

@@ -122,7 +122,7 @@ export function CustomerProfile({
           </button>
         </div>
       )}
-      {saved && !empty && (
+      {saved && saved.profile.bank_id === bankId && !empty && (
         <>
           <div className="detail-grid">
             <div>
@@ -140,6 +140,14 @@ export function CustomerProfile({
               ),
             )}
           </div>
+          <p>
+            Profile last updated{" "}
+            {new Date(saved.profile.updated_at).toLocaleString("en-IN", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+            .
+          </p>
           <p>
             Changes appear here after independent approval. Earlier completed
             cases have not been replayed into this profile.
