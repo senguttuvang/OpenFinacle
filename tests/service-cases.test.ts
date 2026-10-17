@@ -54,6 +54,8 @@ const initialize = async (legacy = false) => {
     );
   db.exec(await Bun.file("migrations/0005_service_cases.sql").text());
   db.exec(await Bun.file("migrations/0006_legacy_service_guards.sql").text());
+  db.exec(await Bun.file("migrations/0007_cards.sql").text());
+  db.exec(await Bun.file("migrations/0008_profiles.sql").text());
   interfere = undefined;
 };
 beforeEach(() => initialize());

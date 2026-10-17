@@ -6,7 +6,7 @@ The first implementation slice covers request-led servicing, with a directory, s
 
 The reference service directory and category families were observed. Individual forms and validation rules in this initial catalogue are inferred demonstration contracts; they have not been verified against every bank form. Each catalogue entry records this evidence class. Exact end-to-end reference parity remains open until its forms and states have been inspected and compared.
 
-All entries use simulated service fulfilment. A request does not change a Fineract account, card credentials, identity record or external delivery network. Existing financial operations remain behind their own real core commands. Never collect bank passwords, card numbers, PINs or OTPs in service forms.
+Entries use simulated service fulfilment. Approved address, email, branch and employer changes materialize the [synthetic relationship profile](profile.md) with source-case history after migration 0008. They do not change Fineract accounts, authoritative identity records, card credentials or external delivery networks. Existing financial operations remain behind their own real core commands. Never collect bank passwords, card numbers, PINs or OTPs in service forms.
 
 ## Catalogue and form contract
 
@@ -44,4 +44,4 @@ Forms validate before a review/edit step. Before sending a submission, the brows
 
 Case detail displays the current request and immutable history snapshots. Action controls use server-returned role/state permissions, capture the displayed version, require relevant notes and review confirmation, and refresh after an uncertain or conflicting outcome before another write. Dialogs use focus trapping and focus restoration; cancellation and rejection are confirmed through the alert-dialog primitive. Physical fulfilment and delivery receipt remain separate simulated events.
 
-This release remains a request-led servicing slice. Product administration, immediate card controls, deposits, loans, investments, insurance, broader branch operations and exhaustive comparison with reference forms remain under the parent reconstruction requirement. Completed case actions do not stand in for those capabilities.
+This release remains a request-led servicing slice. Dedicated [card controls](cards.md) and the [synthetic profile effect contract](profile.md) have their own product state. Deposits, loans, investments, insurance, broader branch operations and exhaustive comparison with reference forms remain under the parent reconstruction requirement. Completed generic cases do not stand in for those capabilities.

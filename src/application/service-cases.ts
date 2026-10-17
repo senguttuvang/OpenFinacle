@@ -1,6 +1,7 @@
 import { Clock, Effect, Schema } from "effect";
 import { BankingError, type Session } from "../domain/banking";
 import { Store } from "../domain/ports";
+import { approvedProfilePatch } from "../domain/profile";
 import {
   allowedCaseActions,
   type CaseAction,
@@ -234,8 +235,12 @@ export const actOnServiceCase = (
         : record.detail;
     const timestamp = yield* now;
     const store = yield* Store;
+    const profilePatch =
+      input.action === "fulfil"
+        ? approvedProfilePatch(record.kind, fields)
+        : null;
     const changed = yield* store.one<{ id: string }>(
-      "UPDATE service_requests SET status=?,delivery_status=?,outcome_note=?,updated_by=?,updated_at=?,payload=?,detail=?,version=version+1,request_key=COALESCE(request_key,'imported:'||id) WHERE id=? AND bank_id=? AND version=? RETURNING id",
+      `UPDATE service_requests SET status=?,delivery_status=?,outcome_note=?,updated_by=?,updated_at=?,payload=?,detail=?,version=version+1,request_key=COALESCE(request_key,'imported:'||id)${profilePatch ? ",profile_patch=?" : ""} WHERE id=? AND bank_id=? AND version=? RETURNING id`,
       transition.status,
       transition.delivery_status,
       transition.note,
@@ -243,6 +248,7 @@ export const actOnServiceCase = (
       timestamp,
       payload,
       detail,
+      ...(profilePatch ? [JSON.stringify(profilePatch)] : []),
       input.id,
       session.bank_id,
       input.version,
