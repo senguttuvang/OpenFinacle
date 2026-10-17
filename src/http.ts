@@ -35,6 +35,13 @@ import {
 import { financialView } from "./application/financial-view";
 import { customerProfile } from "./application/profile";
 import {
+  actOnRecurringPlan,
+  listRecurringPlans,
+  recurringDetail,
+  recurringForKey,
+  submitRecurringPlan,
+} from "./application/recurring-deposits";
+import {
   actOnServiceCase,
   listServiceCases,
   serviceCase,
@@ -52,6 +59,7 @@ import {
 import { CardCommand } from "./domain/cards";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { Core, Store } from "./domain/ports";
+import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
@@ -509,6 +517,37 @@ const handle = (request: Request, env: Environment) =>
         },
       });
     }
+    if (path === "/api/recurring-deposits" && request.method === "GET") {
+      const id = url.searchParams.get("id");
+      const key = url.searchParams.get("key");
+      if (id !== null && key !== null)
+        return yield* Effect.fail(
+          failure("Choose a recurring plan or command reference."),
+        );
+      return Response.json(
+        key !== null
+          ? yield* recurringForKey(session, key)
+          : id !== null
+            ? yield* recurringDetail(session, id)
+            : yield* listRecurringPlans(session),
+      );
+    }
+    if (path === "/api/recurring-deposits" && request.method === "POST")
+      return Response.json(
+        yield* submitRecurringPlan(
+          session,
+          yield* parse(request, RecurringTerms, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
+    if (path === "/api/recurring-deposits/action" && request.method === "POST")
+      return Response.json(
+        yield* actOnRecurringPlan(
+          session,
+          yield* parse(request, RecurringCommand, false, true),
+          request.headers.get("Idempotency-Key") ?? "",
+        ),
+      );
     if (path === "/api/deposits" && request.method === "GET") {
       const id = url.searchParams.get("id");
       const key = url.searchParams.get("key");
