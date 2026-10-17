@@ -45,6 +45,7 @@ import { api } from "./api";
 import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
+import { ReadingSize } from "./reading-size";
 import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
@@ -645,6 +646,7 @@ export default function Page() {
             <strong>{viewTitle}</strong>
           </div>
           <div className="topbar-right">
+            <ReadingSize />
             <CommandMenu
               role={role}
               journey={data.bank.journey}

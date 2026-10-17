@@ -2,6 +2,54 @@ import { expect, test } from "@playwright/test";
 import type { CardCommand, CardDetail } from "../src/domain/cards";
 import { savedWorkspace } from "./fixtures/workspace";
 
+test("reading size persists across reload and role navigation without financial writes", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  const writes: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/session/role")
+      data.role = route.request().postDataJSON().role;
+    else if (route.request().method() !== "GET") writes.push(path);
+    return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
+  });
+  await page.goto("/");
+  const reading = page.getByRole("button", {
+    name: "Extra-large text",
+    exact: true,
+  });
+  await expect(reading).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.body).fontSize),
+    ),
+  ).toBeGreaterThanOrEqual(18);
+  await reading.click();
+  await page.reload();
+  await expect(reading).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.body).fontSize),
+    ),
+  ).toBeGreaterThanOrEqual(22);
+  await page.getByLabel("Demo persona").selectOption("officer");
+  await expect(
+    page.getByRole("heading", { name: "Branch overview", exact: true }),
+  ).toBeVisible();
+  await expect(reading).toHaveAttribute("aria-pressed", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await reading.click();
+  await page.reload();
+  await expect(reading).toHaveAttribute("aria-pressed", "false");
+  expect(writes).toEqual([]);
+});
+
 test("card controls review, recover a lost response after reload and share staff history", async ({
   page,
 }) => {
