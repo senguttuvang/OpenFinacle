@@ -43,23 +43,29 @@ const Installment = Schema.Struct({
   interest_minor: money,
   total_minor: money,
 });
-export const LoanQuote = Schema.Struct({
-  id: Schema.NonEmptyString,
+export const LoanOwner = Schema.Struct({
   bank_id: Schema.NonEmptyString,
   product_id: identifier,
   client_id: identifier,
   savings_account_id: identifier,
+});
+export type LoanOwner = typeof LoanOwner.Type;
+export const LoanSchedule = Schema.Struct({
+  currency: Schema.Literal("INR"),
+  principal_minor: money,
+  interest_minor: money,
+  repayment_minor: money,
+  installments: Schema.Array(Installment),
+});
+export type LoanSchedule = typeof LoanSchedule.Type;
+export const LoanQuote = Schema.Struct({
+  id: Schema.NonEmptyString,
+  ...LoanOwner.fields,
   terms: LoanTerms,
   expected_disbursement_date: calendarDate,
   quoted_at: identifier,
   expires_at: identifier,
-  schedule: Schema.Struct({
-    currency: Schema.Literal("INR"),
-    principal_minor: money,
-    interest_minor: money,
-    repayment_minor: money,
-    installments: Schema.Array(Installment),
-  }),
+  schedule: LoanSchedule,
 });
 export type LoanQuote = typeof LoanQuote.Type;
 const fail = (message: string, status = 409) =>
@@ -97,12 +103,7 @@ export const normalizeLoanTerms = (input: unknown) =>
 export const validateLoanQuote = (
   input: unknown,
   requestedTerms: unknown,
-  owner: {
-    bank_id: string;
-    product_id: number;
-    client_id: number;
-    savings_account_id: number;
-  },
+  owner: LoanOwner,
   now: number,
 ) =>
   Effect.gen(function* () {
@@ -146,7 +147,40 @@ export const validateLoanQuote = (
       return yield* fail(
         "This quote expired or its banking date changed. Obtain a new quote.",
       );
-    const schedule = quote.schedule;
+    yield* validateLoanSchedule(
+      quote.schedule,
+      terms,
+      quote.expected_disbursement_date,
+    );
+    return quote;
+  });
+
+export const validateLoanSchedule = (
+  input: unknown,
+  terms: LoanTerms,
+  disbursementDate: string,
+) =>
+  Effect.gen(function* () {
+    yield* Schema.decodeUnknown(calendarDate)(disbursementDate).pipe(
+      Effect.mapError(
+        () =>
+          new BankingError({
+            message: "The core loan date could not be verified.",
+            status: 503,
+          }),
+      ),
+    );
+    const schedule = yield* Schema.decodeUnknown(LoanSchedule, {
+      onExcessProperty: "error",
+    })(input).pipe(
+      Effect.mapError(
+        () =>
+          new BankingError({
+            message: "The core repayment schedule could not be verified.",
+            status: 503,
+          }),
+      ),
+    );
     const rows = schedule.installments;
     if (
       rows.length !== terms.months ||
@@ -154,9 +188,7 @@ export const validateLoanQuote = (
         (row, index) =>
           row.period !== index + 1 ||
           row.due_date <=
-            (index === 0
-              ? quote.expected_disbursement_date
-              : rows[index - 1].due_date) ||
+            (index === 0 ? disbursementDate : rows[index - 1].due_date) ||
           row.total_minor <= 0 ||
           row.principal_minor + row.interest_minor !== row.total_minor,
       ) ||
@@ -175,7 +207,7 @@ export const validateLoanQuote = (
         "The core repayment schedule is incomplete or inconsistent. Obtain a new quote.",
         503,
       );
-    return quote;
+    return schedule;
   });
 
 // Consume a validated quote; this declared-budget check does not approve credit.
