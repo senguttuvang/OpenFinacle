@@ -9,6 +9,7 @@ import "./command-menu.css";
 import "./branch.css";
 import "./service-centre.css";
 import "./cards.css";
+import "./banking-surfaces.css";
 import "./banking-design.css";
 export const metadata: Metadata = {
   title: "OpenFinacle — Everyday banking, connected",

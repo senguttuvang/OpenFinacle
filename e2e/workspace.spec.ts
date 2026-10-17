@@ -401,6 +401,37 @@ test("customer balances and navigation remain usable with local fonts on desktop
   await expect(
     page.getByRole("heading", { name: "Everyday Savings", exact: true }),
   ).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({
+    path: "test-results/account-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1700, height: 1000 });
+  await page.screenshot({
+    path: "test-results/account-user-1700.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Extra-large text", exact: true })
+    .click();
+  await page.screenshot({
+    path: "test-results/account-extra-large-mobile.png",
+    fullPage: true,
+  });
+  const identity = await page.locator(".account-identity h2").boundingBox();
+  expect(identity?.width).toBeGreaterThanOrEqual(150);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 900, height: 1000 });
+  expect(
+    await page
+      .locator("main.content")
+      .evaluate((element) => element.getBoundingClientRect().left),
+  ).toBeLessThan(50);
   expect(externalFonts).toEqual([]);
   expect(mutations).toEqual([]);
 });
