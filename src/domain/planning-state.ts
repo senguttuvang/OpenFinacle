@@ -92,7 +92,9 @@ export const initialPlanningState = (h: PlanningHousehold): PlanningState => ({
   adviserConsent: false,
 });
 export const validatePlanningState = (value: unknown, household: string) =>
-  Schema.decodeUnknown(PlanningState)(value).pipe(
+  Schema.decodeUnknown(PlanningState, { onExcessProperty: "error" })(
+    value,
+  ).pipe(
     Effect.mapError(
       () =>
         new PlanningError({
