@@ -40,6 +40,7 @@ export interface ServiceCase extends ServiceRequest {
   updated_by: string;
   updated_at: string;
   delivery_status: DeliveryStatus;
+  profile_patch?: string | null;
 }
 export interface CaseEvent {
   id: string;

@@ -102,6 +102,9 @@ test("profile effects require independent fulfilment and retain source case snap
   });
   await run(action(approver, id, "fulfil"));
   const current = await run(customerProfile(officer));
+  expect(
+    (await run(serviceCase(customer, id))).request.profile_patch,
+  ).not.toBeNull();
   expect(current.profile).toMatchObject({
     version: 1,
     fields: {
@@ -283,6 +286,9 @@ test("migration does not invent prior effects and opening imports application da
   );
   db.exec(await Bun.file("migrations/0008_profiles.sql").text());
   const imported = await run(customerProfile(customer));
+  expect(
+    (await run(serviceCase(customer, id))).request.profile_patch,
+  ).toBeNull();
   expect(imported.profile.version).toBe(0);
   expect(imported.profile.fields.address).not.toBe("29 Synthetic Street");
   expect(imported.history[0]).toMatchObject({
