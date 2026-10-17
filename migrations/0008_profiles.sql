@@ -1,3 +1,4 @@
+ALTER TABLE service_requests ADD COLUMN profile_patch TEXT CHECK(profile_patch IS NULL OR json_valid(profile_patch));
 CREATE TABLE synthetic_profiles (
   bank_id TEXT PRIMARY KEY REFERENCES banks(id),
   fields TEXT NOT NULL CHECK(json_valid(fields)),
@@ -41,14 +42,9 @@ END;
 CREATE TRIGGER approved_case_profile_effect AFTER UPDATE ON service_requests
 WHEN NEW.status='fulfilled' AND OLD.status<>'fulfilled' AND NEW.kind IN ('address_change','email_change','branch_transfer','employer_change')
 BEGIN
-  SELECT CASE WHEN NEW.updated_by<>'approver' OR NOT EXISTS(SELECT 1 FROM synthetic_profiles WHERE bank_id=NEW.bank_id) THEN RAISE(ABORT,'Profile maintenance requires independent approval and a saved profile') END;
+  SELECT CASE WHEN NEW.updated_by<>'approver' OR NEW.profile_patch IS NULL OR json_type(NEW.profile_patch)<>'object' OR NOT EXISTS(SELECT 1 FROM synthetic_profiles WHERE bank_id=NEW.bank_id) THEN RAISE(ABORT,'Profile maintenance requires independent approval, a domain patch and a saved profile') END;
   INSERT INTO profile_events(bank_id,case_id,actor,note,fields,version,created_at)
   SELECT NEW.bank_id,NEW.id,NEW.updated_by,NEW.outcome_note,
-    CASE NEW.kind
-      WHEN 'address_change' THEN json_set(fields,'$.address',json_extract(NEW.payload,'$.address'),'$.city',json_extract(NEW.payload,'$.city'),'$.pincode',json_extract(NEW.payload,'$.pincode'))
-      WHEN 'email_change' THEN json_set(fields,'$.email',json_extract(NEW.payload,'$.email'))
-      WHEN 'branch_transfer' THEN json_set(fields,'$.home_branch',json_extract(NEW.payload,'$.branch'))
-      WHEN 'employer_change' THEN json_set(fields,'$.employer',json_extract(NEW.payload,'$.employer'))
-    END,version+1,NEW.updated_at FROM synthetic_profiles WHERE bank_id=NEW.bank_id;
+    json_patch(fields,NEW.profile_patch),version+1,NEW.updated_at FROM synthetic_profiles WHERE bank_id=NEW.bank_id;
   UPDATE synthetic_profiles SET fields=(SELECT fields FROM profile_events WHERE case_id=NEW.id),version=version+1,updated_at=NEW.updated_at WHERE bank_id=NEW.bank_id;
 END;

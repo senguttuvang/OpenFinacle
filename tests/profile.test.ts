@@ -260,10 +260,27 @@ test("profiles are scoped and storage prevents untracked writes or history chang
   ).toThrow("immutable");
 });
 
+test("a rolled-back Worker cannot complete maintenance without the domain effect", async () => {
+  const id = await run(prepare());
+  expect(() =>
+    db.run(
+      "UPDATE service_requests SET status='fulfilled',version=version+1,updated_by='approver' WHERE id=?",
+      [id],
+    ),
+  ).toThrow("domain patch");
+  expect((await run(serviceCase(customer, id))).request.status).toBe(
+    "awaiting_approval",
+  );
+  expect((await run(customerProfile(customer))).profile.version).toBe(0);
+});
+
 test("migration does not invent prior effects and opening imports application data only once", async () => {
   await initialize(false);
   const id = await run(prepare());
-  await run(action(approver, id, "fulfil"));
+  db.run(
+    "UPDATE service_requests SET status='fulfilled',version=version+1,updated_by='approver',outcome_note='Historical approval before profile effects' WHERE id=?",
+    [id],
+  );
   db.exec(await Bun.file("migrations/0008_profiles.sql").text());
   const imported = await run(customerProfile(customer));
   expect(imported.profile.version).toBe(0);

@@ -30,3 +30,26 @@ export const ProfileDetail = Schema.Struct({
   history: Schema.Array(ProfileEvent),
 });
 export type ProfileDetail = typeof ProfileDetail.Type;
+
+// The domain selects affected fields; persistence only applies the approved patch.
+export const approvedProfilePatch = (
+  code: string,
+  fields: Readonly<Record<string, string>>,
+) => {
+  switch (code) {
+    case "address_change":
+      return {
+        address: fields.address,
+        city: fields.city,
+        pincode: fields.pincode,
+      };
+    case "email_change":
+      return { email: fields.email };
+    case "branch_transfer":
+      return { home_branch: fields.branch };
+    case "employer_change":
+      return { employer: fields.employer };
+    default:
+      return null;
+  }
+};
