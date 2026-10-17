@@ -243,3 +243,80 @@ test("journey entry only reads permanent saved data and never provisions or call
   expect(db.query("SELECT COUNT(*) AS n FROM banks").get()).toEqual({ n: 1 });
   db.close();
 });
+
+test("loan setup administration requires authority and demo mode, strictly parses commands and keeps saved reads Core-independent", async () => {
+  let coreCalls = 0;
+  const environment = env({
+    prepare: () =>
+      ({
+        bind() {
+          return this;
+        },
+        first: async () => null,
+      }) as unknown as D1PreparedStatement,
+  });
+  environment.DEMO_MODE = "true";
+  environment.CORE = {
+    fetch: async () => {
+      coreCalls++;
+      throw new Error("Unexpected Core call");
+    },
+  } as unknown as Environment["CORE"];
+  for (const [path, method] of [
+    ["setup", "GET"],
+    ["advance", "POST"],
+    ["inspect", "POST"],
+    ["quote", "POST"],
+  ]) {
+    const response = await handleRequest(
+      new Request(`https://demo.test/api/admin/demo/loans/${path}`, { method }),
+      environment,
+    );
+    expect(response.status).toBe(401);
+  }
+  const headers = {
+    Authorization: "Bearer test-admin",
+    "Content-Type": "application/json",
+  };
+  const status = () =>
+    new Request("https://demo.test/api/admin/demo/loans/setup", { headers });
+  expect(
+    (await handleRequest(status(), { ...environment, DEMO_MODE: "false" }))
+      .status,
+  ).toBe(403);
+  const saved = await handleRequest(status(), environment);
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toMatchObject({
+    version: 0,
+    events: [],
+    next: { kind: "account", code: "OF1002" },
+    pending: null,
+  });
+  for (const [path, body] of [
+    [
+      "advance",
+      {
+        step: { kind: "product" },
+        version: 0,
+        key: "some-key-111",
+        extra: true,
+      },
+    ],
+    ["inspect", { extra: true }],
+    ["quote", { terms: {}, owner: "untrusted" }],
+  ]) {
+    expect(
+      (
+        await handleRequest(
+          new Request(`https://demo.test/api/admin/demo/loans/${path}`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+          }),
+          environment,
+        )
+      ).status,
+    ).toBe(400);
+  }
+  expect(coreCalls).toBe(0);
+});

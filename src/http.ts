@@ -2,6 +2,8 @@ import { getContainer } from "@cloudflare/containers";
 import { Effect, Layer, Schema } from "effect";
 import { coreLayer } from "./adapters/core";
 import type { Environment } from "./adapters/environment";
+import { loanCatalogueLayer } from "./adapters/loan-catalogue";
+import { loanEngineLayer } from "./adapters/loan-engine";
 import { parseJsonRequest as parse } from "./adapters/request-json";
 import { storeLayer } from "./adapters/store";
 import { reportFailure } from "./adapters/telemetry";
@@ -31,6 +33,7 @@ import {
   changeCard,
   listCards,
 } from "./application/cards";
+import { previewDemoLoan } from "./application/demo-loan-quote";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
 import { depositAdvice } from "./application/deposit-advice";
 import {
@@ -41,6 +44,11 @@ import {
   submitDeposit,
 } from "./application/deposits";
 import { financialView } from "./application/financial-view";
+import {
+  advanceLoanSetup,
+  inspectLoanSetup,
+  loanSetupStatus,
+} from "./application/loan-setup";
 import { customerProfile } from "./application/profile";
 import {
   actOnRecurringPlan,
@@ -71,6 +79,8 @@ import {
 import { CardCommand } from "./domain/cards";
 import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
+import { LoanSetupCommand } from "./domain/loan-setup";
+import { LoanTerms } from "./domain/loans";
 import { Core, Store } from "./domain/ports";
 import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
@@ -210,6 +220,35 @@ const handle = (request: Request, env: Environment) =>
         return Response.json(
           yield* prepareScenario(input.journey, input.restart),
         );
+      }
+      if (path === "/api/admin/demo/loans/setup" && request.method === "GET")
+        return Response.json(yield* loanSetupStatus());
+      if (
+        path === "/api/admin/demo/loans/inspect" &&
+        request.method === "POST"
+      ) {
+        yield* parse(
+          request,
+          Schema.Record({ key: Schema.String, value: Schema.Never }),
+          false,
+          true,
+        );
+        return Response.json(yield* inspectLoanSetup());
+      }
+      if (path === "/api/admin/demo/loans/advance" && request.method === "POST")
+        return Response.json(
+          yield* advanceLoanSetup(
+            yield* parse(request, LoanSetupCommand, false, true),
+          ),
+        );
+      if (path === "/api/admin/demo/loans/quote" && request.method === "POST") {
+        const input = yield* parse(
+          request,
+          Schema.Struct({ terms: LoanTerms }),
+          false,
+          true,
+        );
+        return Response.json(yield* previewDemoLoan(input.terms));
       }
       if (path === "/api/admin/demo/backfill" && request.method === "POST") {
         const input = yield* parse(
@@ -789,6 +828,7 @@ export const handleRequest = (
             })
           : Effect.void,
       ),
+      Effect.provide(Layer.merge(loanCatalogueLayer, loanEngineLayer)),
       Effect.provide(
         Layer.merge(coreLayer(env, requestId), storeLayer(env.DB)),
       ),
