@@ -321,7 +321,7 @@ test("loan setup administration requires authority and demo mode, strictly parse
   expect(coreCalls).toBe(0);
 });
 
-test("the native loan pilot is protected, strictly scoped to the prepared demo and has no public customer write route", async () => {
+test("the native loan pilot remains protected independently of strict normal session loan instructions", async () => {
   let coreCalls = 0;
   let writes = 0;
   const environment = env({
@@ -461,7 +461,7 @@ test("the native loan pilot is protected, strictly scoped to the prepared demo a
     }),
     environment,
   );
-  expect(publicWrite.status).toBe(404);
+  expect(publicWrite.status).toBe(400);
   expect(coreCalls).toBe(0);
   expect(writes).toBe(0);
 });

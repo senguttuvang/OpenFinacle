@@ -1,6 +1,6 @@
 # Core-Backed Personal Loans
 
-Define the first lending capability: customer application and declared affordability, officer assessment, independent core registration/approval/disbursement, and owned loan holdings/schedules. Execution: `of-9hc.15`; foundation: `.15.1`. This is a staged implementation contract, not a delivered loan journey or observed bank form.
+The first lending capability covers customer application and declared affordability, officer assessment, independent Core registration/approval/disbursement, and owned holdings/schedules. Execution: `of-9hc.15`; native persistence/proof: `.15.9`; customer/staff workspace: `.15.10`. Actual protected native origination and both unfunded withdrawal paths are verified in [release evidence](../../../docs/verification.md); the [origination contract](loan-origination.md) owns durable operations and workspace behavior. Specific bank forms and staff procedures remain inferred, with fuller repayment/servicing and parity still open.
 
 ## Evidence And Backend Choice
 

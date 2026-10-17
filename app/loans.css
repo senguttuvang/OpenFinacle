@@ -1,0 +1,161 @@
+.loan-workspace {
+  overflow-wrap: anywhere;
+}
+.loan-workspace p {
+  max-width: 70ch;
+}
+.loan-workspace h3:focus,
+.loan-workspace h4:focus {
+  outline-offset: 5px;
+}
+.loan-list {
+  list-style: none;
+  margin: 24px 0;
+  padding: 0;
+}
+.loan-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.loan-list p {
+  margin: 8px 0 0;
+}
+.loan-list button {
+  flex-shrink: 0;
+}
+.loan-detail {
+  margin-top: 32px;
+}
+.loan-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 24px 0;
+}
+.loan-detail-heading h3 {
+  margin: 0 0 8px;
+}
+.loan-warning {
+  background: #fff6df;
+  color: #573e11;
+  border: 1px solid #d9bd7b;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.loan-warning h3,
+.loan-warning h4 {
+  margin-top: 0;
+}
+.loan-reference,
+.loan-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.loan-capitalize {
+  text-transform: capitalize;
+}
+.loan-workspace .form-actions {
+  flex-wrap: wrap;
+}
+.loan-decisions {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.loan-decisions legend {
+  font-weight: 600;
+  margin: 16px 0;
+}
+.loan-workspace button {
+  min-height: 50px;
+}
+.loan-schedule {
+  margin: 24px 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.loan-schedule table {
+  min-width: 36rem;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.loan-schedule caption {
+  text-align: left;
+  font-weight: 600;
+  padding: 12px 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.app-shell .loan-schedule th {
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 0.94rem;
+  letter-spacing: 0;
+}
+.app-shell .loan-schedule td {
+  color: var(--ink);
+  font-size: 1rem;
+}
+.loan-schedule td:nth-child(n + 3),
+.loan-schedule th:nth-child(n + 3) {
+  text-align: right;
+  white-space: nowrap;
+}
+.loan-schedule th[scope="row"] {
+  text-align: left;
+}
+.loan-schedule tfoot {
+  font-weight: 600;
+}
+.loan-disclosure {
+  margin: 24px 0;
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+}
+.loan-disclosure summary {
+  cursor: pointer;
+  min-height: 50px;
+  align-content: center;
+  font-weight: 600;
+}
+.loan-core {
+  margin-top: 28px;
+}
+.loan-history {
+  margin-top: 32px;
+}
+.loan-history ol {
+  padding-left: 1.5rem;
+}
+.loan-history li {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.loan-history p {
+  margin: 8px 0;
+}
+.loan-form .deposit-choice {
+  line-height: 1.5;
+}
+@media (max-width: 650px) {
+  .loan-list li,
+  .loan-detail-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .loan-detail-heading .pill {
+    align-self: flex-start;
+  }
+  .loan-list button {
+    align-self: flex-start;
+  }
+  .loan-workspace .panel-heading {
+    align-items: stretch;
+  }
+}

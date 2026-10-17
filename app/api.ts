@@ -10,6 +10,7 @@ class ApiError extends Data.TaggedError("ApiError")<{
   message: string;
   status: number;
   transportFailure?: boolean;
+  uncertain?: boolean;
 }> {}
 export const api = <T>(path: string, body?: unknown, key?: string) =>
   Effect.gen(function* () {
@@ -32,6 +33,7 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
         new ApiError({
           message: `${(json as { error?: string }).error ?? "The request could not be completed."} Reference: ${response.headers["x-request-id"] ?? "unavailable"}`,
           status: response.status,
+          uncertain: (json as { uncertain?: unknown }).uncertain !== false,
         }),
       );
     return json as T;

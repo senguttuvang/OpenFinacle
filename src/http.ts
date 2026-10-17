@@ -18,7 +18,6 @@ import {
   executeCommand,
   rejectCommand,
   requiredBank,
-  requireStaff,
   reviewApplication,
   submitApplication,
 } from "./application/banking";
@@ -46,7 +45,19 @@ import {
   submitDeposit,
 } from "./application/deposits";
 import { financialView } from "./application/financial-view";
+import {
+  actOnLoan,
+  createLoanQuote,
+  inspectOriginalLoan,
+  refreshLoanCoreView,
+  submitLoanApplication,
+} from "./application/loan-origination";
 import { runLoanPilot } from "./application/loan-pilot";
+import {
+  listLoanApplications,
+  savedLoanDetail,
+  savedLoanForKey,
+} from "./application/loan-records";
 import {
   advanceLoanSetup,
   inspectLoanSetup,
@@ -84,7 +95,8 @@ import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { LoanPilotCommand } from "./domain/loan-pilot";
 import { LoanSetupCommand } from "./domain/loan-setup";
-import { LoanTerms } from "./domain/loans";
+import { LoanSubmission } from "./domain/loan-workflow";
+import { LoanCommand, LoanTerms } from "./domain/loans";
 import { Core, Store } from "./domain/ports";
 import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
@@ -602,6 +614,74 @@ const handle = (request: Request, env: Environment) =>
             },
           })
         : Response.json(advice);
+    }
+    if (path === "/api/loans" || path.startsWith("/api/loans/")) {
+      if (path === "/api/loans" && request.method === "GET") {
+        const keys = [...url.searchParams.keys()];
+        const id = url.searchParams.get("id");
+        const key = url.searchParams.get("key");
+        if (
+          new Set(keys).size !== keys.length ||
+          keys.some((name) => name !== "id" && name !== "key") ||
+          (id !== null && key !== null) ||
+          [id, key].some(
+            (value) => value !== null && !/^[a-zA-Z0-9_-]{8,100}$/.test(value),
+          )
+        )
+          return yield* Effect.fail(
+            failure(
+              "Choose one valid application or original instruction reference.",
+            ),
+          );
+        return Response.json(
+          key !== null
+            ? yield* savedLoanForKey(session, key)
+            : id !== null
+              ? yield* savedLoanDetail(session, id)
+              : yield* listLoanApplications(session),
+        );
+      }
+      if (path === "/api/loans/quote" && request.method === "POST")
+        return Response.json(
+          yield* createLoanQuote(
+            session,
+            yield* parse(request, LoanTerms, false, true),
+          ),
+        );
+      if (path === "/api/loans" && request.method === "POST")
+        return Response.json(
+          yield* submitLoanApplication(
+            session,
+            yield* parse(request, LoanSubmission, false, true),
+            request.headers.get("Idempotency-Key") ?? "",
+          ),
+        );
+      if (path === "/api/loans/action" && request.method === "POST")
+        return Response.json(
+          yield* actOnLoan(
+            session,
+            yield* parse(request, LoanCommand, false, true),
+            request.headers.get("Idempotency-Key") ?? "",
+          ),
+        );
+      if (
+        (path === "/api/loans/inspect" || path === "/api/loans/refresh") &&
+        request.method === "POST"
+      ) {
+        const input = yield* parse(
+          request,
+          Schema.Struct({
+            id: Schema.String.pipe(Schema.pattern(/^[a-zA-Z0-9_-]{8,100}$/)),
+          }),
+          false,
+          true,
+        );
+        return Response.json(
+          path === "/api/loans/inspect"
+            ? yield* inspectOriginalLoan(session, input.id)
+            : yield* refreshLoanCoreView(session, input.id),
+        );
+      }
     }
     if (path === "/api/recurring-deposits" && request.method === "GET") {
       const id = url.searchParams.get("id");

@@ -49,7 +49,7 @@ export const requiredBank = (session: Session) =>
       );
     return bank;
   });
-export const requireStaff = (session: Session) =>
+const requireStaff = (session: Session) =>
   session.role === "customer"
     ? Effect.fail(
         new BankingError({ message: "A staff role is required.", status: 403 }),
