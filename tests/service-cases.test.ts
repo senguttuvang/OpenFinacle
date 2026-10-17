@@ -429,6 +429,25 @@ test("request listing is scoped, paginated and treats search wildcards literally
   const page = await run(listServiceCases(customer, 0, ""));
   expect(page).toMatchObject({ total: 27, limit: 25, offset: 0 });
   expect(page.requests).toHaveLength(25);
+  const reference = `SR-${page.requests[0].id.replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  expect(
+    (await run(listServiceCases(customer, 0, reference))).requests.map(
+      (record) => record.id,
+    ),
+  ).toEqual([page.requests[0].id]);
+  expect(
+    (await run(listServiceCases(customer, 0, reference.toLowerCase(), true)))
+      .total,
+  ).toBe(1);
+  expect(
+    (
+      await run(
+        listServiceCases({ ...customer, bank_id: "other-bank" }, 0, reference),
+      )
+    ).total,
+  ).toBe(0);
+  expect((await run(listServiceCases(customer, 0, "--"))).total).toBe(0);
+  expect((await run(listServiceCases(customer, 0, "SR-%"))).total).toBe(0);
   expect((await run(listServiceCases(customer, 25, ""))).requests).toHaveLength(
     2,
   );

@@ -76,11 +76,17 @@ export const listServiceCases = (
         400,
       );
     const store = yield* Store;
-    const search = `%${query.trim().replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+    const escaped = (value: string) =>
+      `%${value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+    const search = escaped(query.trim());
+    const term = query.trim();
+    const reference = escaped(
+      /^SR-[a-z0-9_]{1,32}$/i.test(term) ? term.slice(3) : term,
+    );
     const where =
-      "bank_id=? AND (id LIKE ? ESCAPE '\\' OR kind LIKE ? ESCAPE '\\' OR detail LIKE ? ESCAPE '\\')" +
+      "bank_id=? AND (id LIKE ? ESCAPE '\\' OR replace(id,'-','') LIKE ? ESCAPE '\\' OR kind LIKE ? ESCAPE '\\' OR detail LIKE ? ESCAPE '\\')" +
       (deliveries ? " AND delivery_status NOT IN ('none','not_recorded')" : "");
-    const values = [session.bank_id, search, search, search];
+    const values = [session.bank_id, search, reference, search, search];
     const count = yield* store.one<{ total: number }>(
       `SELECT COUNT(*) AS total FROM service_requests WHERE ${where}`,
       ...values,
