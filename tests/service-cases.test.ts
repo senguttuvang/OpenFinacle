@@ -50,9 +50,10 @@ const initialize = async (legacy = false) => {
   );
   if (legacy)
     db.run(
-      "INSERT INTO service_requests(id,bank_id,kind,detail,status) VALUES('legacy-cheque','case-bank','chequebook','Earlier cheque request','open'),('legacy-product','case-bank','fixed_deposit','Earlier product application','open')",
+      "INSERT INTO service_requests(id,bank_id,kind,detail,status) VALUES('legacy-cheque','case-bank','chequebook','Earlier cheque request','open'),('legacy-product','case-bank','fixed_deposit','Earlier product application','open'),('legacy-address','case-bank','address_change','Earlier synthetic address request','open')",
     );
   db.exec(await Bun.file("migrations/0005_service_cases.sql").text());
+  db.exec(await Bun.file("migrations/0006_legacy_service_guards.sql").text());
   interfere = undefined;
 };
 beforeEach(() => initialize());
@@ -457,6 +458,54 @@ test("request listing is scoped, paginated and treats search wildcards literally
   });
 });
 
+test("rollback storage guards reject old inserts and legacy completion while preserving independent review", async () => {
+  await initialize(true);
+  expect(() =>
+    db.run(
+      "INSERT INTO service_requests(id,bank_id,kind,detail) VALUES('untracked','case-bank','address_change','Synthetic details')",
+    ),
+  ).toThrow("stable submission key");
+  expect(() =>
+    db.run(
+      "UPDATE service_requests SET status='fulfilled' WHERE id='legacy-address'",
+    ),
+  ).toThrow("versioned import update");
+  expect(row("legacy-address")).toMatchObject({
+    status: "open",
+    request_key: null,
+    version: 0,
+  });
+  expect(
+    (await run(serviceCase(customer, "legacy-address"))).history,
+  ).toHaveLength(1);
+  await run(action(officer, "legacy-address", "start"));
+  expect(
+    await denied(action(officer, "legacy-address", "submit_for_approval")),
+  ).toMatchObject({ status: 400 });
+  await run(action(officer, "legacy-address", "request_information"));
+  await run(
+    action(
+      customer,
+      "legacy-address",
+      "provide_information",
+      "Synthetic address supplied",
+      address,
+    ),
+  );
+  await run(action(officer, "legacy-address", "start"));
+  await run(action(officer, "legacy-address", "submit_for_approval"));
+  expect(
+    await denied(action(officer, "legacy-address", "fulfil")),
+  ).toMatchObject({ status: 403 });
+  const completed = await run(action(approver, "legacy-address", "fulfil"));
+  expect(completed.request).toMatchObject({
+    status: "fulfilled",
+    request_key: "imported:legacy-address",
+    version: 6,
+  });
+  expect(completed.history).toHaveLength(7);
+});
+
 test("migration preserves prior requests with explicit unknown history and supports structured continuation", async () => {
   await initialize(true);
   const old = await run(serviceCase(customer, "legacy-cheque"));
@@ -563,6 +612,21 @@ test("HTTP case actions are authenticated and the old resolve route cannot bypas
       )
     ).status,
   ).toBe(401);
+  for (const kind of [
+    "address_change",
+    "chequebook",
+    "fixed_deposit",
+    "personal_loan",
+  ])
+    expect(
+      (
+        await http("/requests", {
+          kind,
+          detail: "Synthetic unstructured request",
+        })
+      ).status,
+    ).toBe(409);
+  expect(db.query("SELECT id FROM service_requests").all()).toHaveLength(0);
   const created = await http("/service-cases", {
     code: "chequebook",
     fields: cheque,
