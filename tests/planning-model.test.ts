@@ -116,6 +116,32 @@ test("minor-unit model filters, balance identity, calendar boundaries and foreca
   );
 });
 test("cash-flow projection and debt never invent funding on depletion or prepayment", () => {
+  const overdrawn = {
+    ...household,
+    postings: [],
+    holdings: [],
+    accounts: [
+      {
+        id: "cash",
+        label: "Overdrawn synthetic cash",
+        owners: "Synthetic owner",
+        opening: -10000,
+      },
+    ],
+    debt: { principal: 1000000, rate: 0, emi: 0 },
+  };
+  const deficit = planningProjection(overdrawn, {
+    ...assumptions,
+    income: 0,
+    essential: 0,
+    discretionary: 0,
+    sip: 0,
+    prepayment: 100000,
+  });
+  expect(deficit[0]?.opening).toBe(-10000);
+  expect(deficit[0]?.growth).toBe(0);
+  expect(deficit[0]?.gap).toBe(10000);
+  expect(deficit[0]?.debt).toBe(1000000);
   expect(
     evaluatePlanningProjection(household, {
       ...assumptions,

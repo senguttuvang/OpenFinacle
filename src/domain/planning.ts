@@ -257,7 +257,10 @@ export const planningProjection = (
   a: PlanningAssumptions,
 ): PlanningYear[] => {
   let assets = planningWealth(h).investable;
-  const prepayment = Math.min(a.prepayment, h.debt.principal, assets);
+  const prepayment = Math.max(
+    0,
+    Math.min(a.prepayment, h.debt.principal, assets),
+  );
   assets -= prepayment;
   let debt = { ...h.debt, principal: h.debt.principal - prepayment };
   let deflator = 1;
@@ -300,12 +303,20 @@ export const planningProjection = (
     const sip = retired
       ? 0
       : Math.min(
-          Math.max(0, income - essential - discretionary - debtPayment - goals),
+          Math.max(
+            0,
+            income -
+              essential -
+              discretionary -
+              debtPayment -
+              goals +
+              Math.min(0, assets),
+          ),
           Math.round(a.sip * 12 * (1 + a.sipStep / 10000) ** i),
         );
     // SIP is allocation of surplus, not an additional cash source. Half-year return on current contributions.
     const growth =
-      Math.round((assets * (returnRate - a.fee)) / 10000) +
+      Math.round((Math.max(0, assets) * (returnRate - a.fee)) / 10000) +
       Math.round((sip * (returnRate - a.fee)) / 20000);
     const closing =
       assets +
