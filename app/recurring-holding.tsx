@@ -3,6 +3,7 @@
 import type { ReactNode, Ref } from "react";
 import { formatMoney } from "../src/domain/banking";
 import type { RecurringDetail } from "../src/domain/recurring-deposits";
+import { DepositAdvicePreview } from "./deposit-advice";
 import { depositStatus } from "./deposit-terms";
 import { RecurringFacts, recurringAction } from "./recurring-terms";
 
@@ -52,6 +53,15 @@ export function RecurringHolding({
             <dd>{plan.maturity_date ?? "Unavailable"}</dd>
           </div>
         </dl>
+      )}
+      {plan.status === "active" && (
+        <DepositAdvicePreview
+          key={plan.id}
+          bankId={plan.bank_id}
+          id={plan.id}
+          kind="recurring"
+          busy={false}
+        />
       )}
       {children}
       {detail.installments.length > 0 && (

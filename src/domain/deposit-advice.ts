@@ -31,7 +31,7 @@ export const DepositAdvice = Schema.Struct({
   maturity_instruction: Schema.String,
 });
 export type DepositAdvice = typeof DepositAdvice.Type;
-const adviceBoundary =
+export const adviceBoundary =
   "Synthetic opening advice only. No savings debit, mandate, credited interest, payout or external settlement. This is not an interest or tax certificate, or proof of actual funding.";
 
 export const openingAdvice = (
@@ -123,7 +123,7 @@ export const openingAdvice = (
     );
   });
 
-const adviceFacts = (
+export const adviceFacts = (
   advice: DepositAdvice,
 ): readonly (readonly [string, string])[] => [
   ["Holding reference", advice.reference],
