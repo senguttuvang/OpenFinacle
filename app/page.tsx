@@ -42,6 +42,7 @@ import {
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
 import { BranchOverview } from "./branch-overview";
+import { Cards } from "./cards";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import {
@@ -74,6 +75,7 @@ const navIcons = {
   transfer: ArrowLeftRight,
   statements: FileText,
   services: CreditCard,
+  cards: CreditCard,
   cash: Wallet,
   approvals: ShieldCheck,
   operations: Building2,
@@ -1865,6 +1867,16 @@ export default function Page() {
             </section>
           )}
 
+          {view === "cards" && (
+            <Cards
+              key={data.bank.id + data.role}
+              bankId={data.bank.id}
+              role={data.role}
+              busy={busy}
+              perform={perform}
+              openAccount={() => setView("application")}
+            />
+          )}
           {view === "services" && (
             <ServiceCentre
               key={data.bank.id + data.role + serviceSearch}

@@ -1,0 +1,51 @@
+.card-workspace {
+  padding: 24px;
+  min-width: 0;
+}
+.card-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+.card-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+  overflow-wrap: anywhere;
+}
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.card-form,
+.card-recovery {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 24px 0;
+}
+.card-form label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.card-form textarea {
+  width: 100%;
+  min-height: 80px;
+}
+.card-history li {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .card-summary {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
