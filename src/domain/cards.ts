@@ -17,6 +17,8 @@ export const Card = Schema.Struct({
   settings: CardSettings,
   version: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
   updated_at: Schema.String,
+  activation_required: Schema.optional(Schema.Boolean),
+  replacement_id: Schema.optional(Schema.NullOr(Schema.String)),
 });
 export type Card = typeof Card.Type;
 const cardActions = ["settings", "hold", "resume", "block"] as const;
@@ -50,6 +52,7 @@ export const allowedCardActions = (card: Card, role: Role) =>
   cardActions.filter((action) => {
     if (card.status === "blocked" || role === "approver") return false;
     if (action === "block") return true;
+    if (card.activation_required) return false;
     if (role !== "customer") return false;
     return action === "resume"
       ? card.status === "held"

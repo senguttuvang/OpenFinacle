@@ -24,14 +24,20 @@ const parse = <A, I>(schema: Schema.Schema<A, I>, value: unknown) =>
     ),
   );
 const columns =
-  "id,bank_id,suffix,status,json(settings) AS settings,version,updated_at";
+  "id,bank_id,suffix,status,json(settings) AS settings,version,updated_at,activation_required,replacement_id";
 const decodeCard = (value: unknown) =>
   parse(
     Schema.Struct({
       ...Card.fields,
       settings: Schema.parseJson(Card.fields.settings),
+      activation_required: Schema.Literal(0, 1),
     }),
     value,
+  ).pipe(
+    Effect.map((row) => ({
+      ...row,
+      activation_required: row.activation_required === 1,
+    })),
   );
 const keyValid = (key: string) => /^[a-zA-Z0-9_-]{8,100}$/.test(key);
 
@@ -39,7 +45,7 @@ export const listCards = (session: Session) =>
   Effect.gen(function* () {
     const store = yield* Store;
     const rows = yield* store.all(
-      `SELECT ${columns} FROM synthetic_cards WHERE bank_id=? ORDER BY id`,
+      `SELECT ${columns} FROM banking_cards WHERE bank_id=? ORDER BY updated_at DESC,id`,
       session.bank_id,
     );
     return { cards: yield* Effect.forEach(rows, decodeCard) };
@@ -53,14 +59,14 @@ export const cardDetail = (
   Effect.gen(function* () {
     const store = yield* Store;
     const row = yield* store.one(
-      `SELECT ${columns} FROM synthetic_cards WHERE bank_id=? AND id=?`,
+      `SELECT ${columns} FROM banking_cards WHERE bank_id=? AND id=?`,
       session.bank_id,
       id,
     );
     if (!row) return yield* fail("Card not found.", 404);
     const card = yield* decodeCard(row);
     const rows = yield* store.all(
-      "SELECT id,card_id,actor,action,note,status,settings,version,created_at FROM card_events WHERE bank_id=? AND card_id=? ORDER BY version",
+      "SELECT id,card_id,actor,action,note,status,settings,version,created_at FROM banking_card_events WHERE bank_id=? AND card_id=? ORDER BY version",
       session.bank_id,
       id,
     );
@@ -87,7 +93,7 @@ export const cardForKey = (session: Session, key: string) =>
       return yield* fail("Choose a valid card command reference.", 400);
     const store = yield* Store;
     const event = yield* store.one<{ card_id: string }>(
-      "SELECT card_id FROM card_events WHERE bank_id=? AND command_key=?",
+      "SELECT card_id FROM banking_card_events WHERE bank_id=? AND command_key=?",
       session.bank_id,
       key,
     );
@@ -127,7 +133,7 @@ export const changeCard = (session: Session, input: CardCommand, key: string) =>
       command_payload: string;
       actor: string;
     }>(
-      "SELECT card_id,command_payload,actor FROM card_events WHERE bank_id=? AND command_key=?",
+      "SELECT card_id,command_payload,actor FROM banking_card_events WHERE bank_id=? AND command_key=?",
       session.bank_id,
       key,
     );
@@ -144,8 +150,14 @@ export const changeCard = (session: Session, input: CardCommand, key: string) =>
     const { card } = yield* cardDetail(session, input.id);
     const next = yield* cardTransition(card, session.role, input);
     const timestamp = new Date(yield* Clock.currentTimeMillis).toISOString();
+    const table = card.replacement_id
+      ? "replacement_card_events"
+      : "card_events";
+    const source = card.replacement_id
+      ? "replacement_cards"
+      : "synthetic_cards";
     const inserted = yield* store.run(
-      "INSERT INTO card_events(id,bank_id,card_id,command_key,command_payload,actor,action,note,status,settings,version,created_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,? FROM synthetic_cards WHERE id=? AND bank_id=? AND version=? ON CONFLICT(bank_id,command_key) DO NOTHING",
+      `INSERT INTO ${table}(id,bank_id,card_id,command_key,command_payload,actor,action,note,status,settings,version,created_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,? FROM ${source} WHERE id=? AND bank_id=? AND version=? ON CONFLICT(bank_id,command_key) DO NOTHING`,
       crypto.randomUUID(),
       session.bank_id,
       input.id,
@@ -167,7 +179,7 @@ export const changeCard = (session: Session, input: CardCommand, key: string) =>
         command_payload: string;
         actor: string;
       }>(
-        "SELECT command_payload,actor FROM card_events WHERE bank_id=? AND command_key=?",
+        "SELECT command_payload,actor FROM banking_card_events WHERE bank_id=? AND command_key=?",
         session.bank_id,
         key,
       );
