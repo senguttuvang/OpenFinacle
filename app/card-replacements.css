@@ -14,3 +14,19 @@
 .replacement-address {
   white-space: pre-line;
 }
+.card-instrument-picker {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 1rem;
+  max-width: 32rem;
+}
+.card-instrument-picker select {
+  min-height: 50px;
+  font: inherit;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-width: 100%;
+}

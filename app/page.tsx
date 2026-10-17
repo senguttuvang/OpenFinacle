@@ -51,9 +51,12 @@ import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
 
-const Cards = dynamic(() => import("./cards").then((module) => module.Cards), {
-  loading: () => <p role="status">Loading card workspace…</p>,
-});
+const Cards = dynamic(
+  () => import("./card-workspace").then((module) => module.CardWorkspace),
+  {
+    loading: () => <p role="status">Loading card workspace…</p>,
+  },
+);
 const Deposits = dynamic(
   () => import("./deposit-workspace").then((module) => module.DepositWorkspace),
   {

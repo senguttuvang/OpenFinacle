@@ -2,7 +2,7 @@
 
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { Effect, Schema } from "effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BankingError, formatMoney, type Role } from "../src/domain/banking";
 import { Card, CardCommand, CardDetail } from "../src/domain/cards";
 import { api } from "./api";
@@ -13,6 +13,7 @@ const labels = {
   hold: "Temporarily hold",
   resume: "Resume card",
   block: "Permanently block",
+  activate: "Demo replacement activated",
 };
 const channels = {
   atm: "ATM withdrawals",
@@ -27,9 +28,25 @@ const pendingSchema = Schema.Struct({
   input: CardCommand,
 });
 type Pending = typeof pendingSchema.Type;
-const detailApi = (path: string, body?: unknown, key?: string) =>
+const detailApi = (
+  bankId: string,
+  path: string,
+  body?: unknown,
+  key?: string,
+) =>
   api<unknown>(path, body, key).pipe(
     Effect.flatMap(Schema.decodeUnknown(CardDetail)),
+    Effect.flatMap((result) =>
+      result.card.bank_id === bankId
+        ? Effect.succeed(result)
+        : Effect.fail(
+            new BankingError({
+              message:
+                "Card response belongs to a different relationship. Refresh the saved cards.",
+              status: 503,
+            }),
+          ),
+    ),
     Effect.mapError(
       (error) =>
         new BankingError({
@@ -54,12 +71,14 @@ export function Cards({
   busy,
   perform,
   openAccount,
+  selectedCardId,
 }: {
   bankId: string;
   role: Role;
   busy: boolean;
   perform: ServicePerform;
   openAccount: () => void;
+  selectedCardId?: string;
 }) {
   const storage = `openfinacle:card-command:${bankId}`;
   const [cards, setCards] = useState<readonly Card[] | null>(null);
@@ -71,8 +90,13 @@ export function Cards({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [revision, setRevision] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [readFailed, setReadFailed] = useState(false);
+  const submitting = useRef(false);
+  const currentCard = useRef(selectedCardId);
   useEffect(() => {
     let active = true;
+    setLoading(true);
     void Effect.runPromise(
       Effect.gen(function* () {
         const saved = yield* Effect.try({
@@ -84,25 +108,54 @@ export function Cards({
               saved,
             ).pipe(Effect.mapError(storageFailure))
           : null;
+        if (active) setPending(restored);
         const result = yield* api<unknown>(`/cards?refresh=${revision}`).pipe(
           Effect.flatMap(
             Schema.decodeUnknown(Schema.Struct({ cards: Schema.Array(Card) })),
           ),
         );
-        const selected = restored?.input.id ?? result.cards[0]?.id;
+        if (result.cards.some((card) => card.bank_id !== bankId))
+          return yield* Effect.fail(
+            new BankingError({
+              message: "Saved cards belong to a different relationship.",
+              status: 503,
+            }),
+          );
+        const selected =
+          restored?.input.id ??
+          currentCard.current ??
+          selectedCardId ??
+          result.cards.find((card) => card.status !== "blocked")?.id ??
+          result.cards[0]?.id;
         const current = selected
-          ? yield* detailApi(`/cards?id=${encodeURIComponent(selected)}`)
+          ? yield* detailApi(
+              bankId,
+              `/cards?id=${encodeURIComponent(selected)}`,
+            )
           : null;
+        if (current && current.card.id !== selected)
+          return yield* Effect.fail(
+            new BankingError({
+              message: "The selected card response could not be verified.",
+              status: 503,
+            }),
+          );
         if (active) {
           setCards(result.cards);
           setDetail(current);
           setPending(restored);
           setError("");
+          setLoading(false);
+          setReadFailed(false);
         }
       }).pipe(
         Effect.catchAll((failure) =>
           Effect.sync(() => {
-            if (active) setError(failure.message);
+            if (active) {
+              setError(failure.message);
+              setLoading(false);
+              setReadFailed(true);
+            }
           }),
         ),
       ),
@@ -110,7 +163,7 @@ export function Cards({
     return () => {
       active = false;
     };
-  }, [storage, revision]);
+  }, [bankId, storage, revision, selectedCardId]);
   const performHere = (task: Effect.Effect<unknown, { message: string }>) =>
     perform(
       task.pipe(
@@ -128,6 +181,7 @@ export function Cards({
         catch: storageFailure,
       });
       yield* Effect.sync(() => {
+        currentCard.current = result.card.id;
         setDetail(result);
         setPending(null);
         setDraft(null);
@@ -137,9 +191,19 @@ export function Cards({
           "Card change recorded. The saved state and history are shown below.",
         );
         setError("");
+        setRevision((value) => value + 1);
       });
     });
-  const send = (command: Pending) =>
+  const send = (command: Pending) => {
+    if (
+      submitting.current ||
+      busy ||
+      loading ||
+      (pending &&
+        !(retry && pending.key === command.key && command.role === role))
+    )
+      return;
+    submitting.current = true;
     performHere(
       Effect.gen(function* () {
         yield* Effect.try({
@@ -153,6 +217,7 @@ export function Cards({
           setError("");
         });
         const result = yield* detailApi(
+          bankId,
           "/cards/action",
           command.input,
           command.key,
@@ -169,12 +234,19 @@ export function Cards({
             }),
           );
         yield* accept(result);
-      }),
+      }).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            submitting.current = false;
+          }),
+        ),
+      ),
     );
+  };
   const reconcile = () => {
     if (!pending) return;
     performHere(
-      detailApi(`/cards?key=${encodeURIComponent(pending.key)}`).pipe(
+      detailApi(bankId, `/cards?key=${encodeURIComponent(pending.key)}`).pipe(
         Effect.flatMap((result) =>
           result.confirmed_key === pending.key &&
           result.card.id === pending.input.id
@@ -199,9 +271,34 @@ export function Cards({
   const confirm = () => {
     if (draft) send({ key: crypto.randomUUID(), role, input: draft });
   };
-  const disabled = busy || pending !== null;
+  const disabled = busy || loading || readFailed || pending !== null;
+  const select = (id: string) =>
+    performHere(
+      detailApi(bankId, `/cards?id=${encodeURIComponent(id)}`).pipe(
+        Effect.flatMap((result) =>
+          result.card.id === id
+            ? Effect.succeed(result)
+            : Effect.fail(
+                new BankingError({
+                  message: "The selected card response could not be verified.",
+                  status: 503,
+                }),
+              ),
+        ),
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            currentCard.current = result.card.id;
+            setDetail(result);
+            setDraft(null);
+            setReview(false);
+            setError("");
+            setNotice("");
+          }),
+        ),
+      ),
+    );
   return (
-    <section className="panel card-workspace" aria-busy={busy}>
+    <section className="panel card-workspace" aria-busy={busy || loading}>
       <div className="panel-heading">
         <div>
           <h2>
@@ -211,7 +308,7 @@ export function Cards({
         </div>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || loading}
           onClick={() => {
             setRevision(revision + 1);
             setDraft(null);
@@ -236,21 +333,25 @@ export function Cards({
           </p>
           <code>{pending.key}</code>
           <div className="card-actions">
-            <button type="button" disabled={busy} onClick={reconcile}>
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={reconcile}
+            >
               Check saved command
             </button>
             {retry && role === pending.role && (
               <>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || loading}
                   onClick={() => send(pending)}
                 >
                   Retry original instruction
                 </button>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || loading}
                   onClick={() =>
                     performHere(
                       Effect.gen(function* () {
@@ -291,6 +392,27 @@ export function Cards({
       )}
       {detail && (
         <>
+          {cards && cards.length > 1 && (
+            <label className="card-instrument-picker">
+              Selected demo card
+              <select
+                value={detail.card.id}
+                disabled={disabled}
+                onChange={(event) => select(event.target.value)}
+              >
+                {cards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    Demo {card.suffix} ·{" "}
+                    {card.status === "blocked"
+                      ? "Permanently blocked"
+                      : card.activation_required
+                        ? "Awaiting activation"
+                        : card.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="card-summary">
             <div>
               <span>OpenFinacle debit · Demo {detail.card.suffix}</span>
@@ -298,14 +420,18 @@ export function Cards({
                 {detail.card.status === "active"
                   ? "Active"
                   : detail.card.status === "held"
-                    ? "Temporarily held"
+                    ? detail.card.activation_required
+                      ? "Awaiting demo activation"
+                      : "Temporarily held"
                     : "Permanently blocked"}
               </h3>
               <p>
                 {detail.card.status === "held"
-                  ? "All usage is held. Saved channel settings are retained."
+                  ? detail.card.activation_required
+                    ? "Complete recorded delivery and activate in Replacement requests. Normal controls become available afterward."
+                    : "All usage is held. Saved channel settings are retained."
                   : detail.card.status === "blocked"
-                    ? "This card cannot be resumed. Contact the branch for replacement servicing."
+                    ? "This instrument cannot resume. Open Replacement requests to inspect or request a distinct demo card."
                     : "Manage channel access and your daily usage limit."}
               </p>
             </div>
