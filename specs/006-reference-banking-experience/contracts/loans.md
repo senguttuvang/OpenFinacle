@@ -32,6 +32,8 @@ The intended disbursement is a real core transfer into the same owned synthetic 
 
 ## Persistence, Recovery And Release Gates
 
+The [shared Core reservation contract](core-write-claims.md) defines account arbitration with existing savings commands. Before a future loan write is exposed, its authorized original operation must reserve this same gate atomically; a separate loan-only lock is insufficient. The gate alone does not implement loan permission, consent, external identity or Core outcome proof.
+
 Reserve a durable operation and stable core command identity before each write. One active operation per application; guard competing cancellation/registration and decisions atomically. Keep original command input and actor across reload. Pinned [application properties](https://github.com/apache/fineract/blob/1.15.0/fineract-provider/src/main/resources/application.properties) use `Idempotency-Key`, matching the existing adapter; this source takes precedence over a misspelled header in public prose. Idempotency is defense in depth, not permission to replay ambiguous financial writes.
 
 After a lost/unreadable response or persistence acknowledgement, inspect the core read-only by stable external identity and corroborating state/transaction data. Never automatically repeat the POST. A missing external-ID read does not prove an earlier write cannot still complete. Preserve unresolved status and block new instructions until the original outcome is established. A current active status alone is insufficient proof that our requested savings disbursement occurred. No write-to-mock fallback or automatic reset exists.

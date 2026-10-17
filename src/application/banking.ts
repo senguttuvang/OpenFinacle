@@ -791,7 +791,7 @@ export const createCommand = (
       return existing;
     }
     const unresolved = yield* store.one<{ id: string }>(
-      "SELECT id FROM commands WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain') LIMIT 1",
+      "SELECT id FROM core_write_claims WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain') LIMIT 1",
       bank.id,
       accountId,
     );
@@ -869,8 +869,8 @@ export const createCommand = (
         );
     }
     const id = crypto.randomUUID();
-    yield* store.run(
-      "INSERT OR IGNORE INTO commands(id,bank_id,key,kind,status,amount_minor,description,maker,account_id,payload) VALUES(?,?,?,?,'pending',?,?,?,?,?)",
+    const inserted = yield* store.run(
+      "INSERT OR IGNORE INTO commands(id,bank_id,key,kind,status,amount_minor,description,maker,account_id,payload) SELECT ?,?,?,?,'pending',?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM core_write_claims WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain'))",
       id,
       bank.id,
       key,
@@ -880,6 +880,8 @@ export const createCommand = (
       session.role,
       accountId,
       JSON.stringify(input),
+      bank.id,
+      accountId,
     );
     const command = yield* store.one<BankingCommand>(
       "SELECT * FROM commands WHERE bank_id=? AND key=?",
@@ -889,8 +891,11 @@ export const createCommand = (
     if (!command)
       return yield* Effect.fail(
         new BankingError({
-          message: "Command persistence failed.",
-          status: 503,
+          message:
+            inserted === 0
+              ? "Another instruction started or requires reconciliation. Inspect it before creating another financial instruction."
+              : "Command persistence failed.",
+          status: inserted === 0 ? 409 : 503,
         }),
       );
     if (command.payload !== JSON.stringify(input))
@@ -944,12 +949,11 @@ export const executeCommand = (
         }),
       );
     const claim = yield* store.run(
-      "UPDATE commands SET status='executing',approver=? WHERE id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM commands other WHERE other.bank_id=? AND other.account_id=? AND other.id<>? AND other.status IN ('executing','uncertain'))",
+      "UPDATE commands SET status='executing',approver=? WHERE id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM core_write_claims WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain'))",
       automatic ? "policy:retail-transfer" : session.role,
       command.id,
       bank.id,
       command.account_id,
-      command.id,
     );
     if (!claim)
       return yield* Effect.fail(
