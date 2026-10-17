@@ -20,6 +20,8 @@ const routes = new Set([
   "/api/cards",
   "/api/profile",
   "/api/cards/action",
+  "/api/card-replacements",
+  "/api/card-replacements/action",
   "/api/deposits",
   "/api/deposits/action",
   "/api/deposit-advice",
