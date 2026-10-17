@@ -5,6 +5,7 @@ import {
   type LoanApplication,
   LoanQuotePreview,
   LoanSubmission,
+  safeLoanProofChecks,
 } from "../domain/loan-workflow";
 import { LoanWriter } from "../domain/loan-writing";
 import {
@@ -323,7 +324,13 @@ export const inspectOriginalLoan = (session: Session, id: string) =>
         );
       }
     }
-    return yield* recordedDetail(session, id, operation.key);
+    const detail = yield* recordedDetail(session, id, operation.key);
+    return {
+      ...detail,
+      inspection_checks: Either.isLeft(outcome)
+        ? safeLoanProofChecks(outcome.left.loanProofChecks)
+        : [],
+    };
   });
 export const refreshLoanCoreView = (session: Session, id: string) =>
   Effect.gen(function* () {

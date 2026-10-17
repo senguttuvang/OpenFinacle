@@ -254,6 +254,11 @@ const layer = () =>
                 message: "Original Core result not visible",
                 status: 503,
                 uncertain: true,
+                loanProofChecks: [
+                  "core-read",
+                  "invented-private-diagnostic-marker",
+                  "core-read",
+                ],
               }),
             );
           return structuredClone(result);
@@ -645,10 +650,14 @@ test("an invisible delayed disbursement remains locked across reads, then one or
   expect(pending.financial_view_stale).toBe(true);
   const original = dispatches.at(-1);
   if (!original) throw new Error("Missing original dispatch");
-  expect(
-    (await run(inspectOriginalLoan(approver, detail.loan.id))).operation
-      ?.status,
-  ).toBe("uncertain");
+  const inspection = await run(inspectOriginalLoan(approver, detail.loan.id));
+  expect(inspection.operation?.status).toBe("uncertain");
+  expect(inspection.inspection_checks).toEqual(["core-read"]);
+  expect(inspection.history).toEqual(pending.history);
+  expect(inspection.financial_view_stale).toBe(true);
+  expect(JSON.stringify(inspection)).not.toContain(
+    "invented-private-diagnostic-marker",
+  );
   expect(
     (await denied(inspectOriginalLoan(customer, detail.loan.id))).status,
   ).toBe(403);

@@ -1,10 +1,11 @@
-import { Effect, Layer, Schema } from "effect";
+import { Effect, Layer, ParseResult, Schema } from "effect";
 import { BankingError } from "../domain/banking";
 import {
   type CoreLoanSnapshot,
   LoanEnquiry,
   type LoanLookup,
 } from "../domain/loan-engine";
+import { safeLoanProofChecks } from "../domain/loan-workflow";
 import {
   LoanOwner,
   LoanQuote,
@@ -121,18 +122,51 @@ const Transfer = Schema.Struct({
   fromAccount: Schema.Struct({ id }),
   toAccount: Schema.Struct({ id }),
 });
-const invalid = (message: string, status = 503) =>
-  new BankingError({ message, status });
+const invalid = (
+  message: string,
+  status = 503,
+  checks: readonly string[] = [],
+) =>
+  new BankingError({
+    message,
+    status,
+    loanProofChecks: safeLoanProofChecks(checks),
+  });
+const shapeChecks: Readonly<Record<string, string>> = {
+  summary: "loan-summary-shape",
+  transactions: "loan-transactions-shape",
+  "transactions.currency": "transaction-currency-shape",
+  "transactions.manuallyReversed": "transaction-reversal-shape",
+  "transactions.externalId": "transaction-identity-shape",
+  "transactions.transfer": "transfer-summary-shape",
+  timeline: "loan-timeline-shape",
+  status: "loan-status-shape",
+};
 const decode = <A, I>(
   schema: Schema.Schema<A, I>,
   value: unknown,
   status = 503,
+  stage = "loan-response-shape",
 ) =>
-  Schema.decodeUnknown(schema)(value).pipe(
-    Effect.mapError(() =>
+  Schema.decodeUnknown(schema, { errors: "all" })(value).pipe(
+    Effect.mapError((error) =>
       invalid(
         "The core loan enquiry could not be verified. No operation was replayed.",
         status,
+        [
+          stage,
+          ...ParseResult.ArrayFormatter.formatErrorSync(error).flatMap(
+            (issue) => {
+              const path = issue.path.filter(
+                (part) => typeof part === "string",
+              );
+              return path.flatMap((_, index) => {
+                const check = shapeChecks[path.slice(0, index + 1).join(".")];
+                return check ? [check] : [];
+              });
+            },
+          ),
+        ],
       ),
     ),
   );
@@ -149,10 +183,20 @@ export const loanEnquiryLayer = Layer.effect(
         const terms = yield* normalizeLoanTerms(lookup.terms);
         const raw = yield* decode(
           Loan,
-          yield* core.request(
-            "GET",
-            `loans/external-id/${encodeURIComponent(lookup.external_id)}?associations=repaymentSchedule,transactions,charges,linkedAccount`,
-          ),
+          yield* core
+            .request(
+              "GET",
+              `loans/external-id/${encodeURIComponent(lookup.external_id)}?associations=repaymentSchedule,transactions,charges,linkedAccount`,
+            )
+            .pipe(
+              Effect.mapError((error) =>
+                invalid(
+                  "Core loan read unavailable; inspect the original instruction.",
+                  error.status,
+                  ["core-read"],
+                ),
+              ),
+            ),
         );
         if (
           raw.externalId !== lookup.external_id ||
@@ -165,6 +209,7 @@ export const loanEnquiryLayer = Layer.effect(
             invalid(
               "The core loan does not match this owned application.",
               403,
+              ["loan-ownership"],
             ),
           );
         const expected = yield* date(raw.timeline.expectedDisbursementDate);
@@ -200,6 +245,8 @@ export const loanEnquiryLayer = Layer.effect(
           return yield* Effect.fail(
             invalid(
               "The core loan terms or state differ from the reviewed application.",
+              503,
+              ["loan-terms"],
             ),
           );
         const actual = raw.timeline.actualDisbursementDate
@@ -214,6 +261,8 @@ export const loanEnquiryLayer = Layer.effect(
           return yield* Effect.fail(
             invalid(
               "The core loan state and disbursement facts are inconsistent.",
+              503,
+              ["loan-funding-facts"],
             ),
           );
         const disbursements = yield* Effect.forEach(
@@ -243,6 +292,8 @@ export const loanEnquiryLayer = Layer.effect(
           return yield* Effect.fail(
             invalid(
               "An undisbursed loan contains unexpected disbursement history.",
+              503,
+              ["loan-undisbursed-history"],
             ),
           );
         const snapshot: CoreLoanSnapshot = {
@@ -277,7 +328,15 @@ export const loanEnquiryLayer = Layer.effect(
               ? yield* normalizeCoreLoanSchedule(raw.repaymentSchedule, {
                   ...lookup,
                   expected_disbursement_date: actual,
-                })
+                }).pipe(
+                  Effect.mapError((error) =>
+                    invalid(
+                      "The owned Core loan schedule could not be normalized.",
+                      error.status,
+                      ["schedule-normalization"],
+                    ),
+                  ),
+                )
               : null,
           disbursements,
         };
@@ -318,11 +377,24 @@ export const loanEnquiryLayer = Layer.effect(
               invalid(
                 "The original savings disbursement could not be corroborated.",
                 409,
+                ["disbursement-correlation"],
               ),
             );
           const transfer = yield* decode(
             Transfer,
-            yield* core.request("GET", `accounttransfers/${row.transfer.id}`),
+            yield* core
+              .request("GET", `accounttransfers/${row.transfer.id}`)
+              .pipe(
+                Effect.mapError((error) =>
+                  invalid(
+                    "Core transfer read unavailable; inspect the original instruction.",
+                    error.status,
+                    ["core-read"],
+                  ),
+                ),
+              ),
+            503,
+            "transfer-response-shape",
           );
           if (
             transfer.id !== row.transfer.id ||
@@ -339,6 +411,7 @@ export const loanEnquiryLayer = Layer.effect(
               invalid(
                 "The core transfer does not corroborate the owned savings disbursement.",
                 409,
+                ["transfer-correlation"],
               ),
             );
           return {
@@ -361,6 +434,7 @@ export const loanEnquiryLayer = Layer.effect(
                       ? 503
                       : 409,
                 uncertain: true,
+                loanProofChecks: safeLoanProofChecks(error.loanProofChecks),
               }),
           ),
         ),

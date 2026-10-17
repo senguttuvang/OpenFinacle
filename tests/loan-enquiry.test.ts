@@ -186,6 +186,38 @@ const harness = (
   };
 };
 
+test("read-only proof diagnostics select static schema checks and discard response values and transport messages", async () => {
+  const marker = "invented-private-response-marker";
+  const h = harness({
+    ...raw,
+    transactions: [
+      {
+        ...transaction,
+        manuallyReversed: marker,
+        transfer: { ...basicTransfer, currency: marker },
+      },
+    ],
+  });
+  const error = await h.denied(true);
+  expect(error.loanProofChecks).toEqual(
+    expect.arrayContaining([
+      "loan-response-shape",
+      "loan-transactions-shape",
+      "transaction-reversal-shape",
+      "transfer-summary-shape",
+    ]),
+  );
+  expect(JSON.stringify(error)).not.toContain(marker);
+  expect(h.calls).toHaveLength(1);
+  expect(h.calls.every((call) => call.method === "GET")).toBe(true);
+  const absent = harness(raw, transfer, loanPath);
+  expect((await absent.denied(true)).loanProofChecks).toEqual(["core-read"]);
+  const foreign = harness({ ...raw, clientId: 999 });
+  expect((await foreign.denied(true)).loanProofChecks).toEqual([
+    "loan-ownership",
+  ]);
+});
+
 test("owned loan enquiry normalizes core facts and schedules without quote expiry or any write", async () => {
   const h = harness();
   const result = await h.inspect();

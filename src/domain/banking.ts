@@ -4,6 +4,7 @@ export class BankingError extends Data.TaggedError("BankingError")<{
   message: string;
   status: number;
   uncertain?: boolean;
+  loanProofChecks?: readonly string[];
 }> {}
 export type Role = "customer" | "officer" | "approver";
 export type CustomerJourney = "new" | "existing";

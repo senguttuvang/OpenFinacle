@@ -1,6 +1,7 @@
 import { Clock, Effect, Layer, Schema } from "effect";
 import { BankingError, dateFields } from "../domain/banking";
 import { LoanEnquiry } from "../domain/loan-engine";
+import { safeLoanProofChecks } from "../domain/loan-workflow";
 import {
   type LoanWriteInstruction,
   type LoanWriteResult,
@@ -16,12 +17,15 @@ import {
 const acknowledgement = Schema.Struct({
   resourceId: Schema.Number.pipe(Schema.int(), Schema.positive()),
 });
-const uncertain = () =>
+const uncertain = (error?: unknown) =>
   new BankingError({
     message:
       "The original loan instruction remains unconfirmed. Inspect it; do not repeat the Core write.",
     status: 503,
     uncertain: true,
+    loanProofChecks: safeLoanProofChecks(
+      error instanceof BankingError ? error.loanProofChecks : undefined,
+    ),
   });
 const invalidState = () =>
   new BankingError({
@@ -51,7 +55,12 @@ export const loanWriterLayer = Layer.effect(
             JSON.stringify(proof.loan.schedule) !==
               JSON.stringify(input.quote.schedule)
           )
-            return yield* Effect.fail(invalidState());
+            return yield* Effect.fail(
+              new BankingError({
+                ...invalidState(),
+                loanProofChecks: ["schedule-match"],
+              }),
+            );
           return {
             loan: proof.loan,
             transaction_id: proof.transaction_id,
