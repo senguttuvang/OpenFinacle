@@ -239,6 +239,12 @@ test("foreign accounts/products and incompatible product or currency configurati
       503,
     ],
     ["loanproducts/11", { ...product, enableDownPayment: true }, 503],
+    [
+      "loanproducts/11",
+      { ...product, enableAutoRepaymentForDownPayment: true },
+      503,
+    ],
+    ["loanproducts/11", { ...product, isRatesEnabled: true }, 503],
     ["loanproducts/11", { ...product, enableIncomeCapitalization: true }, 503],
     [
       "loanproducts/11",

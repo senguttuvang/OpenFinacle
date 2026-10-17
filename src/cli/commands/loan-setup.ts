@@ -16,6 +16,7 @@ import {
   loanAdminRevision,
   loanAdminToken,
 } from "../loan-admin";
+import { loanSetupReport } from "../loan-setup-report";
 
 export const loanSetup = Command.make(
   "loan-setup",
@@ -115,15 +116,7 @@ export const loanSetup = Command.make(
         ),
       );
       const report = (current: LoanSetupState) =>
-        Console.log(
-          JSON.stringify({
-            version: current.version,
-            next: loanSetupNext(current),
-            pending: loanSetupPending(current)?.status ?? null,
-            history_events: current.events.length,
-            complete: loanSetupNext(current) === null,
-          }),
-        );
+        Console.log(JSON.stringify(loanSetupReport(current)));
       if (action === "status") return yield* report(state);
       if (action === "quote") {
         const preview = yield* call("quote", {

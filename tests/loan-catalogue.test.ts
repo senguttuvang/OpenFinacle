@@ -366,3 +366,21 @@ test("core write failures preserve certainty and never retry, while all acknowle
   );
   expect(writes(productFailure.calls)).toHaveLength(1);
 });
+
+test("fixed-rate product creation omits response-only and disabled-feature-only parameters while retaining disabled feature flags", async () => {
+  const h = harness({ glaccounts: [...base, ...references] });
+  expect(await h.run({ kind: "product" })).toBe(8);
+  const body = writes(h.calls)[0].body as Record<string, unknown>;
+  for (const field of [
+    "isRatesEnabled",
+    "isFloatingInterestRateCalculationAllowed",
+    "enableAutoRepaymentForDownPayment",
+  ])
+    expect(Object.hasOwn(body, field)).toBe(false);
+  expect(body).toMatchObject({
+    isLinkedToFloatingInterestRates: false,
+    enableDownPayment: false,
+    interestRatePerPeriod: 1,
+    charges: [],
+  });
+});
