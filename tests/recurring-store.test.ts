@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
-import { beforeEach, expect, test } from "bun:test";
+import { beforeEach, expect, mock, test } from "bun:test";
 import { Effect, Layer, TestClock, TestContext } from "effect";
+import type { Environment } from "../src/adapters/environment";
 import {
   actOnRecurringPlan,
   listRecurringPlans,
@@ -10,6 +11,12 @@ import {
 } from "../src/application/recurring-deposits";
 import { BankingError, type Session } from "../src/domain/banking";
 import { Store, type StoreService } from "../src/domain/ports";
+
+mock.module("@cloudflare/containers", () => ({
+  getContainer: (namespace: unknown) => namespace,
+}));
+const { handleRequest } = await import("../src/http");
+
 import type {
   RecurringCommand,
   RecurringTerms,
@@ -417,4 +424,196 @@ test("competing allocation wins once; stale writers cannot overwrite progress or
   expect(() =>
     db.run("DELETE FROM recurring_events WHERE plan_id=?", [id]),
   ).toThrow("immutable");
+});
+
+test("submission audit failure leaves no plan/key and terminal decisions cannot be bypassed", async () => {
+  db.exec(
+    "CREATE TRIGGER fail_submission BEFORE INSERT ON audit WHEN NEW.action='recurring.submit' BEGIN SELECT RAISE(ABORT,'Injected failure'); END",
+  );
+  expect(
+    await denied(submitRecurringPlan(customer, terms, "failed-submission")),
+  ).toMatchObject({ status: 503 });
+  expect((await run(listRecurringPlans(customer))).plans).toEqual([]);
+  expect(
+    await denied(recurringForKey(customer, "failed-submission")),
+  ).toMatchObject({ status: 404 });
+  db.exec("DROP TRIGGER fail_submission");
+  const { plan } = await submit();
+  expect(
+    await denied(
+      actOnRecurringPlan(
+        approver,
+        action(plan.id, 0, "activate"),
+        "early-activation",
+      ),
+    ),
+  ).toMatchObject({ status: 403 });
+  await run(
+    actOnRecurringPlan(
+      customer,
+      action(plan.id, 0, "cancel"),
+      "cancel-recurring",
+    ),
+  );
+  expect(
+    await denied(
+      actOnRecurringPlan(
+        officer,
+        action(plan.id, 1, "recommend"),
+        "cancelled-recommendation",
+      ),
+    ),
+  ).toMatchObject({ status: 403 });
+  const second = await run(
+    submitRecurringPlan(customer, terms, "second-recurring"),
+  );
+  await run(
+    actOnRecurringPlan(
+      officer,
+      action(second.plan.id, 0, "recommend"),
+      "second-recommendation",
+    ),
+  );
+  expect(
+    await denied(
+      actOnRecurringPlan(
+        officer,
+        action(second.plan.id, 1, "activate"),
+        "self-activation",
+      ),
+    ),
+  ).toMatchObject({ status: 403 });
+  await run(
+    actOnRecurringPlan(
+      approver,
+      action(second.plan.id, 1, "reject"),
+      "reject-recurring",
+    ),
+  );
+  expect(
+    (await run(recurringDetail(customer, second.plan.id))).installments,
+  ).toEqual([]);
+});
+
+test("SQL activation rejects a changed or incomplete schedule atomically", async () => {
+  const { plan } = await submit();
+  await run(
+    actOnRecurringPlan(
+      officer,
+      action(plan.id, 0, "recommend"),
+      "recurring-recommend",
+    ),
+  );
+  const insert = (schedule: string) =>
+    db.run(
+      "INSERT INTO recurring_events(id,bank_id,plan_id,command_key,command_payload,actor,action,note,terms,status,maker,checker,activated_at,maturity_date,maturity_minor,schedule,version,created_at) SELECT 'bad-schedule',bank_id,id,'bad-schedule-key','{}','approver','activate','Synthetic test schedule',terms,'active','officer','approver','2026-10-17T09:00:00Z','2027-04-17',610500,?,2,'2026-10-17T09:00:00Z' FROM recurring_plans WHERE id=?",
+      [schedule, plan.id],
+    );
+  expect(() => insert("[]")).toThrow("Invalid recurring schedule");
+  const wrong = Array.from({ length: 6 }, (_, index) => ({
+    period: index + 1,
+    due_date: "2026-10-17",
+    amount_minor: 100000,
+  }));
+  expect(() => insert(JSON.stringify(wrong))).toThrow(
+    "Invalid recurring schedule",
+  );
+  const saved = await run(recurringDetail(customer, plan.id));
+  expect(saved.plan).toMatchObject({ status: "recommended", version: 1 });
+  expect(saved.installments).toEqual([]);
+  expect(saved.history).toHaveLength(2);
+});
+
+test("HTTP recurring endpoints enforce authentication, strict fields, ownership and demo mode with no core calls", async () => {
+  const token = "synthetic-recurring-session";
+  const hash = new Bun.CryptoHasher("sha256").update(token).digest("hex");
+  db.run(
+    "INSERT INTO sessions(token_hash,bank_id,role,expires_at) VALUES(?,'recurring-bank','customer',?)",
+    [hash, Number.MAX_SAFE_INTEGER],
+  );
+  let coreCalls = 0;
+  const env = {
+    DB: {
+      prepare: (sql: string) => {
+        let values: (string | number | null)[] = [];
+        return {
+          bind(...args: (string | number | null)[]) {
+            values = args;
+            return this;
+          },
+          first: async () => db.query(sql).get(...values),
+          all: async () => ({ results: db.query(sql).all(...values) }),
+          run: async () => ({ meta: { changes: db.run(sql, values).changes } }),
+        };
+      },
+    } as unknown as D1Database,
+    CORE: {
+      fetch: async () => {
+        coreCalls++;
+        throw new Error("No recurring core effects");
+      },
+    } as unknown as Environment["CORE"],
+    DOCUMENTS: {} as R2Bucket,
+    ASSETS: {} as Fetcher,
+    CORE_DATABASE: "unused",
+    CORE_PASSWORD: "unused",
+    ADMIN_TOKEN: "unused",
+    APP_REVISION: "recurring-tests",
+    DEMO_MODE: "true",
+  } satisfies Environment;
+  const http = (path: string, body?: unknown, cookie = true) =>
+    handleRequest(
+      new Request(`https://demo.test/api${path}`, {
+        method: body === undefined ? "GET" : "POST",
+        headers: {
+          ...(cookie ? { Cookie: `of_session=${token}` } : {}),
+          Origin: "https://demo.test",
+          "Content-Type": "application/json",
+          "Idempotency-Key": path.endsWith("/action")
+            ? "http-recurring-action"
+            : "http-recurring-command",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }),
+      env,
+    );
+  expect((await http("/recurring-deposits", undefined, false)).status).toBe(
+    401,
+  );
+  expect(
+    (await http("/recurring-deposits", { ...terms, rate: 50 })).status,
+  ).toBe(400);
+  expect(
+    (await http("/recurring-deposits", { ...terms, amount: 550 })).status,
+  ).toBe(400);
+  const response = await http("/recurring-deposits", terms);
+  expect(response.status).toBe(200);
+  const saved = (await response.json()) as { plan: { id: string } };
+  expect(
+    (await http("/recurring-deposits?key=http-recurring-command")).status,
+  ).toBe(200);
+  expect(
+    (
+      await http(
+        "/recurring-deposits/action",
+        action(saved.plan.id, 0, "activate"),
+      )
+    ).status,
+  ).toBe(403);
+  db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  expect((await http(`/recurring-deposits?id=${saved.plan.id}`)).status).toBe(
+    404,
+  );
+  expect(
+    (await http("/recurring-deposits?key=http-recurring-command")).status,
+  ).toBe(404);
+  expect(
+    (
+      await handleRequest(
+        new Request("https://demo.test/api/recurring-deposits"),
+        { ...env, DEMO_MODE: "false" },
+      )
+    ).status,
+  ).toBe(503);
+  expect(coreCalls).toBe(0);
 });

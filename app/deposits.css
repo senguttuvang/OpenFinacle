@@ -27,7 +27,7 @@
   gap: 12px;
   min-height: 50px;
 }
-.deposit-form input:not([type="radio"]),
+.deposit-form input:not([type="radio"], [type="checkbox"]),
 .deposit-form select,
 .deposit-form textarea {
   width: 100%;
@@ -40,7 +40,8 @@
   background: white;
   font: inherit;
 }
-.deposit-form input[type="radio"] {
+.deposit-form input[type="radio"],
+.deposit-form input[type="checkbox"] {
   width: 20px;
   height: 20px;
   accent-color: var(--teal);
