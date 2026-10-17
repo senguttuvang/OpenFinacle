@@ -110,6 +110,13 @@ test("service catalogue requires identity and returns only static contracts with
     (await handleRequest(request("/api/service-catalog"), environment)).status,
   ).toBe(401);
   const reads: string[] = [];
+  let coreCalls = 0;
+  environment.CORE = {
+    fetch: async () => {
+      coreCalls++;
+      throw new Error("Catalogue must not call the banking core");
+    },
+  } as unknown as Environment["CORE"];
   const statement = {
     bind() {
       return this;
@@ -153,7 +160,7 @@ test("service catalogue requires identity and returns only static contracts with
   expect(reads).toEqual([
     "SELECT * FROM sessions WHERE token_hash=? AND expires_at>?",
   ]);
-  expect(environment.CORE).toEqual({});
+  expect(coreCalls).toBe(0);
 });
 
 test("journey entry only reads permanent saved data and never provisions or calls the core", async () => {
