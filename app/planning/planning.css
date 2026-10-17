@@ -68,6 +68,11 @@
   border-color: #a8b7cf;
   color: #173d86;
 }
+.wealth-planning .reading-toggle[aria-pressed="true"] {
+  background: #dce7ff;
+  color: #173d86;
+  border-color: #668bde;
+}
 .wealth-planning button:hover {
   filter: brightness(0.94);
 }

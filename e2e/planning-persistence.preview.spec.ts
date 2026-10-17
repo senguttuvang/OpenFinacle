@@ -149,6 +149,15 @@ test("real local D1 saves budgets and scenarios, permits only consented read-onl
   await page
     .getByRole("button", { name: "Extra-large text", exact: true })
     .click();
+  const readingToggle = page.getByRole("button", {
+    name: "Extra-large text",
+    exact: true,
+  });
+  await expect(readingToggle).toHaveCSS("color", "rgb(23, 61, 134)");
+  await expect(readingToggle).toHaveCSS(
+    "background-color",
+    "rgb(220, 231, 255)",
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
