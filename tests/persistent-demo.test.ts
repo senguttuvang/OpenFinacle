@@ -99,6 +99,97 @@ test("prepared scenario selection and cached dashboards work without calling an 
   ).toBe(3300);
 });
 
+test("saved dashboards overlap bounded workflow reads only after financial data and fail without partial results", async () => {
+  await run(financialView(bank(), true));
+  unavailable = true;
+  calls = [];
+  let financialRead = false;
+  let financialFirst = true;
+  let active = 0;
+  let peak = 0;
+  let count = 0;
+  let failDocuments = false;
+  const query = <A>(sql: string, read: () => A) =>
+    Effect.gen(function* () {
+      const isWorkflow =
+        /FROM (applications|beneficiaries|commands|audit|documents|service_requests)\b/.test(
+          sql,
+        );
+      const execute = Effect.try({
+        try: read,
+        catch: () =>
+          new BankingError({
+            message: "Injected workflow read failure",
+            status: 503,
+          }),
+      });
+      if (!isWorkflow) {
+        if (sql.includes("FROM financial_snapshots"))
+          yield* Effect.sleep("20 millis");
+        const value = yield* execute;
+        if (sql.includes("FROM financial_snapshots")) financialRead = true;
+        return value;
+      }
+      financialFirst = financialFirst && financialRead;
+      count++;
+      active++;
+      peak = Math.max(peak, active);
+      return yield* Effect.sleep("20 millis").pipe(
+        Effect.zipRight(
+          failDocuments && sql.includes("FROM documents")
+            ? Effect.fail(
+                new BankingError({
+                  message: "Injected workflow read failure",
+                  status: 503,
+                }),
+              )
+            : execute,
+        ),
+        Effect.ensuring(
+          Effect.sync(() => {
+            active--;
+          }),
+        ),
+      );
+    });
+  const observed: StoreService = {
+    all: <T>(sql: string, ...values: (string | number | null)[]) =>
+      query(sql, () => db.query(sql).all(...values) as T[]),
+    one: <T>(sql: string, ...values: (string | number | null)[]) =>
+      query(sql, () => db.query(sql).get(...values) as T | null),
+    run: () =>
+      Effect.fail(
+        new BankingError({
+          message: "Saved entry must not write",
+          status: 500,
+        }),
+      ),
+  };
+  const view = await run(
+    dashboard(session, false).pipe(Effect.provideService(Store, observed)),
+  );
+  expect(count).toBe(6);
+  expect(peak).toBeGreaterThan(1);
+  expect(peak).toBeLessThanOrEqual(3);
+  expect(financialFirst).toBe(true);
+  expect(view.account?.id).toBe(11);
+  expect(view.recipient.summary).toBeUndefined();
+  expect(view.employer).toBeNull();
+  expect(calls).toEqual([]);
+  failDocuments = true;
+  financialRead = false;
+  expect(
+    await run(
+      dashboard(session, false).pipe(
+        Effect.provideService(Store, observed),
+        Effect.flip,
+      ),
+    ),
+  ).toMatchObject({ status: 503, message: "Injected workflow read failure" });
+  expect(active).toBe(0);
+  expect(calls).toEqual([]);
+});
+
 test("preparing an existing scenario never reopens or refunds financial accounts", async () => {
   await run(prepareScenario("existing"));
   await run(prepareScenario("existing"));

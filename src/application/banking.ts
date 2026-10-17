@@ -416,29 +416,41 @@ export const dashboard = (session: Session, refresh = true) =>
     const financial = yield* financialView(bank, refresh);
     const { account, recipient } = financial;
     const employer = session.role === "customer" ? null : financial.employer;
-    const application = yield* store.one<Application>(
-      "SELECT * FROM applications WHERE bank_id=?",
-      bank.id,
-    );
-    const beneficiaries = yield* store.all<Beneficiary>(
-      "SELECT * FROM beneficiaries WHERE bank_id=? ORDER BY created_at DESC",
-      bank.id,
-    );
-    const commands = yield* store.all<BankingCommand>(
-      "SELECT * FROM commands WHERE bank_id=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
-      bank.id,
-    );
-    const events = yield* store.all(
-      "SELECT * FROM audit WHERE bank_id=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
-      bank.id,
-    );
-    const documents = yield* store.all(
-      "SELECT id,name,kind,size,created_at FROM documents WHERE bank_id=?",
-      bank.id,
-    );
-    const requests = yield* store.all(
-      "SELECT id,bank_id,kind,detail,status,created_at FROM service_requests WHERE bank_id=? ORDER BY created_at DESC",
-      bank.id,
+    const {
+      application,
+      beneficiaries,
+      commands,
+      events,
+      documents,
+      requests,
+    } = yield* Effect.all(
+      {
+        application: store.one<Application>(
+          "SELECT * FROM applications WHERE bank_id=?",
+          bank.id,
+        ),
+        beneficiaries: store.all<Beneficiary>(
+          "SELECT * FROM beneficiaries WHERE bank_id=? ORDER BY created_at DESC",
+          bank.id,
+        ),
+        commands: store.all<BankingCommand>(
+          "SELECT * FROM commands WHERE bank_id=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
+          bank.id,
+        ),
+        events: store.all(
+          "SELECT * FROM audit WHERE bank_id=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
+          bank.id,
+        ),
+        documents: store.all(
+          "SELECT id,name,kind,size,created_at FROM documents WHERE bank_id=?",
+          bank.id,
+        ),
+        requests: store.all(
+          "SELECT id,bank_id,kind,detail,status,created_at FROM service_requests WHERE bank_id=? ORDER BY created_at DESC",
+          bank.id,
+        ),
+      },
+      { concurrency: 3 },
     );
     return {
       bank: { id: bank.id, created_at: bank.created_at, journey: bank.journey },
