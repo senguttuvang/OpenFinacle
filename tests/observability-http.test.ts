@@ -103,6 +103,66 @@ test("production mode refuses anonymous demo sessions and role switching", async
   }
 });
 
+test("service catalogue requires identity and returns only static contracts without core access", async () => {
+  const environment = env();
+  environment.DEMO_MODE = "true";
+  expect(
+    (await handleRequest(request("/api/service-catalog"), environment)).status,
+  ).toBe(401);
+  const reads: string[] = [];
+  let coreCalls = 0;
+  environment.CORE = {
+    fetch: async () => {
+      coreCalls++;
+      throw new Error("Catalogue must not call the banking core");
+    },
+  } as unknown as Environment["CORE"];
+  const statement = {
+    bind() {
+      return this;
+    },
+    first: async () => ({
+      token_hash: "synthetic",
+      bank_id: "synthetic-bank",
+      role: "customer",
+      expires_at: Number.MAX_SAFE_INTEGER,
+    }),
+  } as unknown as D1PreparedStatement;
+  environment.DB = {
+    prepare: (sql: string) => {
+      reads.push(sql);
+      return statement;
+    },
+  } as unknown as D1Database;
+  const response = await handleRequest(
+    new Request("https://demo.test/api/service-catalog", {
+      headers: { Cookie: "of_session=synthetic-catalog-token" },
+    }),
+    environment,
+  );
+  expect(response.status).toBe(200);
+  const result = (await response.json()) as {
+    services: {
+      code: string;
+      backend: string;
+      evidence: string;
+      fields: { key: string }[];
+    }[];
+  };
+  expect(
+    result.services.find((s) => s.code === "address_change"),
+  ).toMatchObject({
+    backend: "simulated_service",
+    evidence: "directory_observed_form_inferred",
+    fields: [{ key: "address" }, { key: "city" }, { key: "pincode" }],
+  });
+  expect(result.services.some((s) => s.code === "loan_noc")).toBe(true);
+  expect(reads).toEqual([
+    "SELECT * FROM sessions WHERE token_hash=? AND expires_at>?",
+  ]);
+  expect(coreCalls).toBe(0);
+});
+
 test("journey entry only reads permanent saved data and never provisions or calls the core", async () => {
   const { Database } = await import("bun:sqlite");
   const db = new Database(":memory:");
