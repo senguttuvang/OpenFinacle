@@ -4,6 +4,8 @@ A working everyday banking demonstration, with an original customer portal and a
 
 ## Run and check
 
+The full check and protected workflow-release commands require `sqlite3` 3.38+ with safe mode and JSON support. CI installs it explicitly. SQL restore verification runs only in a disposable in-memory database and rejects every failed statement.
+
 ```sh
 bun install --frozen-lockfile
 bun run check

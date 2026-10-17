@@ -1,8 +1,8 @@
-import { Database } from "bun:sqlite";
 import { chmod, lstat, mkdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { Clock, Effect, Schema } from "effect";
+import { verifySqliteScript } from "./sqlite-script";
 
 const target = {
   account: "f7861b73f1ebb5f7d13f3329200fc639",
@@ -122,6 +122,8 @@ export const verifyWorkflowTarget = (
   );
 
 const preflight = Effect.gen(function* () {
+  // Verify strict local restore capability before any provider/export operation.
+  yield* verifySqliteScript("");
   const config = yield* io(
     () => Bun.file("wrangler.jsonc").text(),
     "The release configuration could not be read.",
@@ -146,45 +148,26 @@ const preflight = Effect.gen(function* () {
 
 // Restore only a protected export into a disposable in-memory database. This never opens project storage.
 export const verifyWorkflowDump = (sql: string) =>
-  Effect.try({
-    try: () => {
-      const database = new Database(":memory:");
-      try {
-        database.exec(sql);
-        const result = database.query("PRAGMA integrity_check").get() as {
-          integrity_check: string;
-        } | null;
-        const tables = database
-          .query("SELECT name FROM sqlite_master WHERE type='table'")
-          .all() as { name: string }[];
-        if (
-          result?.integrity_check !== "ok" ||
-          database.query("PRAGMA foreign_key_check").all().length !== 0 ||
-          ![
-            "settings",
-            "banks",
-            "sessions",
-            "applications",
-            "beneficiaries",
-            "commands",
-            "audit",
-            "documents",
-            "service_requests",
-            "usage_limits",
-            "financial_snapshots",
-            "demo_seed_lease",
-          ].every((name) => tables.some((table) => table.name === name))
-        )
-          throw failure("Invalid export");
-      } finally {
-        database.close();
-      }
-    },
-    catch: () =>
+  verifySqliteScript(sql, [
+    "settings",
+    "banks",
+    "sessions",
+    "applications",
+    "beneficiaries",
+    "commands",
+    "audit",
+    "documents",
+    "service_requests",
+    "usage_limits",
+    "financial_snapshots",
+    "demo_seed_lease",
+  ]).pipe(
+    Effect.mapError(() =>
       failure(
-        "The workflow export did not restore with the required schema and a clean integrity check. It cannot authorize a migration.",
+        "The workflow export did not restore with the required schema and a clean integrity check. Require sqlite3 3.38+ and inspect the protected export. It cannot authorize a migration; SQL details are suppressed.",
       ),
-  });
+    ),
+  );
 
 export const verifyWorkflowManifest = (
   value: unknown,
