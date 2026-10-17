@@ -33,6 +33,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import {
   type CommandKind,
@@ -42,7 +43,6 @@ import {
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
 import { BranchOverview } from "./branch-overview";
-import { Cards } from "./cards";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import {
@@ -52,6 +52,10 @@ import {
 } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
+
+const Cards = dynamic(() => import("./cards").then((module) => module.Cards), {
+  loading: () => <p role="status">Loading card workspace…</p>,
+});
 
 const roles: Record<Role, { name: string; person: string; initials: string }> =
   {

@@ -2,6 +2,31 @@
   padding: 24px;
   min-width: 0;
 }
+.card-workspace button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--teal);
+  font-weight: 600;
+}
+.card-workspace button[type="submit"] {
+  background: var(--teal);
+  color: white;
+}
+.card-summary > div:last-child > *,
+.card-history span {
+  display: block;
+}
+.card-summary strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.card-channels dd {
+  margin: 6px 0;
+  font-weight: 600;
+}
 .card-summary {
   display: flex;
   justify-content: space-between;
@@ -28,11 +53,35 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   margin: 24px 0;
+  overflow-wrap: anywhere;
+}
+.card-form fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
 }
 .card-form label {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+.card-form input[type="number"],
+.card-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+}
+.card-form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+.card-history p {
+  margin: 8px 0;
 }
 .card-form textarea {
   width: 100%;
