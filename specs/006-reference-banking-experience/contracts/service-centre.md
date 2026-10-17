@@ -33,3 +33,13 @@ Migration 0005 adds fields and history without deleting existing requests. Impor
 Domain tests cover unsupported/extra fields, missing values, allowed choices, invalid calendar dates, dependent ranges, formats and limits. Case tests must cover ownership, roles, sensitive approval, invalid/stale transitions, idempotency conflicts, persistence and history/audit consistency. UI tests must cover discovery/search, form/review/edit, submission/outcome, request and deliverable tracking, staff processing and keyboard/mobile behavior using synthetic data.
 
 The catalogue foundation alone is not a completed service journey. Execution and remaining work are tracked in Beads `of-9hc.1` under the reconstruction feature.
+
+## Customer and staff screens
+
+The service centre loads only when its screen opens. Customer entry points separate the searchable, grouped service directory from request tracking and deliverable tracking. Deliverables use the server-filtered `GET /api/service-cases?view=deliveries`; counts, search and pagination apply to the complete filtered relationship queue. Historical records with unknown delivery are not presented as dispatched items.
+
+Forms validate before a review/edit step. Before sending a submission, the browser retains its original fields and stable key in session storage scoped to the demonstration relationship. An interrupted response locks further submission until the key is inspected; reload and reopening a form restores that check. A confirmed case clears the pending key. Browser storage failure blocks sending rather than losing the reconciliation reference.
+
+Case detail displays the current request and immutable history snapshots. Action controls use server-returned role/state permissions, capture the displayed version, require relevant notes and review confirmation, and refresh after an uncertain or conflicting outcome before another write. Dialogs use focus trapping and focus restoration; cancellation and rejection are confirmed through the alert-dialog primitive. Physical fulfilment and delivery receipt remain separate simulated events.
+
+This release remains a request-led servicing slice. Product administration, immediate card controls, deposits, loans, investments, insurance, broader branch operations and exhaustive comparison with reference forms remain under the parent reconstruction requirement. Completed case actions do not stand in for those capabilities.

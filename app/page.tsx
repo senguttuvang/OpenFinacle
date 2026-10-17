@@ -7,7 +7,6 @@ import {
   ArrowLeftRight,
   ArrowRight,
   ArrowUpRight,
-  Bell,
   Building2,
   Check,
   CheckCheck,
@@ -50,6 +49,7 @@ import {
   RetailOverview,
   RetailProfile,
 } from "./retail-overview";
+import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
 
 const roles: Record<Role, { name: string; person: string; initials: string }> =
@@ -141,10 +141,7 @@ export default function Page() {
   );
   const [beneficiaryName, setBeneficiaryName] = useState("Arjun Raman");
   const [otp, setOtp] = useState("246810");
-  const [serviceKind, setServiceKind] = useState("chequebook");
-  const [serviceDetail, setServiceDetail] = useState(
-    "Please issue a 25-leaf chequebook for my savings account.",
-  );
+  const [serviceSearch, setServiceSearch] = useState("");
 
   const load = useCallback(
     (refresh = false) =>
@@ -528,10 +525,7 @@ export default function Page() {
             <button
               type="button"
               onClick={() => {
-                setServiceKind("debit_card");
-                setServiceDetail(
-                  "Please issue a debit card for my savings account.",
-                );
+                setServiceSearch("replacement debit card");
                 setView("services");
               }}
             >
@@ -541,10 +535,7 @@ export default function Page() {
             <button
               type="button"
               onClick={() => {
-                setServiceKind("chequebook");
-                setServiceDetail(
-                  "Please issue a 25-leaf chequebook for my savings account.",
-                );
+                setServiceSearch("chequebook");
                 setView("services");
               }}
             >
@@ -554,10 +545,7 @@ export default function Page() {
             <button
               type="button"
               onClick={() => {
-                setServiceKind("address_change");
-                setServiceDetail(
-                  "Please update my address using the supplied synthetic details.",
-                );
+                setServiceSearch("address");
                 setView("services");
               }}
             >
@@ -1878,115 +1866,14 @@ export default function Page() {
           )}
 
           {view === "services" && (
-            <div className="form-grid">
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      {staff ? "Customer service queue" : "How can we help?"}
-                    </h2>
-                    <p>
-                      {staff
-                        ? "Record the outcome of simulated fulfilment."
-                        : "Track your requests without another branch visit."}
-                    </p>
-                  </div>
-                  <CreditCard size={21} />
-                </div>
-                {!staff && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      perform(
-                        api("/requests", {
-                          kind: serviceKind,
-                          detail: serviceDetail,
-                        }),
-                        "Service request recorded.",
-                      );
-                    }}
-                  >
-                    <label>
-                      I'd like to
-                      <select
-                        value={serviceKind}
-                        onChange={(e) => setServiceKind(e.target.value)}
-                      >
-                        <option value="chequebook">Request a chequebook</option>
-                        <option value="debit_card">Request a debit card</option>
-                        <option value="address_change">
-                          Update my address
-                        </option>
-                      </select>
-                    </label>
-                    <label>
-                      Details
-                      <textarea
-                        value={serviceDetail}
-                        onChange={(e) => setServiceDetail(e.target.value)}
-                        required
-                      />
-                    </label>
-                    <PendingButton
-                      busy={busy}
-                      type="submit"
-                      className="primary"
-                      disabled={!account}
-                    >
-                      Submit request <ArrowRight size={16} />
-                    </PendingButton>
-                  </form>
-                )}
-                <div className="request-list">
-                  {data.requests.map((r) => (
-                    <div className="request" key={r.id}>
-                      <div>
-                        <strong>{r.kind.replaceAll("_", " ")}</strong>
-                        <p>{r.detail}</p>
-                        <Pill status={r.status} />
-                      </div>
-                      {staff && r.status === "open" && (
-                        <PendingButton
-                          busy={busy}
-                          className="secondary"
-                          onClick={() =>
-                            perform(
-                              api("/requests/resolve", { id: r.id }),
-                              "Demo fulfilment recorded.",
-                            )
-                          }
-                        >
-                          Record demo fulfilment
-                        </PendingButton>
-                      )}
-                    </div>
-                  ))}
-                  {staff && !data.requests.length && (
-                    <div className="empty-state">
-                      <Bell />
-                      <h3>No requests waiting</h3>
-                      <p>Customer requests will arrive here.</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-              <aside className="info-panel">
-                <CreditCard size={35} />
-                <h2>
-                  Little things.
-                  <br />
-                  Taken care of.
-                </h2>
-                <p>
-                  Submit a request as the customer. Switch to the bank officer
-                  to see and fulfil it.
-                </p>
-                <div className="small-note">
-                  Card issuance, cheque dispatch and address verification are
-                  simulated service workflows. No physical item is dispatched.
-                </div>
-              </aside>
-            </div>
+            <ServiceCentre
+              key={data.bank.id + data.role + serviceSearch}
+              initialSearch={serviceSearch}
+              data={data}
+              busy={busy}
+              perform={perform}
+              openAccount={() => setView("application")}
+            />
           )}
 
           {view === "operations" && (

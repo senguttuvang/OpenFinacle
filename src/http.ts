@@ -515,6 +515,7 @@ const handle = (request: Request, env: Environment) =>
                 session,
                 Number(url.searchParams.get("offset") ?? 0),
                 url.searchParams.get("query") ?? "",
+                url.searchParams.get("view") === "deliveries",
               ),
       );
     }

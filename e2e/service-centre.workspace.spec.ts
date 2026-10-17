@@ -1,0 +1,336 @@
+import { expect, type Page, test } from "@playwright/test";
+import type { CaseDetail } from "../src/domain/service-cases";
+import { serviceCatalog } from "../src/domain/services";
+import { savedWorkspace } from "./fixtures/workspace";
+
+const sampleCase = (): CaseDetail => ({
+  request: {
+    id: "12345678-1234-4567-8901-123456789abc",
+    bank_id: "synthetic-workspace",
+    kind: "chequebook",
+    detail:
+      "Number of cheque leaves: 25\nDelivery preference: Collect at branch",
+    status: "open",
+    created_at: "2026-10-17 08:00:00",
+    updated_at: "2026-10-17T08:00:00Z",
+    payload: JSON.stringify({ leaves: "25", delivery: "Collect at branch" }),
+    submitted_payload: JSON.stringify({
+      leaves: "25",
+      delivery: "Collect at branch",
+    }),
+    version: 0,
+    request_key: "synthetic-submission-key",
+    outcome_note: "Request submitted",
+    updated_by: "customer",
+    delivery_status: "pending",
+  },
+  history: [
+    {
+      id: "event-submitted",
+      request_id: "12345678-1234-4567-8901-123456789abc",
+      actor: "customer",
+      from_status: null,
+      to_status: "open",
+      note: "Request submitted",
+      detail:
+        "Number of cheque leaves: 25\nDelivery preference: Collect at branch",
+      payload: "{}",
+      delivery_status: "pending",
+      created_at: "2026-10-17T08:00:00Z",
+    },
+  ],
+  actions: ["cancel"],
+});
+
+async function openServices(page: Page) {
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Service requests/ })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Customer service", exact: true }),
+  ).toBeVisible();
+}
+
+test("service directory validates and reviews details, records one request and restores focus on mobile", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  let recorded: CaseDetail | null = null;
+  const submissions: { key: string | undefined; body: unknown }[] = [];
+  const listViews: string[] = [];
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/service-catalog")
+      return route.fulfill({ json: { services: serviceCatalog } });
+    if (url.pathname === "/api/service-cases" && request.method() === "POST") {
+      submissions.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postDataJSON(),
+      });
+      recorded = sampleCase();
+      recorded.request.kind = "address_change";
+      recorded.request.delivery_status = "none";
+      recorded.request.detail =
+        "Address: 42 Sample Lane\nCity: Example City\nPIN code: 600020";
+      return route.fulfill({ json: recorded });
+    }
+    if (url.pathname === "/api/service-cases") {
+      listViews.push(url.searchParams.get("view") ?? "requests");
+      return route.fulfill({
+        json: {
+          requests:
+            recorded && url.searchParams.get("view") !== "deliveries"
+              ? [recorded.request]
+              : [],
+          total:
+            recorded && url.searchParams.get("view") !== "deliveries" ? 1 : 0,
+          offset: 0,
+          limit: 25,
+        },
+      });
+    }
+    return route.fulfill({
+      json: url.pathname === "/api/dashboard" ? data : {},
+    });
+  });
+  await openServices(page);
+  await page
+    .getByRole("searchbox", { name: "Search services" })
+    .fill("update address");
+  const service = page.getByRole("button", {
+    name: /Update address Request a review/,
+  });
+  await service.click();
+  const dialog = page.getByRole("dialog", { name: "Raise a service request" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Address", { exact: false }).fill("42 Sample Lane");
+  await dialog.getByLabel("City").fill("Example City");
+  await dialog.getByLabel("PIN code").fill("000000");
+  await dialog
+    .getByRole("button", { name: "Review request", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText("six-digit PIN code");
+  expect(submissions).toEqual([]);
+  await dialog.getByLabel("PIN code").fill("600020");
+  await dialog
+    .getByRole("button", { name: "Review request", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("heading", { name: "Review your request" }),
+  ).toBeVisible();
+  await expect(dialog).toContainText("Example City");
+  await dialog.getByRole("button", { name: "Edit details" }).click();
+  await expect(dialog.getByLabel("PIN code")).toHaveValue("600020");
+  await dialog
+    .getByRole("button", { name: "Review request", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Confirm request", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("SR-123456781234");
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "Request history" }),
+  ).toBeVisible();
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0].key).toMatch(/^[a-f0-9-]{36}$/);
+  expect(submissions[0].body).toEqual({
+    code: "address_change",
+    fields: {
+      address: "42 Sample Lane",
+      city: "Example City",
+      pincode: "600020",
+    },
+  });
+  await page.keyboard.press("Escape");
+  await expect(service).toBeFocused();
+  await page.getByRole("button", { name: /Check your deliverables/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "No deliverables yet" }),
+  ).toBeVisible();
+  expect(listViews).toContain("deliveries");
+  await page.getByRole("button", { name: /Raise a new request/ }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await service.click();
+  await expect(page.getByLabel("Address", { exact: false })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/service-form-mobile.png",
+  });
+});
+
+for (const interruptedResponse of ["lost", "malformed"] as const) {
+  test(`${interruptedResponse} submission responses survive reload and reconcile the same key without another POST`, async ({
+    page,
+  }) => {
+    const data = savedWorkspace();
+    const recorded = sampleCase();
+    const keys: string[] = [];
+    const lookups: string[] = [];
+    await page.route("**/api/**", (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (url.pathname === "/api/service-catalog")
+        return route.fulfill({ json: { services: serviceCatalog } });
+      if (
+        url.pathname === "/api/service-cases" &&
+        request.method() === "POST"
+      ) {
+        keys.push(request.headers()["idempotency-key"]);
+        return interruptedResponse === "lost"
+          ? route.abort("failed")
+          : route.fulfill({ json: { request: { status: "fulfilled" } } });
+      }
+      if (
+        url.pathname === "/api/service-cases" &&
+        url.searchParams.has("key")
+      ) {
+        lookups.push(url.searchParams.get("key") ?? "");
+        return route.fulfill({ json: recorded });
+      }
+      if (url.pathname === "/api/service-cases")
+        return route.fulfill({
+          json: {
+            requests: keys.length ? [recorded.request] : [],
+            total: keys.length,
+            offset: 0,
+            limit: 25,
+          },
+        });
+      return route.fulfill({
+        json: url.pathname === "/api/dashboard" ? data : {},
+      });
+    });
+    await openServices(page);
+    await page
+      .getByRole("button", { name: /Request a chequebook Choose/ })
+      .click();
+    await page.getByLabel("Number of cheque leaves").selectOption("25");
+    await page
+      .getByLabel("Delivery preference")
+      .selectOption("Collect at branch");
+    await page
+      .getByRole("button", { name: "Review request", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirm request", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check submission status" }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Confirm request", exact: true }),
+    ).not.toBeVisible();
+    await page.reload();
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: /Service requests/ })
+      .click();
+    await page
+      .getByRole("button", { name: /Request a chequebook Choose/ })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check submission status" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Check submission status" }).click();
+    await expect(page.getByRole("dialog")).toContainText("SR-123456781234");
+    expect(keys).toHaveLength(1);
+    expect(lookups).toEqual(keys);
+  });
+}
+
+test("staff reviews versioned actions and refreshes a conflicting case before another action", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  data.role = "officer";
+  const recorded = sampleCase();
+  recorded.actions = ["start", "request_information", "reject"];
+  data.requests = [recorded.request];
+  const actions: unknown[] = [];
+  let release = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/service-catalog")
+      return route.fulfill({ json: { services: serviceCatalog } });
+    if (url.pathname === "/api/service-cases/action") {
+      actions.push(request.postDataJSON());
+      await pending;
+      recorded.request.status = "in_progress";
+      recorded.request.version = 1;
+      recorded.actions = ["fulfil", "request_information", "reject"];
+      return route.fulfill({
+        status: 409,
+        json: { error: "This request changed. Refresh its history." },
+      });
+    }
+    if (url.pathname === "/api/service-cases" && url.searchParams.has("id"))
+      return route.fulfill({ json: recorded });
+    if (url.pathname === "/api/service-cases")
+      return route.fulfill({
+        json: { requests: [recorded.request], total: 1, offset: 0, limit: 25 },
+      });
+    return route.fulfill({
+      json: url.pathname === "/api/dashboard" ? data : {},
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Open service requests/ }).click();
+  await page.getByRole("button", { name: /View request SR-/ }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "Request history" }),
+  ).toBeVisible();
+  const dialog = page.getByRole("dialog", {
+    name: "Service request",
+    exact: true,
+  });
+  await dialog
+    .getByRole("combobox", { name: "Action", exact: true })
+    .selectOption("start");
+  await dialog.getByRole("button", { name: "Review action" }).click();
+  const confirmation = page.getByRole("alertdialog");
+  await expect(
+    confirmation.getByRole("button", { name: "Back to action" }),
+  ).toBeFocused();
+  await confirmation.getByRole("button", { name: "Confirm action" }).click();
+  await expect(
+    confirmation.getByRole("button", { name: "Recording…" }),
+  ).toBeDisabled();
+  await expect(page.getByLabel("Demo persona")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toBeVisible();
+  release();
+  await expect(
+    dialog.getByRole("button", { name: "Refresh request history" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("combobox", { name: "Action", exact: true }),
+  ).not.toBeVisible();
+  expect(actions).toEqual([
+    { id: recorded.request.id, version: 0, action: "start", note: "" },
+  ]);
+  await dialog.getByRole("button", { name: "Refresh request history" }).click();
+  await expect(
+    dialog.getByRole("combobox", { name: "Action", exact: true }),
+  ).toContainText("Record completion");
+  await expect(
+    dialog.getByRole("combobox", { name: "Action", exact: true }),
+  ).not.toContainText("Start processing");
+  await expect(dialog).toContainText("Being processed");
+  expect(actions).toHaveLength(1);
+});
