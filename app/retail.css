@@ -20,17 +20,17 @@
   color: #b9d0c8;
 }
 .customer-retail .journey-switch {
-  color: #884319;
+  color: #28634d;
 }
 .customer-retail {
-  --ink: #36322f;
-  --muted: #756e68;
-  --line: #e6e2df;
-  --teal: #a13519;
-  --deep: #852320;
-  --paper: #f4f3f2;
-  --orange: #ee7919;
-  --radius: 7px;
+  --ink: #213247;
+  --muted: #68788a;
+  --line: #e2e7ed;
+  --teal: #147657;
+  --deep: #13283e;
+  --paper: #f3f5f8;
+  --orange: #9cdbbd;
+  --radius: 12px;
   display: block;
   background: var(--paper);
 }
@@ -42,21 +42,21 @@
   height: 84px;
   padding: 0 28px;
   background: white;
-  border-top: 4px solid #982720;
+  border-top: 3px solid var(--deep);
 }
 .customer-retail .breadcrumb {
   display: none;
 }
 .retail-brand {
-  color: #8e2924;
+  color: var(--deep);
   position: relative;
   padding-bottom: 12px;
 }
 .retail-brand .brand-symbol {
-  background: #fff3e6;
+  background: #e8f3ed;
   border: 0;
-  border-radius: 50%;
-  color: #c24a0b;
+  border-radius: 9px;
+  color: var(--teal);
 }
 .retail-brand small {
   position: absolute;
@@ -64,28 +64,28 @@
   letter-spacing: 0.22em;
   bottom: -2px;
   left: 44px;
-  color: #786a61;
+  color: var(--muted);
 }
 .retail-navigation {
   display: flex;
   justify-content: space-between;
   gap: 0;
-  background: #fff3e7;
-  border-bottom: 1px solid #ecd8c5;
+  background: white;
+  border-bottom: 1px solid var(--line);
   min-height: 53px;
   padding: 0 24px;
 }
 .retail-navigation button {
   background: transparent;
-  color: #65564a;
+  color: #526477;
   border-bottom: 3px solid transparent;
   padding: 14px 19px;
   font-size: 13px;
 }
 .retail-navigation button.active {
-  color: #9b2e13;
-  border-bottom-color: #dc6c19;
-  background: #ffe8d0;
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+  background: #edf6f1;
 }
 .customer-retail .sidebar {
   top: 160px;
@@ -104,7 +104,7 @@
 .retail-shortcuts {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 12px;
   padding: 18px 0 0;
   overflow: hidden;
 }
@@ -119,22 +119,22 @@
   text-align: left;
   padding: 15px 14px;
   background: white;
-  color: #5b514a;
+  color: #526477;
   font-size: 12px;
-  border-top: 1px solid #efebe7;
+  border-top: 1px solid var(--line);
   gap: 10px;
 }
 .retail-shortcuts button svg {
-  color: #bd561a;
+  color: var(--teal);
   flex-shrink: 0;
 }
 .retail-shortcuts-note {
   padding: 20px 16px;
-  background: #fff8ef;
-  border-top: 1px solid #f4e7d7;
+  background: #f4f8f6;
+  border-top: 1px solid var(--line);
 }
 .retail-shortcuts-note > svg {
-  color: #b7672b;
+  color: var(--teal);
   margin-bottom: 10px;
 }
 .retail-shortcuts-note strong {
@@ -153,32 +153,33 @@
 .customer-retail .demo-help {
   background: #fff;
   border-color: var(--line);
-  border-radius: 7px;
+  border-radius: 12px;
 }
 .customer-retail .demo-help p,
 .customer-retail .core-status,
 .customer-retail .core-status small {
-  color: #756e68;
+  color: var(--muted);
 }
 .customer-retail .role-select {
-  background: #fff8f1;
-  border-color: #e9d7c5;
-  color: #6b4231;
+  background: #f4f8f6;
+  border-color: #dce6e0;
+  color: #28634d;
 }
 .customer-retail .role-select option {
   background: white;
-  color: #413b36;
+  color: var(--ink);
 }
 .customer-retail .content {
   margin-left: 248px;
   max-width: none;
-  padding: 23px 24px 32px 0;
+  padding: 30px 28px 32px 0;
 }
 .customer-retail .page-heading {
   margin-bottom: 22px;
 }
 .customer-retail h1 {
-  font-size: 26px;
+  font-size: 30px;
+  font-weight: 650;
   letter-spacing: -0.035em;
 }
 .customer-retail h2 {
@@ -186,33 +187,33 @@
   letter-spacing: -0.025em;
 }
 .customer-retail .eyebrow {
-  color: #aa511f;
+  color: var(--teal);
   font-size: 9px;
 }
 .customer-retail .page-heading p {
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 6px;
 }
 .customer-retail .primary {
-  background: #b94b10;
+  background: var(--teal);
   color: white;
-  border-color: #b94b10;
+  border-color: var(--teal);
 }
 .customer-retail .secondary {
   background: white;
-  border: 1px solid #dfb48f;
-  color: #a14516;
+  border: 1px solid #bbd3c6;
+  color: var(--teal);
 }
 .customer-retail .text-link {
-  color: #a34a1b;
+  color: var(--teal);
 }
 .customer-retail .panel {
-  border-radius: 7px;
+  border-radius: 12px;
   border-color: var(--line);
-  box-shadow: none;
+  box-shadow: 0 2px 4px #172b4303;
 }
 .customer-retail .panel-heading p {
-  font-size: 11px;
+  font-size: 12px;
 }
 .retail-dashboard {
   display: grid;
@@ -227,9 +228,10 @@
   gap: 20px;
 }
 .retail-portfolio {
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: white;
+  border: 1px solid #20394e;
+  border-radius: 14px;
+  background: #13283e;
+  color: #fff;
   overflow: hidden;
 }
 .retail-panel-title {
@@ -237,56 +239,61 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 22px;
-  border-bottom: 1px solid #f0ece8;
+  border-bottom: 1px solid #ffffff20;
   gap: 12px;
 }
 .retail-panel-title .text-link {
-  font-size: 11px;
+  font-size: 12px;
+}
+.retail-portfolio .text-link {
+  color: #b7e5ce;
+}
+.retail-portfolio h2 {
+  color: #fff;
 }
 .retail-portfolio-body {
   display: flex;
   gap: 24px;
   align-items: center;
-  padding: 27px 24px;
+  padding: 40px 26px 30px;
   position: relative;
 }
 .portfolio-ring {
-  width: 114px;
-  height: 114px;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
-  border: 10px solid #e8791f;
-  border-radius: 50%;
+  border: 1px solid #4e777c;
+  border-radius: 15px;
+  background: #254c56;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #a9440c;
+  color: #c2eed9;
 }
 .portfolio-ring span {
   font-size: 10px;
   margin-top: 4px;
-}
-.portfolio-ring strong {
-  font-size: 12px;
 }
 .retail-total {
   display: grid;
   gap: 7px;
 }
 .retail-total > span {
-  color: var(--muted);
+  color: #b8c8d8;
   font-size: 12px;
 }
 .retail-total > strong {
-  font-size: clamp(26px, 2.8vw, 37px);
+  font-family: "Manrope Variable", sans-serif;
+  font-size: clamp(34px, 3.4vw, 50px);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #752b20;
+  color: #fff;
   letter-spacing: -0.04em;
 }
 .retail-total > small {
-  color: var(--muted);
-  font-size: 11px;
+  color: #b8c8d8;
+  font-size: 12px;
 }
 .retail-account-active {
   display: inline-flex;
@@ -297,6 +304,7 @@
   white-space: nowrap;
 }
 .retail-portfolio-body > .retail-account-active {
+  color: #b7e5ce;
   position: absolute;
   top: 17px;
   right: 20px;
@@ -307,7 +315,7 @@
   justify-content: space-between;
   margin: 0 22px;
   padding: 20px 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #ffffff20;
   gap: 15px;
 }
 .retail-account-line > div {
@@ -319,28 +327,34 @@
 }
 .retail-account-line span,
 .retail-account-line small {
-  color: var(--muted);
-  font-size: 10px;
+  color: #b8c8d8;
+  font-size: 12px;
 }
 .retail-account-line > button {
-  font-size: 10px;
+  font-size: 12px;
 }
 .retail-action-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: #bd5410;
+  background: #1e394e;
 }
 .retail-action-strip button {
   color: white;
   background: transparent;
-  padding: 18px 10px;
-  font-size: 11px;
-  border-right: 1px solid #ffffff50;
+  padding: 20px 10px;
+  font-size: 12px;
+  border-right: 1px solid #ffffff20;
   flex-direction: column;
   gap: 7px;
 }
 .retail-action-strip button:last-child {
   border-right: 0;
+}
+.retail-action-strip button svg {
+  color: #b7e5ce;
+}
+.retail-action-strip button:hover {
+  background: #2a4b60;
 }
 .retail-transactions {
   padding-bottom: 0;
@@ -349,10 +363,10 @@
   padding: 14px 0;
 }
 .retail-transactions .activity strong {
-  font-size: 12px;
+  font-size: 14px;
 }
 .retail-transactions .activity small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .retail-transactions .activity-value small {
   display: block;
@@ -360,8 +374,8 @@
   margin-top: 6px;
 }
 .customer-retail .activity-icon {
-  background: #fff0e0;
-  color: #b65824;
+  background: #edf3f7;
+  color: #48667d;
   border-radius: 50%;
 }
 .customer-retail .activity-icon.incoming {
@@ -369,7 +383,7 @@
   color: #2e7652;
 }
 .retail-seed-note {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   padding: 13px 0 15px;
   border-top: 1px solid var(--line);
@@ -381,24 +395,24 @@
   gap: 18px;
   align-items: center;
   padding: 24px;
-  background: #fff3e3;
-  border: 1px solid #f1dfc8;
-  border-radius: 7px;
+  background: #edf6f1;
+  border: 1px solid #d7e7de;
+  border-radius: 12px;
 }
 .support-symbol {
-  color: #b44e15;
+  color: var(--teal);
 }
 .retail-support-banner span {
   font-size: 8px;
   letter-spacing: 0.14em;
-  color: #a55329;
+  color: #386b54;
 }
 .retail-support-banner h2 {
   margin-top: 5px;
 }
 .retail-support-banner p {
-  font-size: 11px;
-  color: #826650;
+  font-size: 13px;
+  color: #526d60;
   margin-top: 5px;
 }
 .retail-support-banner > button {
@@ -408,7 +422,7 @@
 }
 .retail-kicker {
   font-size: 9px;
-  color: #a64a18;
+  color: var(--teal);
   letter-spacing: 0.12em;
 }
 .retail-notifications h2 {
@@ -422,15 +436,15 @@
 }
 .retail-update > svg {
   flex-shrink: 0;
-  color: #c76325;
+  color: var(--teal);
   margin-top: 2px;
 }
 .retail-update strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 550;
 }
 .retail-update p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
   line-height: 1.6;
@@ -460,9 +474,9 @@
 }
 .retail-help-card {
   padding: 22px;
-  background: #fbe8d5;
-  border-radius: 7px;
-  border: 1px solid #f0d7bc;
+  background: #eaf0f5;
+  border-radius: 12px;
+  border: 1px solid var(--line);
 }
 .retail-help-card h3 {
   font-size: 15px;
@@ -470,7 +484,7 @@
 }
 .retail-help-card p {
   margin: 8px 0 16px;
-  color: #7c6250;
+  color: #526477;
   font-size: 12px;
 }
 @media (min-width: 1600px) {
@@ -524,6 +538,8 @@
     display: none;
   }
   .customer-retail .demo-help > strong {
+    display: block;
+    font-size: 11px;
     flex: 1;
   }
   .customer-retail .role-select {
@@ -563,16 +579,14 @@
     grid-column: auto;
   }
   .retail-portfolio-body {
-    padding: 30px 18px 24px;
+    padding: 40px 20px 26px;
     gap: 18px;
   }
   .portfolio-ring {
-    width: 90px;
-    height: 90px;
-    border-width: 8px;
+    display: none;
   }
   .retail-total > strong {
-    font-size: 28px;
+    font-size: 36px;
   }
   .retail-account-line {
     align-items: flex-start;

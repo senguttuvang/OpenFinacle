@@ -54,6 +54,7 @@ export function CommandMenu({
         <button
           type="button"
           className="command-trigger"
+          aria-label="Find a screen"
           disabled={busy}
           aria-keyshortcuts="Meta+K Control+K"
         >

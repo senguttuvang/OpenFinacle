@@ -148,6 +148,70 @@ const savedWorkspace = (): Dashboard => ({
   businessDate: "17 October 2026",
 });
 
+test("customer balances and navigation remain usable with local fonts on desktop and mobile", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  if (data.account)
+    data.account.transactions = [
+      {
+        id: 1,
+        date: [2026, 10, 15],
+        amount: 100000,
+        runningBalance: 100000,
+        transactionType: { value: "Opening deposit", deposit: true },
+      },
+      {
+        id: 2,
+        date: [2026, 10, 16],
+        amount: 20000,
+        runningBalance: 120000,
+        transactionType: { value: "Salary credit", deposit: true },
+      },
+    ];
+  const externalFonts: string[] = [];
+  const mutations: string[] = [];
+  page.on("request", (request) => {
+    if (/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(request.url()))
+      externalFonts.push(request.url());
+  });
+  await page.route("**/api/**", (route) => {
+    if (route.request().method() !== "GET")
+      mutations.push(new URL(route.request().url()).pathname);
+    return route.fulfill({
+      json:
+        new URL(route.request().url()).pathname === "/api/dashboard"
+          ? data
+          : {},
+    });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("balance")).toHaveText("₹1,20,000.00");
+  await page.getByRole("button", { name: "Hide balances" }).click();
+  await expect(page.getByTestId("balance")).toHaveText("₹ ••••••");
+  await page.getByRole("button", { name: "Show balances" }).click();
+  await page.screenshot({
+    path: "test-results/customer-workspace-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/customer-workspace-mobile.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "My accounts", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Everyday Savings", exact: true }),
+  ).toBeVisible();
+  expect(externalFonts).toEqual([]);
+  expect(mutations).toEqual([]);
+});
+
 test("commands search customer screens, trap focus and return it without banking mutations", async ({
   page,
 }) => {

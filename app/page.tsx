@@ -754,6 +754,14 @@ export default function Page() {
               {data.businessDate}
             </span>
           </div>
+          <p className="sync-caption">
+            <Clock3 size={13} />
+            {data.core.stale ? "Refresh needed" : "Saved banking view"} · Last
+            synced{" "}
+            {data.core.syncedAt
+              ? new Date(data.core.syncedAt).toLocaleString("en-IN")
+              : "not available"}
+          </p>
           {error && (
             <div className="notice error" role="alert">
               <CircleHelp size={18} />

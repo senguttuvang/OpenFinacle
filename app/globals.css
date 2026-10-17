@@ -1,13 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Serif+Display&display=swap");
-
 :root {
-  --ink: #193c3e;
-  --muted: #728181;
-  --teal: #174f50;
-  --deep: #103a3d;
-  --paper: #f5f6f2;
-  --line: #e3e8e2;
-  --orange: #efbd8a;
+  --ink: #213247;
+  --muted: #68788a;
+  --teal: #147657;
+  --deep: #13283e;
+  --paper: #f3f5f8;
+  --line: #e2e7ed;
+  --orange: #9cdbbd;
   --green: #277866;
   --radius: 14px;
 }
@@ -43,7 +41,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "DM Sans", "Trebuchet MS", sans-serif;
+  font-family: "IBM Plex Sans", sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
@@ -102,6 +100,7 @@ p {
 h1,
 h2,
 h3 {
+  font-family: "Manrope Variable", sans-serif;
   font-weight: 550;
   letter-spacing: -0.035em;
 }
@@ -174,6 +173,21 @@ button {
 .muted {
   color: var(--muted);
   font-size: 13px;
+}
+.sync-caption {
+  display: none;
+}
+@media (max-width: 800px) {
+  .sync-caption {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+    margin: -8px 0 20px;
+  }
 }
 .spaced {
   margin-top: 24px;
@@ -285,7 +299,7 @@ button {
   border-color: #eedac4;
 }
 .reference {
-  font-family: "DM Sans", sans-serif;
+  font-family: "Manrope Variable", sans-serif;
   font-size: 11px;
   color: var(--muted);
 }
@@ -582,7 +596,7 @@ button {
   color: #c8dcd1;
 }
 .card-bank {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Manrope Variable", sans-serif;
   font-size: 33px;
   line-height: 1;
   color: #edc59e;
@@ -662,7 +676,7 @@ button {
   color: #8c7049;
 }
 .next-step h2 {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Manrope Variable", sans-serif;
   font-weight: 400;
   font-size: 27px;
   line-height: 1.15;
@@ -1022,7 +1036,7 @@ input[readonly] {
   margin-bottom: 23px;
 }
 .info-panel h2 {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Manrope Variable", sans-serif;
   font-weight: 400;
   font-size: 31px;
   line-height: 1.14;
@@ -1533,9 +1547,9 @@ td:nth-child(5) {
   margin-bottom: 23px;
 }
 .welcome h1 {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Manrope Variable", sans-serif;
   font-size: clamp(45px, 5vw, 76px);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.06;
 }
@@ -1563,7 +1577,7 @@ td:nth-child(5) {
   gap: 30px;
 }
 .welcome-art {
-  background: #173e3c;
+  background: #13283e;
   position: relative;
   min-height: 100vh;
   overflow: hidden;
@@ -1608,7 +1622,7 @@ td:nth-child(5) {
   letter-spacing: 0.15em;
 }
 .welcome-card > p {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Manrope Variable", sans-serif;
   font-size: 35px;
   line-height: 1.1;
   letter-spacing: -0.02em;
