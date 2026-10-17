@@ -7,7 +7,7 @@ import {
   normalizeLoanTerms,
   validateLoanSchedule,
 } from "../domain/loans";
-import { Core } from "../domain/ports";
+import { Core, type CoreService } from "../domain/ports";
 
 const positiveId = Schema.Number.pipe(Schema.int(), Schema.positive());
 const nonnegative = Schema.Number.pipe(Schema.nonNegative());
@@ -200,6 +200,64 @@ export const normalizeCoreLoanSchedule = (
     );
   });
 
+export const coreLoanApplicationBody = (input: LoanQuoteInput) => ({
+  ...dateFields(),
+  loanType: "individual",
+  submittedOnDate: input.expected_disbursement_date,
+  productId: input.owner.product_id,
+  clientId: input.owner.client_id,
+  principal: input.terms.principal,
+  loanTermFrequency: input.terms.months,
+  loanTermFrequencyType: 2,
+  numberOfRepayments: input.terms.months,
+  repaymentEvery: 1,
+  repaymentFrequencyType: 2,
+  interestRatePerPeriod: 1,
+  interestType: 0,
+  amortizationType: 1,
+  interestCalculationPeriodType: 1,
+  expectedDisbursementDate: input.expected_disbursement_date,
+  transactionProcessingStrategyCode: "mifos-standard-strategy",
+});
+
+export const verifyCoreLoanReferences = (
+  core: CoreService,
+  owner: typeof LoanOwner.Type,
+) =>
+  Effect.gen(function* () {
+    const result = yield* Effect.all(
+      {
+        product: core.request("GET", `loanproducts/${owner.product_id}`),
+        account: core.request(
+          "GET",
+          `savingsaccounts/${owner.savings_account_id}`,
+        ),
+      },
+      { concurrency: 2 },
+    );
+    const product = yield* decode(
+      coreLoanProductShape,
+      result.product,
+      "The configured core loan product does not match the demo contract. Ask the operator to inspect product setup.",
+    );
+    const account = yield* decode(
+      Savings,
+      result.account,
+      "An active owned INR savings account is required for this core loan instruction.",
+    );
+    if (
+      product.id !== owner.product_id ||
+      account.id !== owner.savings_account_id ||
+      account.clientId !== owner.client_id
+    )
+      return yield* Effect.fail(
+        invalid(
+          "The core loan product or savings ownership could not be verified.",
+          403,
+        ),
+      );
+  });
+
 export const loanEngineLayer = Layer.effect(
   LoanEngine,
   Effect.gen(function* () {
@@ -220,59 +278,15 @@ export const loanEngineLayer = Layer.effect(
             "Choose a valid expected disbursement date.",
             400,
           );
-          const result = yield* Effect.all(
-            {
-              product: core.request("GET", `loanproducts/${owner.product_id}`),
-              account: core.request(
-                "GET",
-                `savingsaccounts/${owner.savings_account_id}`,
-              ),
-            },
-            { concurrency: 2 },
-          );
-          const product = yield* decode(
-            coreLoanProductShape,
-            result.product,
-            "The configured core loan product does not match the demo contract. Ask the operator to inspect product setup.",
-          );
-          const account = yield* decode(
-            Savings,
-            result.account,
-            "An active owned INR savings account is required for this core loan quote.",
-          );
-          if (
-            product.id !== owner.product_id ||
-            account.id !== owner.savings_account_id ||
-            account.clientId !== owner.client_id
-          )
-            return yield* Effect.fail(
-              invalid(
-                "The core loan product or savings ownership could not be verified.",
-                403,
-              ),
-            );
+          yield* verifyCoreLoanReferences(core, owner);
           const schedule = yield* core.request(
             "POST",
             "loans?command=calculateLoanSchedule",
-            {
-              ...dateFields(),
-              loanType: "individual",
-              submittedOnDate: date,
-              productId: owner.product_id,
-              clientId: owner.client_id,
-              principal: terms.principal,
-              loanTermFrequency: terms.months,
-              loanTermFrequencyType: 2,
-              numberOfRepayments: terms.months,
-              repaymentEvery: 1,
-              repaymentFrequencyType: 2,
-              interestRatePerPeriod: 1,
-              interestType: 0,
-              amortizationType: 1,
-              interestCalculationPeriodType: 1,
-              expectedDisbursementDate: date,
-              transactionProcessingStrategyCode: "mifos-standard-strategy",
-            },
+            coreLoanApplicationBody({
+              owner,
+              terms,
+              expected_disbursement_date: date,
+            }),
           );
           return yield* normalizeCoreLoanSchedule(schedule, {
             owner,

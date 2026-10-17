@@ -240,7 +240,9 @@ export const LoanRecord = Schema.Struct({
     "active",
     "rejected",
     "cancelled",
+    "withdrawn",
   ),
+  withdrawal_requested: Schema.Boolean,
   maker: Schema.NullOr(Schema.Literal("officer")),
   checker: Schema.NullOr(Schema.Literal("approver")),
   core_id: Schema.NullOr(identifier),
@@ -257,6 +259,9 @@ export const LoanCommand = Schema.Struct({
     "disburse",
     "reject",
     "cancel",
+    "request_withdrawal",
+    "undo_approval",
+    "withdraw",
   ),
   note: Schema.String.pipe(Schema.minLength(5), Schema.maxLength(300)),
 });
@@ -271,7 +276,8 @@ export const loanActions = (
     loan.status === "submitted" &&
     !loan.maker &&
     !loan.checker &&
-    !loan.core_id
+    !loan.core_id &&
+    !loan.withdrawal_requested
   )
     return role === "customer"
       ? ["cancel"]
@@ -282,20 +288,25 @@ export const loanActions = (
     loan.status === "recommended" &&
     loan.maker === "officer" &&
     !loan.checker &&
-    !loan.core_id
+    !loan.core_id &&
+    !loan.withdrawal_requested
   )
     return role === "approver"
       ? ["register", "reject"]
       : role === "customer"
         ? ["cancel"]
         : [];
-  if (
-    loan.maker !== "officer" ||
-    loan.checker !== "approver" ||
-    !loan.core_id ||
-    role !== "approver"
-  )
+  if (loan.maker !== "officer" || loan.checker !== "approver" || !loan.core_id)
     return [];
+  if (loan.status !== "registered" && loan.status !== "approved") return [];
+  if (loan.withdrawal_requested)
+    return role === "approver"
+      ? loan.status === "approved"
+        ? ["undo_approval"]
+        : ["withdraw"]
+      : [];
+  if (role === "customer") return ["request_withdrawal"];
+  if (role !== "approver") return [];
   return loan.status === "registered"
     ? ["approve"]
     : loan.status === "approved"
@@ -334,16 +345,23 @@ export const loanDecision = (
       disburse: "active",
       reject: "rejected",
       cancel: "cancelled",
+      request_withdrawal: loan.status,
+      undo_approval: "registered",
+      withdraw: "withdrawn",
     } as const;
     return {
       next_status: next[command.action],
       maker: command.action === "recommend" ? ("officer" as const) : loan.maker,
       checker:
         command.action === "register" ? ("approver" as const) : loan.checker,
+      withdrawal_requested:
+        command.action === "request_withdrawal" || loan.withdrawal_requested,
       core_command:
         command.action === "register" ||
         command.action === "approve" ||
-        command.action === "disburse"
+        command.action === "disburse" ||
+        command.action === "undo_approval" ||
+        command.action === "withdraw"
           ? command.action
           : null,
       note: command.note.trim(),

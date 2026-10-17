@@ -62,6 +62,7 @@ const loan: LoanRecord = {
   checker: null,
   core_id: null,
   version: 0,
+  withdrawal_requested: false,
 };
 const command = (action: LoanCommand["action"]): LoanCommand => ({
   id: loan.id,
@@ -314,6 +315,7 @@ test("loan decisions separate customer cancellation, officer assessment and inde
     maker: "officer",
     checker: null,
     core_command: null,
+    withdrawal_requested: false,
     note: command("recommend").note,
   });
   const recommended: LoanRecord = {
@@ -334,7 +336,7 @@ test("loan decisions separate customer cancellation, officer assessment and inde
   ] as const) {
     expect(loanActions(record, "officer", false)).toEqual([]);
     expect(loanActions(record, "customer", false)).toEqual(
-      record.status === "recommended" ? ["cancel"] : [],
+      record.status === "recommended" ? ["cancel"] : ["request_withdrawal"],
     );
     const result = await Effect.runPromise(
       loanDecision(record, command(action), "approver", false),
@@ -371,7 +373,12 @@ test("unresolved core operations, stale versions, corrupt links and terminal rec
       (await denied(loanDecision(recommended, command("register"), role, true)))
         .status,
     ).toBe(403);
-    for (const status of ["active", "rejected", "cancelled"] as const)
+    for (const status of [
+      "active",
+      "rejected",
+      "cancelled",
+      "withdrawn",
+    ] as const)
       expect(loanActions({ ...loan, status }, role, false)).toEqual([]);
   }
   for (const record of [
@@ -423,4 +430,55 @@ test("unresolved core operations, stale versions, corrupt links and terminal rec
       core_id: 100,
     })._tag,
   ).toBe("Left");
+});
+
+test("customer withdrawal blocks lending progression and requires separate approver undo and withdrawal stages", async () => {
+  const approved: LoanRecord = {
+    ...loan,
+    status: "approved",
+    maker: "officer",
+    checker: "approver",
+    core_id: 40,
+  };
+  const request = await Effect.runPromise(
+    loanDecision(approved, command("request_withdrawal"), "customer", false),
+  );
+  expect(request.next_status).toBe("approved");
+  expect(request.core_command).toBeNull();
+  expect(request.withdrawal_requested).toBe(true);
+  const pending = { ...approved, withdrawal_requested: true };
+  expect(loanActions(pending, "approver", false)).toEqual(["undo_approval"]);
+  for (const role of ["customer", "officer"] as const)
+    expect(loanActions(pending, role, false)).toEqual([]);
+  expect(loanActions(pending, "approver", true)).toEqual([]);
+  expect(
+    (
+      await denied(
+        loanDecision(pending, command("disburse"), "approver", false),
+      )
+    ).status,
+  ).toBe(403);
+  const undo = await Effect.runPromise(
+    loanDecision(pending, command("undo_approval"), "approver", false),
+  );
+  expect(undo.next_status).toBe("registered");
+  expect(undo.core_command).toBe("undo_approval");
+  expect(undo.withdrawal_requested).toBe(true);
+  const registered = { ...pending, status: "registered" as const };
+  expect(loanActions(registered, "approver", false)).toEqual(["withdraw"]);
+  const withdrawal = await Effect.runPromise(
+    loanDecision(registered, command("withdraw"), "approver", false),
+  );
+  expect(withdrawal.next_status).toBe("withdrawn");
+  expect(withdrawal.core_command).toBe("withdraw");
+  expect(
+    (
+      await denied(
+        loanDecision(approved, command("withdraw"), "approver", false),
+      )
+    ).status,
+  ).toBe(403);
+  expect(
+    loanActions({ ...loan, withdrawal_requested: true }, "officer", false),
+  ).toEqual([]);
 });

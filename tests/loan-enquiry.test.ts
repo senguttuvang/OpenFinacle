@@ -80,6 +80,8 @@ const raw = {
     closed: false,
   },
   timeline: {
+    submittedOnDate: [2026, 10, 17],
+    approvedOnDate: [2026, 10, 17],
     expectedDisbursementDate: [2026, 10, 17],
     actualDisbursementDate: [2026, 10, 17],
   },
@@ -242,7 +244,11 @@ test("registered and approved applications do not invent active balances or a fu
         active: false,
         closed: false,
       },
-      timeline: { expectedDisbursementDate: [2026, 10, 17] },
+      timeline: {
+        submittedOnDate: [2026, 10, 17],
+        approvedOnDate: id === 200 ? [2026, 10, 17] : null,
+        expectedDisbursementDate: [2026, 10, 17],
+      },
       summary: null,
       repaymentSchedule: null,
       transactions: [],
@@ -328,6 +334,51 @@ test("disbursement proof requires the exact external transaction and corroborati
     { method: "GET", path: loanPath },
     { method: "GET", path: "accounttransfers/51" },
   ]);
+});
+
+test("withdrawn identity requires its original submission and actual withdrawal timeline without funding facts", async () => {
+  const withdrawn = {
+    ...raw,
+    approvedPrincipal: null,
+    status: {
+      id: 400,
+      pendingApproval: false,
+      waitingForDisbursal: false,
+      active: false,
+      closed: false,
+    },
+    timeline: {
+      submittedOnDate: [2026, 10, 17],
+      expectedDisbursementDate: [2026, 10, 17],
+      withdrawnOnDate: [2026, 10, 18],
+    },
+    summary: null,
+    repaymentSchedule: null,
+    transactions: [],
+  };
+  const h = harness(withdrawn);
+  expect(await h.inspect()).toMatchObject({
+    status: "withdrawn",
+    submitted_on_date: "2026-10-17",
+    approved_on_date: null,
+    withdrawn_on_date: "2026-10-18",
+    actual_disbursement_date: null,
+    schedule: null,
+  });
+  expect((await h.denied(true)).uncertain).toBe(true);
+  expect(h.calls.every((c) => c.method === "GET")).toBe(true);
+  for (const changed of [
+    { timeline: { ...withdrawn.timeline, withdrawnOnDate: null } },
+    { timeline: { ...withdrawn.timeline, withdrawnOnDate: [2026, 10, 16] } },
+    { timeline: { ...withdrawn.timeline, approvedOnDate: [2026, 10, 17] } },
+    { timeline: { ...withdrawn.timeline, submittedOnDate: [2026, 10, 16] } },
+    { summary: raw.summary },
+    { transactions: [transaction] },
+    { status: { ...withdrawn.status, closed: true } },
+  ])
+    expect((await harness({ ...withdrawn, ...changed }).denied()).status).toBe(
+      503,
+    );
 });
 
 test("active status, cash disbursement, duplicate or reversed history and mismatched amounts never prove savings posting", async () => {
