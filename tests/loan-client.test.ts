@@ -27,6 +27,16 @@ test("loan receipts bind the original actor, key, quote or command and cannot cl
   };
   expect(verifiedLoanReceipt(receipt, original)).toBe(true);
   expect(
+    verifiedLoanReceipt(
+      {
+        ...receipt,
+        loan: { ...receipt.loan, quote_id: "different-owned-quote" },
+        quote: { ...receipt.quote, id: "different-owned-quote" },
+      },
+      original,
+    ),
+  ).toBe(false);
+  expect(
     verifiedLoanReceipt({ ...receipt, recorded_key: "another-key" }, original),
   ).toBe(false);
   expect(

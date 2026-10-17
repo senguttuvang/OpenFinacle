@@ -126,6 +126,11 @@ export const verifiedLoanReceipt = (
   )
     return false;
   if (
+    original.instruction.kind === "submit" &&
+    result.loan.quote_id !== original.instruction.input.quote_id
+  )
+    return false;
+  if (
     original.instruction.kind === "action" &&
     result.loan.id !== original.instruction.input.id
   )
