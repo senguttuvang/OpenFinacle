@@ -51,6 +51,7 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
         "operations",
         "services",
         "cards",
+        "profile",
         "statements",
         "audit",
       ]
@@ -68,13 +69,19 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
           "overview",
           "application",
           "cards",
+          "profile",
           "transfer",
           "statements",
           "services",
         ];
   return views.map((view) => ({
     view,
-    label: staff && view === "accounts" ? "Customer enquiry" : viewLabels[view],
+    label:
+      staff && view === "accounts"
+        ? "Customer enquiry"
+        : staff && view === "profile"
+          ? "Customer profile"
+          : viewLabels[view],
     alias: staff ? staffAliases[view] : undefined,
   }));
 }

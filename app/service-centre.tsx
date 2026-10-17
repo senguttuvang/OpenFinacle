@@ -45,20 +45,24 @@ export function ServiceCentre({
   perform,
   openAccount,
   initialSearch = "",
+  initialRequest = "",
 }: {
   data: Dashboard;
   busy: boolean;
   perform: ServicePerform;
   openAccount: () => void;
   initialSearch?: string;
+  initialRequest?: string;
 }) {
   const customer = data.role === "customer";
-  const [tab, setTab] = useState<Tab>(customer ? "directory" : "requests");
+  const [tab, setTab] = useState<Tab>(
+    initialRequest ? "requests" : customer ? "directory" : "requests",
+  );
   const [catalog, setCatalog] = useState<readonly ServiceDefinition[]>([]);
   const [category, setCategory] = useState("All services");
   const [directoryQuery, setDirectoryQuery] = useState(initialSearch);
-  const [query, setQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState(initialRequest);
+  const [search, setSearch] = useState(initialRequest);
   const [offset, setOffset] = useState(0);
   const [revision, setRevision] = useState(0);
   const [listing, setListing] = useState<CasePage | null>(null);
@@ -68,6 +72,9 @@ export function ServiceCentre({
   const [popup, setPopup] = useState<Popup | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (initialRequest) heading.current?.focus();
+  }, [initialRequest]);
   useEffect(() => {
     let active = true;
     setLoading(true);
