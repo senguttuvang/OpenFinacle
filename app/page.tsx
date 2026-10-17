@@ -467,7 +467,9 @@ export default function Page() {
       : onboardingNextStep;
 
   return (
-    <div className={`app-shell${retail ? " customer-retail" : ""}`}>
+    <div
+      className={`app-shell${retail ? " customer-retail" : ""}${staff ? " branch-workspace" : ""}`}
+    >
       <aside className="sidebar">
         <a className="brand" href="/">
           <span className="brand-symbol">
