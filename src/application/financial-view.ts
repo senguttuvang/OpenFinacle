@@ -69,5 +69,19 @@ export const financialView = (bank: Bank, refresh = false) =>
       JSON.stringify(value),
       syncedAt,
     );
-    return { ...value, syncedAt, stale: false };
+    const saved = yield* store.one<{
+      synced_at: number;
+      invalidated_at: number;
+    }>(
+      "SELECT synced_at,invalidated_at FROM financial_snapshots WHERE bank_id=?",
+      bank.id,
+    );
+    return {
+      ...value,
+      syncedAt,
+      stale:
+        !saved ||
+        saved.synced_at !== syncedAt ||
+        saved.synced_at < saved.invalidated_at,
+    };
   });

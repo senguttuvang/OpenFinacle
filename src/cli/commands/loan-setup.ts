@@ -1,9 +1,5 @@
 import { Command, Options } from "@effect/cli";
-import {
-  FetchHttpClient,
-  HttpClient,
-  HttpClientRequest,
-} from "@effect/platform";
+import { FetchHttpClient } from "@effect/platform";
 import { Console, Effect, Schema } from "effect";
 import {
   LoanSetupState,
@@ -11,12 +7,8 @@ import {
   loanSetupPending,
 } from "../../domain/loan-setup";
 import { LoanSchedule } from "../../domain/loans";
-import {
-  loanAdminOrigin,
-  loanAdminRevision,
-  loanAdminToken,
-} from "../loan-admin";
-import { loanAdminHttpFailure, loanSetupReport } from "../loan-setup-report";
+import { loanAdminClient } from "../loan-admin-client";
+import { loanSetupReport } from "../loan-setup-report";
 
 export const loanSetup = Command.make(
   "loan-setup",
@@ -36,75 +28,8 @@ export const loanSetup = Command.make(
   },
   ({ url, secrets, action }) =>
     Effect.gen(function* () {
-      const origin = yield* loanAdminOrigin(url);
-      const revision = yield* loanAdminRevision();
-      const readJson = (response: {
-        status: number;
-        json: Effect.Effect<unknown, unknown>;
-      }) =>
-        Effect.gen(function* () {
-          const data = yield* response.json.pipe(
-            Effect.mapError(
-              () =>
-                new Error(
-                  "The loan administration response is unreadable. Inspect the saved checkpoint; no request was retried.",
-                ),
-            ),
-          );
-          if (response.status !== 200)
-            return yield* Effect.fail(
-              loanAdminHttpFailure(response.status, data),
-            );
-          return data;
-        });
-      const health = yield* HttpClient.get(`${origin}/api/health`).pipe(
-        Effect.mapError(
-          () =>
-            new Error(
-              "Could not verify the deployed source; no administrative request was sent.",
-            ),
-        ),
-        Effect.flatMap(readJson),
-        Effect.flatMap(
-          Schema.decodeUnknown(
-            Schema.Struct({ revision: Schema.Literal(revision) }),
-          ),
-        ),
-        Effect.mapError(
-          () =>
-            new Error(
-              "The deployed revision must equal this clean checkout before loan administration.",
-            ),
-        ),
-      );
-      yield* Console.log(`Verified source ${health.revision}.`);
-      const token = yield* loanAdminToken(secrets);
-      const call = (path: string, body?: unknown) =>
-        Effect.gen(function* () {
-          let request = HttpClientRequest.make(
-            body === undefined ? "GET" : "POST",
-          )(`${origin}/api/admin/demo/loans/${path}`).pipe(
-            HttpClientRequest.setHeader("Authorization", `Bearer ${token}`),
-          );
-          if (body !== undefined)
-            request = yield* HttpClientRequest.bodyJson(request, body).pipe(
-              Effect.mapError(
-                () =>
-                  new Error(
-                    "Could not encode the loan administration request.",
-                  ),
-              ),
-            );
-          const response = yield* HttpClient.execute(request).pipe(
-            Effect.mapError(
-              () =>
-                new Error(
-                  "Loan administration connection failed. Credential-bearing diagnostics are suppressed. Read and inspect the checkpoint before continuing; no request was retried.",
-                ),
-            ),
-          );
-          return yield* readJson(response);
-        });
+      const { revision, call } = yield* loanAdminClient(url, secrets);
+      yield* Console.log(`Verified source ${revision}.`);
       const state = yield* call("setup").pipe(
         Effect.flatMap(Schema.decodeUnknown(LoanSetupState)),
         Effect.mapError(

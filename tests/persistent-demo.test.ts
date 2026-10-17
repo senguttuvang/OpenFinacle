@@ -219,7 +219,7 @@ test("snapshot invalidation is visible and an older refresh cannot overwrite new
     .query("SELECT payload,synced_at FROM financial_snapshots")
     .get();
   expect((await run(financialView(bank()))).stale).toBe(true);
-  await run(financialView(bank(), true));
+  expect((await run(financialView(bank(), true))).stale).toBe(true);
   expect(
     db.query("SELECT payload,synced_at FROM financial_snapshots").get(),
   ).toEqual(before);

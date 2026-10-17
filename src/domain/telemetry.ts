@@ -32,6 +32,7 @@ const routes = new Set([
   "/api/requests",
   "/api/requests/resolve",
   "/api/admin/telemetry-probe",
+  "/api/admin/demo/loans/pilot",
 ]);
 export const safeRoute = (path: string) =>
   routes.has(path)
@@ -52,6 +53,12 @@ export const safeCoreRoute = (path: string) => {
     "accounttransfers",
     "transactions",
     "users",
+    "loans",
+    "loanproducts",
+    "glaccounts",
+    "financialactivityaccounts",
+    "paymenttypes",
+    "external-id",
   ]);
   return parts.map((p) => (resources.has(p) ? p : ":id")).join("/");
 };

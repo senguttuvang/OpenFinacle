@@ -13,6 +13,7 @@ import {
   createBootstrapPassword,
 } from "./bootstrap-password";
 import { demo } from "./commands/demo";
+import { loanPilot } from "./commands/loan-pilot";
 import { loanSetup } from "./commands/loan-setup";
 import { observability } from "./commands/observability";
 import { workflows } from "./commands/workflows";
@@ -310,6 +311,7 @@ const diagnosticEnvironment = Command.make("diagnostic-environment", {}, () =>
 );
 const cli = Command.make("openfinacle").pipe(
   Command.withSubcommands([
+    loanPilot,
     loanSetup,
     workflows,
     observability,

@@ -1,6 +1,6 @@
 import { Context, Effect, Schema } from "effect";
 import { BankingError, bankingDate } from "./banking";
-import type { CoreLoanSnapshot } from "./loan-engine";
+import { CoreLoanSnapshot } from "./loan-engine";
 import {
   LoanOwner,
   LoanQuote,
@@ -32,11 +32,16 @@ export const LoanWriteInstruction = Schema.Struct({
   transaction_external_id: Schema.optional(opaque),
 });
 export type LoanWriteInstruction = typeof LoanWriteInstruction.Type;
-export interface LoanWriteResult {
-  loan: CoreLoanSnapshot;
-  transaction_id: number | null;
-  transfer_id: number | null;
-}
+export const LoanWriteResult = Schema.Struct({
+  loan: CoreLoanSnapshot,
+  transaction_id: Schema.NullOr(
+    Schema.Number.pipe(Schema.int(), Schema.positive()),
+  ),
+  transfer_id: Schema.NullOr(
+    Schema.Number.pipe(Schema.int(), Schema.positive()),
+  ),
+});
+export type LoanWriteResult = typeof LoanWriteResult.Type;
 export interface LoanWriterService {
   // The application must durably reserve its authorized original operation first.
   dispatch: (

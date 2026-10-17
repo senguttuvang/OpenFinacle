@@ -4,6 +4,8 @@ import { coreLayer } from "./adapters/core";
 import type { Environment } from "./adapters/environment";
 import { loanCatalogueLayer } from "./adapters/loan-catalogue";
 import { loanEngineLayer } from "./adapters/loan-engine";
+import { loanEnquiryLayer } from "./adapters/loan-enquiry";
+import { loanWriterLayer } from "./adapters/loan-writing";
 import { parseJsonRequest as parse } from "./adapters/request-json";
 import { storeLayer } from "./adapters/store";
 import { reportFailure } from "./adapters/telemetry";
@@ -44,6 +46,7 @@ import {
   submitDeposit,
 } from "./application/deposits";
 import { financialView } from "./application/financial-view";
+import { runLoanPilot } from "./application/loan-pilot";
 import {
   advanceLoanSetup,
   inspectLoanSetup,
@@ -79,6 +82,7 @@ import {
 import { CardCommand } from "./domain/cards";
 import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
+import { LoanPilotCommand } from "./domain/loan-pilot";
 import { LoanSetupCommand } from "./domain/loan-setup";
 import { LoanTerms } from "./domain/loans";
 import { Core, Store } from "./domain/ports";
@@ -250,6 +254,12 @@ const handle = (request: Request, env: Environment) =>
         );
         return Response.json(yield* previewDemoLoan(input.terms));
       }
+      if (path === "/api/admin/demo/loans/pilot" && request.method === "POST")
+        return Response.json(
+          yield* runLoanPilot(
+            yield* parse(request, LoanPilotCommand, false, true),
+          ),
+        );
       if (path === "/api/admin/demo/backfill" && request.method === "POST") {
         const input = yield* parse(
           request,
@@ -828,6 +838,8 @@ export const handleRequest = (
             })
           : Effect.void,
       ),
+      Effect.provide(loanWriterLayer),
+      Effect.provide(loanEnquiryLayer),
       Effect.provide(Layer.merge(loanCatalogueLayer, loanEngineLayer)),
       Effect.provide(
         Layer.merge(coreLayer(env, requestId), storeLayer(env.DB)),

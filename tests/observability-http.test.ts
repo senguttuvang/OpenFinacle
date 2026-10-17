@@ -320,3 +320,148 @@ test("loan setup administration requires authority and demo mode, strictly parse
   }
   expect(coreCalls).toBe(0);
 });
+
+test("the native loan pilot is protected, strictly scoped to the prepared demo and has no public customer write route", async () => {
+  let coreCalls = 0;
+  let writes = 0;
+  const environment = env({
+    prepare: (sql: string) =>
+      ({
+        bind() {
+          return this;
+        },
+        first: async () =>
+          sql.includes("FROM settings")
+            ? { value: "pilot-bank" }
+            : sql.includes("FROM banks")
+              ? {
+                  id: "pilot-bank",
+                  status: "ready",
+                  journey: "existing",
+                  customer_client: 41,
+                  customer_account: 51,
+                  recipient_client: 42,
+                  recipient_account: 52,
+                  employer_client: 43,
+                  employer_account: 53,
+                  created_at: "2026-10-17",
+                }
+              : sql.includes("FROM sessions")
+                ? {
+                    token_hash: "synthetic",
+                    bank_id: "pilot-bank",
+                    role: "customer",
+                    expires_at: Number.MAX_SAFE_INTEGER,
+                  }
+                : null,
+        all: async () => ({ results: [] }),
+        run: async () => {
+          writes++;
+          throw new Error("No pilot write expected in this HTTP boundary test");
+        },
+      }) as unknown as D1PreparedStatement,
+  });
+  environment.DEMO_MODE = "true";
+  environment.CORE = {
+    fetch: async () => {
+      coreCalls++;
+      throw new Error("Unexpected Core access");
+    },
+  } as unknown as Environment["CORE"];
+  const headers = {
+    Authorization: "Bearer test-admin",
+    "Content-Type": "application/json",
+  };
+  const call = (body: unknown, extra: HeadersInit = {}) =>
+    new Request("https://demo.test/api/admin/demo/loans/pilot", {
+      method: "POST",
+      headers: { ...headers, ...extra },
+      body: JSON.stringify(body),
+    });
+  expect(
+    (
+      await handleRequest(
+        new Request("https://demo.test/api/admin/demo/loans/pilot", {
+          method: "POST",
+        }),
+        environment,
+      )
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await handleRequest(call({ kind: "list", role: "customer" }), {
+        ...environment,
+        DEMO_MODE: "false",
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (
+      await handleRequest(
+        call(
+          { kind: "list", role: "customer" },
+          { Origin: "https://foreign.test" },
+        ),
+        environment,
+      )
+    ).status,
+  ).toBe(403);
+  const list = await handleRequest(
+    call({ kind: "list", role: "customer" }),
+    environment,
+  );
+  expect(list.status).toBe(200);
+  expect(await list.json()).toEqual({ loans: [] });
+  for (const body of [
+    { kind: "list", role: "customer", bank_id: "untrusted" },
+    { kind: "quote", role: "customer", terms: {} },
+    {
+      kind: "submit",
+      role: "customer",
+      submission: { quote_id: "quote-one" },
+      key: "original-key",
+    },
+    {
+      kind: "action",
+      role: "approver",
+      key: "original-key",
+      command: {
+        id: "application-one",
+        version: 1,
+        action: "register",
+        note: "Invented review",
+        core_id: 71,
+      },
+    },
+    { kind: "inspect", role: "approver", id: "../../private" },
+  ])
+    expect((await handleRequest(call(body), environment)).status).toBe(400);
+  expect(
+    (
+      await handleRequest(
+        call({ kind: "inspect", role: "customer", id: "application-one" }),
+        environment,
+      )
+    ).status,
+  ).toBe(403);
+  const publicWrite = await handleRequest(
+    new Request("https://demo.test/api/loans/action", {
+      method: "POST",
+      headers: {
+        Cookie: "of_session=synthetic",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: "application-one",
+        version: 1,
+        action: "disburse",
+        note: "Invented review",
+      }),
+    }),
+    environment,
+  );
+  expect(publicWrite.status).toBe(404);
+  expect(coreCalls).toBe(0);
+  expect(writes).toBe(0);
+});

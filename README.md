@@ -6,6 +6,8 @@ A working everyday banking demonstration, with an original customer portal and a
 
 The full check and protected workflow-release commands require `sqlite3` 3.38+ with safe mode and JSON support. CI installs it explicitly. SQL restore verification runs only in a disposable in-memory database and rejects every failed statement.
 
+The [protected loan origination pilot](specs/006-reference-banking-experience/contracts/loan-origination.md) documents explicit operator demonstration actions, original-key recovery and release proof before customer lending routes/screens are enabled.
+
 ```sh
 bun install --frozen-lockfile
 bun run check
