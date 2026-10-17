@@ -127,6 +127,8 @@ const raw = {
 };
 const transfer = {
   ...basicTransfer,
+  // Direct AccountTransferData uses Jackson ISO_LOCAL_DATE; embedded legacy loan data uses arrays.
+  transferDate: "2026-10-17",
   fromClient: { id: 12 },
   toClient: { id: 12 },
   fromAccountType: { id: 1 },
@@ -134,6 +136,31 @@ const transfer = {
   fromAccount: { id: 21 },
   toAccount: { id: 13 },
 };
+
+test("full transfer uses a strict ISO calendar date while embedded transfer retains the legacy date array", async () => {
+  const h = harness();
+  expect(await h.proof()).toMatchObject({
+    transaction_id: 31,
+    transfer_id: 51,
+    date: "2026-10-17",
+    amount_minor: 1200000,
+  });
+  expect(h.calls.every((call) => call.method === "GET")).toBe(true);
+  for (const transferDate of [
+    "2026-10-18",
+    "2026-02-30",
+    "2026-10-17T00:00:00Z",
+    "17/10/2026",
+    [2026, 10, 17],
+    null,
+    undefined,
+  ]) {
+    const rejected = harness(raw, { ...transfer, transferDate });
+    const error = await rejected.denied(true);
+    expect(error.uncertain).toBe(true);
+    expect(rejected.calls.every((call) => call.method === "GET")).toBe(true);
+  }
+});
 const loanPath =
   "loans/external-id/of-loan-example?associations=repaymentSchedule,transactions,charges,linkedAccount";
 const harness = (
@@ -465,7 +492,7 @@ test("unreversed transfer must match loan, savings destination, both clients, ty
     { fromClient: { id: 99 } },
     { toClient: { id: 99 } },
     { transferAmount: 11999 },
-    { transferDate: [2026, 10, 18] },
+    { transferDate: "2026-10-18" },
   ]) {
     const h = harness(raw, { ...transfer, ...change });
     expect(await h.denied(true)).toMatchObject({

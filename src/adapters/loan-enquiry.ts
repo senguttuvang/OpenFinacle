@@ -115,6 +115,8 @@ const Loan = Schema.Struct({
 });
 const Transfer = Schema.Struct({
   ...TransferBasic.fields,
+  // This endpoint returns AccountTransferData through Jackson, unlike the embedded legacy loan response.
+  transferDate: LoanQuote.fields.expected_disbursement_date,
   fromClient: Schema.Struct({ id }),
   toClient: Schema.Struct({ id }),
   fromAccountType: option(1),
@@ -405,7 +407,7 @@ export const loanEnquiryLayer = Layer.effect(
             transfer.toClient.id !== loan.owner.client_id ||
             (yield* loanCoreMinor(transfer.transferAmount)) !==
               row.amount_minor ||
-            (yield* date(transfer.transferDate)) !== row.date
+            transfer.transferDate !== row.date
           )
             return yield* Effect.fail(
               invalid(
