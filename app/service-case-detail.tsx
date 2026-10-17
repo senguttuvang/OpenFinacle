@@ -3,6 +3,7 @@
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { Effect } from "effect";
 import { useState } from "react";
+import { isProfileMaintenance } from "../src/domain/profile-effects";
 import type { CaseAction, CaseDetail } from "../src/domain/service-cases";
 import type { ServiceDefinition } from "../src/domain/services";
 import { validateServiceFields } from "../src/domain/services";
@@ -143,8 +144,13 @@ export function ServiceCaseDetail({
       </div>
       <h3>{definition?.title ?? record.kind.replaceAll("_", " ")}</h3>
       <p className="centre-note">
-        Simulated service fulfilment. Account balances and product records are
-        not changed by these case actions.
+        {isProfileMaintenance(record.kind)
+          ? record.status === "fulfilled"
+            ? record.profile_patch
+              ? "This approved change updated the saved synthetic customer profile. Account balances and Fineract records are unchanged."
+              : "This earlier case has no recorded profile effect. Its history is preserved and has not been replayed."
+            : "Independent approval updates the saved synthetic customer profile. Account balances and Fineract records are unchanged."
+          : "Simulated service fulfilment. Account balances and product records are not changed by these case actions."}
       </p>
       <dl className="centre-summary">
         <div>

@@ -1,7 +1,7 @@
 import { Clock, Effect, Schema } from "effect";
 import { BankingError, type Session } from "../domain/banking";
 import { Store } from "../domain/ports";
-import { approvedProfilePatch } from "../domain/profile";
+import { approvedProfilePatch } from "../domain/profile-effects";
 import {
   allowedCaseActions,
   type CaseAction,

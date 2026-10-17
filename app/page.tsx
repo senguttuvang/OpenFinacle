@@ -365,6 +365,8 @@ export default function Page() {
     (a, b) => b.id - a.id,
   );
   const navigation = navigationFor(role, data.bank.journey);
+  const viewTitle =
+    navigation.find((item) => item.view === view)?.label ?? labels[view];
   const customerNav = navigation.map((item) => item.view);
   const journeySteps = [
     Boolean(data.application),
@@ -640,7 +642,7 @@ export default function Page() {
           <div className="breadcrumb">
             {staff ? "Branch banking" : "Personal banking"}
             <ChevronRight size={14} />
-            <strong>{labels[view]}</strong>
+            <strong>{viewTitle}</strong>
           </div>
           <div className="topbar-right">
             <CommandMenu
@@ -725,7 +727,7 @@ export default function Page() {
                     : retail
                       ? `Welcome back, ${(account?.clientName ?? "Mira").split(" ")[0]}`
                       : `Good things ahead, ${(data.application?.name ?? "Mira").split(" ")[0]}.`
-                  : labels[view]}
+                  : viewTitle}
               </h1>
               <p>
                 {view === "overview"

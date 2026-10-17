@@ -53,6 +53,99 @@ async function openServices(page: Page) {
   ).toBeVisible();
 }
 
+test("completed maintenance distinguishes applied effects from imported history", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  data.role = "officer";
+  const payload = JSON.stringify({
+    address: "88 Synthetic Avenue",
+    city: "Chennai",
+    pincode: "600020",
+  });
+  const legacy = sampleCase();
+  legacy.request = {
+    ...legacy.request,
+    id: "11111111-1111-4111-8111-111111111111",
+    kind: "address_change",
+    status: "fulfilled",
+    detail: "Synthetic address maintenance",
+    payload,
+    submitted_payload: payload,
+    delivery_status: "none",
+    profile_patch: null,
+  };
+  legacy.history = [
+    {
+      ...legacy.history[0],
+      request_id: legacy.request.id,
+      actor: "system",
+      from_status: null,
+      to_status: "fulfilled",
+      note: "Completed case imported; earlier history unavailable",
+      payload,
+      delivery_status: "none",
+    },
+  ];
+  legacy.actions = [];
+  const applied = structuredClone(legacy);
+  applied.request = {
+    ...applied.request,
+    id: "22222222-2222-4222-8222-222222222222",
+    version: 3,
+    profile_patch: payload,
+  };
+  const states = ["open", "in_progress", "awaiting_approval", "fulfilled"];
+  applied.history = states.map((status, index) => ({
+    ...legacy.history[0],
+    id: `applied-${index}`,
+    request_id: applied.request.id,
+    actor: index === 0 ? "customer" : index === 3 ? "approver" : "officer",
+    from_status: states[index - 1] ?? null,
+    to_status: status,
+    note: "Synthetic approval history",
+    created_at: `2026-10-17T08:0${index}:00Z`,
+  }));
+  data.requests = [legacy.request, applied.request];
+  await page.route("**/api/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/service-catalog")
+      return route.fulfill({ json: { services: serviceCatalog } });
+    if (url.pathname === "/api/service-cases") {
+      const id = url.searchParams.get("id");
+      return route.fulfill({
+        json: id
+          ? id === legacy.request.id
+            ? legacy
+            : applied
+          : { requests: data.requests, total: 2, offset: 0, limit: 25 },
+      });
+    }
+    return route.fulfill({
+      json: url.pathname === "/api/dashboard" ? data : {},
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Service requests", exact: true })
+    .click();
+  for (const [reference, effect] of [
+    ["SR-111111111111", "no recorded profile effect"],
+    ["SR-222222222222", "updated the saved synthetic customer profile"],
+  ]) {
+    await page
+      .getByRole("button", { name: `View request ${reference}`, exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Service request",
+      exact: true,
+    });
+    await expect(dialog).toContainText(effect);
+    await dialog.getByRole("button", { name: "Close service request" }).click();
+  }
+});
+
 test("service directory validates and reviews details, records one request and restores focus on mobile", async ({
   page,
 }) => {

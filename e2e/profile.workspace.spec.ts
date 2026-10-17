@@ -102,7 +102,11 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
     .getByRole("button", { name: "Customer profile", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Customer profile", exact: true }),
+    page.getByRole("heading", {
+      name: "Customer profile",
+      level: 2,
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.locator(".detail-grid").first()).toContainText(
     "approved@example.test",

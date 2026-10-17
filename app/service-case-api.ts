@@ -36,6 +36,7 @@ const caseDetail = Schema.Struct({
     outcome_note: Schema.String,
     updated_by: Schema.String,
     delivery_status: delivery,
+    profile_patch: Schema.optional(Schema.NullOr(Schema.String)),
   }),
   history: Schema.mutable(
     Schema.Array(
