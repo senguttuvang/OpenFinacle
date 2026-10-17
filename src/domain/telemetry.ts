@@ -22,6 +22,8 @@ const routes = new Set([
   "/api/cards/action",
   "/api/deposits",
   "/api/deposits/action",
+  "/api/recurring-deposits",
+  "/api/recurring-deposits/action",
   "/api/service-cases",
   "/api/service-cases/action",
   "/api/requests",
