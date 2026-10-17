@@ -14,7 +14,7 @@ Customer, officer and approver may enquire within their current relationship. Al
 
 `GET /api/deposit-advice?kind=fixed|recurring&id=...` returns a validated JSON advice read model. `download=1` returns UTF-8 plain text with attachment disposition, no-store and nosniff. Text avoids HTML/CSV execution and preserves invented labels literally. Filename uses a sanitized product reference, never user text. No state-changing GET or automatic save occurs. Preview errors remain visible with retry available; an unverified response must not show a download action.
 
-Holding detail offers preview only for active products. Preview checks returned relationship/product/reference against the requested holding, shows the demo boundary, original amount/term/rate/illustration, activation and maturity dates, authorization and nominee/maturity preference, then an explicit download link. It uses existing type/space/color tokens and remains usable on mobile/XL and at 200% text.
+Holding detail offers preview only for active products. Preview checks returned relationship/product/reference against the requested holding, shows the demo boundary, original amount/term/rate/illustration, activation and maturity dates, authorization and nominee/maturity preference, then an explicit download button. The browser fetches and verifies the success status, attachment type/filename and exact advice text against the preview before saving a file. A failed/expired/unverified download shows an error without saving a JSON response or leaving the app. It uses existing type/space/color tokens and remains usable on mobile/XL and at 200% text.
 
 ## Architecture and verification
 

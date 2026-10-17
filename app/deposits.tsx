@@ -10,6 +10,7 @@ import {
   DepositTerms,
 } from "../src/domain/deposits";
 import { api } from "./api";
+import { DepositAdvicePreview } from "./deposit-advice";
 import {
   DepositFacts,
   DepositForm,
@@ -401,6 +402,15 @@ export function Deposits({
                 </dd>
               </div>
             </dl>
+          )}
+          {detail.deposit.status === "active" && (
+            <DepositAdvicePreview
+              key={detail.deposit.id}
+              bankId={bankId}
+              id={detail.deposit.id}
+              kind="fixed"
+              busy={busy}
+            />
           )}
           {!action && (
             <div className="card-actions">

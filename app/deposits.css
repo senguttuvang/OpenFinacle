@@ -107,3 +107,14 @@
     align-items: flex-start;
   }
 }
+.deposit-advice {
+  margin-block: 1.5rem;
+}
+.deposit-advice h4 {
+  font-size: 1.2rem;
+  line-height: 1.4;
+  margin-block: 0 1rem;
+}
+.deposit-advice .detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
