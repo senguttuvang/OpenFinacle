@@ -4,7 +4,10 @@ import {
   buildLoanPilotCommand,
   loanPilotReport,
 } from "../src/cli/loan-pilot-report";
-import type { LoanDetail } from "../src/domain/loan-workflow";
+import {
+  type LoanDetail,
+  safeLoanProofChecks,
+} from "../src/domain/loan-workflow";
 import { workflowQuote as quote } from "./fixtures/loan-workflow";
 
 type Options = Parameters<typeof buildLoanPilotCommand>[0];
@@ -105,6 +108,10 @@ test("native quote is explicitly nonfinancial and reports only the selected inve
 test("native receipt output omits raw original notes, payloads and personal budget fields", () => {
   const marker = "synthetic-private-note-marker";
   const detail: LoanDetail = {
+    inspection_checks: [
+      "loan-transactions-shape",
+      "transaction-reversal-shape",
+    ],
     loan: {
       id: "application-one",
       bank_id: quote.bank_id,
@@ -170,5 +177,17 @@ test("native receipt output omits raw original notes, payloads and personal budg
     status: "recommended",
     history_events: 2,
     origin: "admin-pilot",
+    inspection_checks: [
+      "loan-transactions-shape",
+      "transaction-reversal-shape",
+    ],
   });
+  expect(
+    safeLoanProofChecks([
+      marker,
+      "core-read",
+      "core-read",
+      "https://invented.invalid/private",
+    ]),
+  ).toEqual(["core-read"]);
 });

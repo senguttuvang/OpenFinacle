@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { Role } from "../domain/banking";
 import { LoanPilotCommand, type LoanPilotResponse } from "../domain/loan-pilot";
+import { safeLoanProofChecks } from "../domain/loan-workflow";
 import type { LoanCommand } from "../domain/loans";
 
 export const loanPilotActions = [
@@ -160,6 +161,7 @@ export const loanPilotReport = (value: LoanPilotResponse) => {
   const funded = value.core?.snapshot.disbursements[0];
   return {
     loan_id: value.loan.id,
+    inspection_checks: safeLoanProofChecks(value.inspection_checks),
     quote_id: value.quote.id,
     origin: value.loan.origin,
     status: value.loan.status,

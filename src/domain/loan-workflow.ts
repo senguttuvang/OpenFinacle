@@ -54,7 +54,32 @@ const LoanSavedCoreView = Schema.Struct({
   stale: Schema.Boolean,
 });
 export const LoanRequest = Schema.Union(LoanSubmission, LoanCommand);
+const LoanProofCheck = Schema.Literal(
+  "core-read",
+  "loan-response-shape",
+  "loan-summary-shape",
+  "loan-transactions-shape",
+  "transaction-currency-shape",
+  "transaction-reversal-shape",
+  "transaction-identity-shape",
+  "transfer-summary-shape",
+  "loan-timeline-shape",
+  "loan-status-shape",
+  "loan-ownership",
+  "loan-terms",
+  "loan-funding-facts",
+  "loan-undisbursed-history",
+  "schedule-normalization",
+  "schedule-match",
+  "disbursement-correlation",
+  "transfer-response-shape",
+  "transfer-correlation",
+);
+export const safeLoanProofChecks = (checks: readonly string[] | undefined) => [
+  ...new Set((checks ?? []).filter(Schema.is(LoanProofCheck))),
+];
 export const LoanDetail = Schema.Struct({
+  inspection_checks: Schema.optional(Schema.Array(LoanProofCheck)),
   loan: LoanApplication,
   quote: LoanQuote,
   core: Schema.NullOr(LoanSavedCoreView),

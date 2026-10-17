@@ -41,6 +41,8 @@ bun run cli loan-pilot --action inspect --role approver --loan-id <loan-id>
 
 Each step uses the ID/version printed by the preceding saved result. Generate and retain the original key before sending; never infer a latest target. After a lost or unreadable result use status by that key and explicit approver inspection, never another write because a read is absent. An explicit fresh attempt is permitted only after a definite saved failure and valid current terms. Quote preview uses independently invented ₹12,000/12-month education terms; it is not a loan submission. `--accept-quote` explicitly records simulated customer acceptance.
 
+Explicit approver inspection includes allowlisted `inspection_checks` when proof cannot be verified. Codes identify the failed shape, ownership, schedule or correlation stage without raw Core values, parser messages, response bodies or transport causes. They are current read-only observations, not a stored outcome or authority to release/replay the original operation. Saved status still reads only D1; ordinary customer receipts do not invoke diagnosis.
+
 For an unfunded registered/approved loan, the customer uses `request_withdrawal`. An approved loan then needs one approver `undo_approval` action followed by a later explicit `withdraw`; a registered loan needs only the latter after customer intent. Use current saved versions and new keys for these distinct reviewed stages. No active-loan reversal is implemented.
 
 ## Release proof still required
