@@ -45,6 +45,7 @@ import { api } from "./api";
 import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
+import { PersonaSelect } from "./persona-select";
 import { ReadingSize } from "./reading-size";
 import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
@@ -577,22 +578,12 @@ export default function Page() {
             <Sparkles size={19} />
             <strong>Experience both sides</strong>
             <p>Switch roles to follow a customer's journey through the bank.</p>
-            <div className="role-select">
-              <Users size={16} />
-              <select
-                aria-label="Demo persona"
-                value={role}
-                disabled={busy}
-                onChange={(e) => changeRole(e.target.value as Role)}
-              >
-                {Object.entries(roles).map(([key, info]) => (
-                  <option value={key} key={key}>
-                    {info.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} />
-            </div>
+            <PersonaSelect
+              value={role}
+              disabled={busy}
+              options={roles}
+              onChange={changeRole}
+            />
           </div>
           <div className="core-status">
             <span />{" "}

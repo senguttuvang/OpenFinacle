@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Dashboard } from "../src/domain/view";
+import { choosePersona } from "./fixtures/persona";
 
 test("deployed customer and branch screens use real saved data without financial mutations", async ({
   page,
@@ -26,7 +27,7 @@ test("deployed customer and branch screens use real saved data without financial
       new URL(item.url()).pathname === "/api/dashboard" &&
       item.request().method() === "GET",
   );
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   const data = (await (await response).json()) as Dashboard;
   expect(data.role).toBe("officer");
   expect(data.core.cached).toBe(true);
@@ -61,7 +62,7 @@ test("deployed customer and branch screens use real saved data without financial
     path: "test-results/live-branch-workspace.png",
     fullPage: true,
   });
-  await page.getByLabel("Demo persona").selectOption("customer");
+  await choosePersona(page, "customer");
   await expect(
     page.getByRole("heading", { name: /Welcome back/ }),
   ).toBeVisible();

@@ -1,6 +1,63 @@
 import { expect, test } from "@playwright/test";
 import type { CardCommand, CardDetail } from "../src/domain/cards";
+import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
+
+test("persona select supports keyboard, cancellation, typeahead and large mobile options", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  const writes: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() !== "GET") writes.push(path);
+    if (path === "/api/session/role")
+      data.role = route.request().postDataJSON().role;
+    return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
+  });
+  await page.goto("/");
+  const trigger = page.getByRole("combobox", { name: "Demo persona" });
+  await trigger.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await expect(page.getByRole("option")).toHaveCount(3);
+  await expect(
+    page.getByRole("option", { name: "Customer", exact: true }),
+  ).toHaveAttribute("data-state", "checked");
+  await page.screenshot({
+    path: "test-results/persona-desktop.png",
+  });
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  expect(writes).toEqual([]);
+  await trigger.click();
+  await page.keyboard.type("Approver");
+  await expect(
+    page.getByRole("option", { name: "Approver", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveText("Approver");
+  await expect(trigger).toBeEnabled();
+  await expect(trigger).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Extra-large text", exact: true })
+    .click();
+  await trigger.click();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  const option = await page
+    .getByRole("option", { name: "Bank officer", exact: true })
+    .boundingBox();
+  expect(option?.height).toBeGreaterThanOrEqual(50);
+  expect(option?.x).toBeGreaterThanOrEqual(0);
+  expect((option?.x ?? 0) + (option?.width ?? 0)).toBeLessThanOrEqual(390);
+  await page.screenshot({
+    path: "test-results/persona-mobile.png",
+  });
+  await page.getByRole("option", { name: "Bank officer", exact: true }).click();
+  await expect(trigger).toHaveText("Bank officer");
+  expect(writes).toEqual(["/api/session/role", "/api/session/role"]);
+});
 
 test("reading size persists across reload and role navigation without financial writes", async ({
   page,
@@ -33,7 +90,7 @@ test("reading size persists across reload and role navigation without financial 
       Number.parseFloat(getComputedStyle(document.body).fontSize),
     ),
   ).toBeGreaterThanOrEqual(22);
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   await expect(
     page.getByRole("heading", { name: "Branch overview", exact: true }),
   ).toBeVisible();
@@ -201,7 +258,7 @@ test("card controls review, recover a lost response after reload and share staff
   await expect(
     page.getByRole("heading", { name: "Temporarily held", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Customer card enquiry" }),
@@ -492,7 +549,7 @@ test("busy role changes cannot open command navigation", async ({ page }) => {
     await route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
   await page.goto("/");
-  await page.getByLabel("Demo persona").selectOption("officer");
+  await choosePersona(page, "officer");
   const trigger = page.getByRole("button", { name: /Find a screen/ });
   await expect(trigger).toBeDisabled();
   await page.keyboard.press("Control+k");
