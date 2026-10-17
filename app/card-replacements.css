@@ -1,0 +1,16 @@
+.replacement-workspace,
+.replacement-record {
+  overflow-wrap: anywhere;
+}
+.replacement-record,
+.replacement-form {
+  margin-block: 1.5rem;
+}
+.replacement-workspace .detail-grid,
+.replacement-record .detail-grid,
+.replacement-form .detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+.replacement-address {
+  white-space: pre-line;
+}
