@@ -8,6 +8,7 @@ export type View =
   | "transfer"
   | "statements"
   | "services"
+  | "cards"
   | "cash"
   | "approvals"
   | "operations"
@@ -21,6 +22,7 @@ export const viewLabels: Record<View, string> = {
   transfer: "Pay & transfer",
   statements: "Statements",
   services: "Service requests",
+  cards: "Cards",
   cash: "Cash & salary",
   approvals: "Approval inbox",
   operations: "Bank operations",
@@ -48,6 +50,7 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
         "approvals",
         "operations",
         "services",
+        "cards",
         "statements",
         "audit",
       ]
@@ -58,9 +61,17 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
           "transfer",
           "statements",
           "services",
+          "cards",
           "profile",
         ]
-      : ["overview", "application", "transfer", "statements", "services"];
+      : [
+          "overview",
+          "application",
+          "cards",
+          "transfer",
+          "statements",
+          "services",
+        ];
   return views.map((view) => ({
     view,
     label: staff && view === "accounts" ? "Customer enquiry" : viewLabels[view],

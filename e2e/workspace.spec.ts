@@ -1,5 +1,187 @@
 import { expect, test } from "@playwright/test";
+import type { CardCommand, CardDetail } from "../src/domain/cards";
 import { savedWorkspace } from "./fixtures/workspace";
+
+test("card controls review, recover a lost response after reload and share staff history", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  const button = (name: string) =>
+    page.getByRole("button", { name, exact: true });
+  let detail: CardDetail = {
+    card: {
+      id: "synthetic-debit",
+      bank_id: data.bank.id,
+      suffix: "4242",
+      status: "active",
+      settings: {
+        atm: true,
+        pos: true,
+        online: false,
+        contactless: false,
+        international: false,
+        daily_limit: 25000,
+      },
+      version: 0,
+      updated_at: "2026-10-17",
+    },
+    history: [],
+    actions: ["settings", "hold", "block"],
+    confirmed_key: null,
+  };
+  let lose = false;
+  let writes = 0;
+  const keys = new Set<string>();
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/session/role") {
+      data.role = request.postDataJSON().role;
+      return route.fulfill({ json: { role: data.role } });
+    }
+    if (url.pathname === "/api/cards/action") {
+      const input = request.postDataJSON() as CardCommand;
+      const key = request.headers()["idempotency-key"];
+      keys.add(key);
+      writes++;
+      detail = {
+        ...detail,
+        confirmed_key: key,
+        card: {
+          ...detail.card,
+          version: detail.card.version + 1,
+          status:
+            input.action === "hold"
+              ? "held"
+              : input.action === "block"
+                ? "blocked"
+                : "active",
+          settings: input.settings ?? detail.card.settings,
+        },
+      };
+      detail = {
+        ...detail,
+        history: [
+          ...detail.history,
+          {
+            id: `event-${writes}`,
+            card_id: detail.card.id,
+            actor: data.role,
+            action: input.action,
+            note: input.note,
+            status: detail.card.status,
+            settings: detail.card.settings,
+            version: detail.card.version,
+            created_at: "2026-10-17",
+          },
+        ],
+      };
+      if (lose) {
+        lose = false;
+        return route.abort();
+      }
+      return route.fulfill({ json: detail });
+    }
+    if (url.pathname === "/api/cards") {
+      if (!url.searchParams.has("id") && !url.searchParams.has("key"))
+        return route.fulfill({ json: { cards: [detail.card] } });
+      if (
+        url.searchParams.has("key") &&
+        !keys.has(url.searchParams.get("key") ?? "")
+      )
+        return route.fulfill({
+          status: 404,
+          json: { error: "No saved card command" },
+        });
+      const actions =
+        detail.card.status === "blocked"
+          ? []
+          : data.role === "officer"
+            ? ["block"]
+            : detail.card.status === "held"
+              ? ["resume", "block"]
+              : ["settings", "hold", "block"];
+      return route.fulfill({ json: { ...detail, actions } });
+    }
+    return route.fulfill({
+      json: url.pathname === "/api/dashboard" ? data : {},
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "My debit card" }),
+  ).toBeVisible();
+  await button("Change controls").click();
+  await page.getByLabel("Online payments", { exact: true }).check();
+  await page.getByLabel("Daily limit (₹)").fill("50000");
+  await page
+    .getByLabel("Reason", { exact: true })
+    .fill("Enable synthetic online shopping");
+  await button("Review change").click();
+  expect(writes).toBe(0);
+  await page.getByRole("button", { name: "Edit change", exact: true }).click();
+  await expect(
+    page.getByLabel("Online payments", { exact: true }),
+  ).toBeChecked();
+  await button("Review change").click();
+  await button("Confirm card change").click();
+  await expect(page.getByRole("status")).toContainText("Card change recorded");
+  expect(detail.card.settings.online).toBe(true);
+  expect(detail.card.settings.daily_limit).toBe(50000);
+  lose = true;
+  await button("Temporarily hold").click();
+  await page
+    .getByLabel("Reason", { exact: true })
+    .fill("Synthetic card temporarily misplaced");
+  await button("Review change").click();
+  await button("Confirm card change").click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Check saved command" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Resume card", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Check saved command" }).click();
+  await expect(page.getByRole("status")).toContainText("Card change recorded");
+  expect(writes).toBe(2);
+  await expect(
+    page.getByRole("heading", { name: "Temporarily held", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Demo persona").selectOption("officer");
+  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Customer card enquiry" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Resume card", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".card-history li")).toHaveCount(2);
+  await button("Permanently block").click();
+  await page
+    .getByLabel("Reason", { exact: true })
+    .fill("Synthetic lost card security report");
+  await button("Review change").click();
+  await page.getByRole("button", { name: "Confirm permanent block" }).click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.getByRole("button", { name: "Keep card", exact: true }).click();
+  expect(writes).toBe(2);
+  await page.getByRole("button", { name: "Confirm permanent block" }).click();
+  await button("Block card permanently").click();
+  await expect(
+    page.getByRole("heading", { name: "Permanently blocked", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".card-history li")).toHaveCount(3);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
 
 test("branch queues reflect records, filter before display and stay usable on mobile", async ({
   page,

@@ -1,5 +1,11 @@
 # Live verification
 
+## 17 October 2026 continuation
+
+Service-centre release `257f0e7` (private PRs 18–27) added 24 request-led forms and persisted customer/staff case, information, approval and delivery histories. Its exact-source gate passed 69 tests and nine fixture browser checks. Two live synthetic cases retained their four- and seven-event histories after reload; displayed receipt search and entry at 1790 ms were verified. This is service coverage, not complete product effects or reference parity.
+
+Card backend PR 28 adds explicitly synthetic D1 card controls and immutable history, with no Fineract/network effects. The continuation gate passes 77 tests; ten production-export fixture browser checks cover review/edit, lost-response recovery, shared staff enquiry, permanent-block confirmation and existing workspace journeys. Card migration/deployment and live card verification are still pending at this checkpoint. Individual card forms remain inferred, and broader cards, deposits, loans, payments, investments, insurance and branch/reference coverage remain open.
+
 Verified on 16 October 2026 (Asia/Kolkata) at https://openfinacle.plts.in against Apache Fineract 1.15.0. Financial application source: `3dbdd4c7c7e4084eb5a79c4a5bc2027de200ea88`. The release endpoint `/api/health` identifies the final deployed Git revision.
 
 `bun run check` passed: strict TypeScript, Biome, Oxlint, Knip, dependency-cruiser, type coverage above 99%, 28 behavioral tests, production export, and the Wrangler/container build dry-run. Biome reports existing CSS ordering warnings; there are no check errors. Secret scanning passed. The Indian-midnight date boundary is tested with an explicit clock instant; domain formatting does not read the system clock.
