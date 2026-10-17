@@ -1,0 +1,114 @@
+.command-trigger {
+  gap: 9px;
+  padding: 9px 12px;
+  background: #f4f6f8;
+  color: #526171;
+  border: 1px solid #dde3e8;
+  border-radius: 8px;
+  font-size: 12px;
+}
+kbd {
+  font:
+    10px "IBM Plex Sans",
+    sans-serif;
+  padding: 3px 5px;
+  border: 1px solid #dce2e8;
+  border-radius: 4px;
+  color: #536275;
+  background: #fff;
+  white-space: nowrap;
+}
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #0b192b80;
+}
+.command-dialog {
+  position: fixed;
+  top: min(18vh, 160px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(560px, calc(100vw - 32px));
+  background: #fff;
+  color: #192c42;
+  border: 1px solid #dce3e9;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px #0b192b35;
+  overflow: hidden;
+  font-family: "Manrope Variable", sans-serif;
+}
+.command-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5eaf0;
+}
+.command-search [cmdk-input] {
+  width: 100%;
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+}
+.command-search [cmdk-input]:focus {
+  outline: 0;
+}
+[cmdk-list] {
+  max-height: min(360px, 55dvh);
+  overflow-y: auto;
+  padding: 8px;
+}
+[cmdk-group-heading] {
+  padding: 12px 10px 8px;
+  color: #647386;
+  font-size: 11px;
+  font-weight: 600;
+}
+[cmdk-item] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+[cmdk-item] > span {
+  flex: 1;
+}
+[cmdk-item][data-selected="true"] {
+  background: #e9f5ef;
+  color: #126349;
+}
+[cmdk-item][data-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+[cmdk-empty] {
+  padding: 26px 14px;
+  font-size: 13px;
+  color: #647386;
+}
+.command-footer {
+  display: flex;
+  gap: 18px;
+  padding: 12px 18px;
+  background: #f7f9fb;
+  border-top: 1px solid #e5eaf0;
+  font-size: 10px;
+  color: #647386;
+}
+@media (max-width: 800px) {
+  .command-trigger > span,
+  .command-trigger > kbd {
+    display: none;
+  }
+  .command-trigger {
+    padding: 10px;
+  }
+}

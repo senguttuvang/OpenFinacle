@@ -1,0 +1,7 @@
+# Delivery and boundaries
+
+Use the existing Next.js static client, Effect API boundary and Worker application. Keep presentation under app; no UI import of server adapters. Retain API contracts, Fineract adapter, D1 workflows and snapshot behavior. Add a presentation-owned navigation catalogue shared by sidebar and command palette; cmdk with Radix Dialog owns keyboard selection and modal focus. Self-host Manrope and IBM Plex Sans through Fontsource, avoiding a render-blocking Google font request.
+
+Deliver two reviewable changes: first the evidence, navigation catalogue and accessible command menu; then the visual system and branch work queues. Beads of-oyt owns execution. Run strict type/static gates, unit/integration tests, Next build and Worker/container dry run for each merge candidate. Browser tests verify command search, aliases, Escape/focus return, role scope and responsive layouts without modifying shared banking balances. Re-run live read-only persistent entry after deployment. The complete mutating suite requires explicitly prepared clean scenarios and must not silently reset the owner's shared demo.
+
+The UI direction is a deep navy operational rail, quiet neutral canvas, crisp emerald actions, large customer amounts and compact staff rows. Typography and hierarchy distinguish customer guidance from operational density; components retain visible focus, explicit empty states and reduced-motion support. No decorative performance charts or invented branches.

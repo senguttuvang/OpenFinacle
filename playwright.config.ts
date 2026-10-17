@@ -12,6 +12,15 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "workspace",
+      testMatch: /workspace\.spec\.ts/,
+      expect: { timeout: 10000 },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+    {
       name: "entry",
       testMatch: /(?:persistent-entry|readiness)\.spec\.ts/,
       use: {
