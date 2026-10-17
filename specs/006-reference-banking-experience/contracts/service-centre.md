@@ -34,6 +34,8 @@ Domain tests cover unsupported/extra fields, missing values, allowed choices, in
 
 The catalogue foundation alone is not a completed service journey. Execution and remaining work are tracked in Beads `of-9hc.1` under the reconstruction feature.
 
+Legacy unstructured submission and simple completion endpoints return a conflict and direct callers to the service centre. Migration 0006 rejects new cases without a submission key and requires a versioned import for legacy updates. Existing legacy records stay readable and retain their imported history; sensitive maintenance still requires structured customer information and independent authorization. An older Worker cannot create or silently complete unversioned requests after application rollback.
+
 ## Customer and staff screens
 
 The service centre loads only when its screen opens. Customer entry points separate the searchable, grouped service directory from request tracking and deliverable tracking. Deliverables use the server-filtered `GET /api/service-cases?view=deliveries`; counts, search and pagination apply to the complete filtered relationship queue. Historical records with unknown delivery are not presented as dispatched items.
