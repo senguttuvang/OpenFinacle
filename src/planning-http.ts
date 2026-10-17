@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect";
 import { parseJsonRequest } from "./adapters/request-json";
 import {
   initializePlanning,
+  inspectPlanningCommand,
   readPlanning,
   savePlanning,
 } from "./application/planning";
@@ -25,6 +26,14 @@ export const planningRequest = (
     const url = new URL(request.url);
     const household = url.searchParams.get("household") ?? "";
     const key = request.headers.get("Idempotency-Key") ?? "";
+    if (request.method === "GET" && url.pathname === "/api/planning/command")
+      return Response.json(
+        yield* inspectPlanningCommand(
+          session,
+          household,
+          url.searchParams.get("key") ?? "",
+        ),
+      );
     if (request.method === "GET" && url.pathname === "/api/planning")
       return Response.json(yield* readPlanning(session, household));
     if (
