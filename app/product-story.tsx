@@ -161,6 +161,39 @@ export function ProductStory({ children }: { children?: ReactNode }) {
         </figure>
       </section>
       <section
+        id="imagine"
+        className="magazine-imagine"
+        aria-labelledby="imagine-title"
+      >
+        <div className="magazine-imagine-heading">
+          <div>
+            <h2 id="imagine-title">
+              Decades of banking.
+              <br />
+              <span>Ten weeks to build.</span>
+            </h2>
+            <p>
+              Finacle’s product journey. A new human-led team. A new AI-first
+              team. Shape the talent, scope and budget, then explore what each
+              could deliver in ten weeks. The judgment is yours.
+            </p>
+          </div>
+          <div className="magazine-build-note">
+            <Sparkles aria-hidden="true" />
+            <p>
+              The founder reports a week and about 500M AI tokens to reach this
+              prototype, building on an existing open-source core. The
+              comparison below explores different scopes and people with
+              explicit assumptions.
+            </p>
+            <LearnMore href="/build-story">
+              The story behind the build
+            </LearnMore>
+          </div>
+        </div>
+        <BuildRecipe />
+      </section>
+      <section
         id="experience"
         className="magazine-feature"
         aria-labelledby="experience-title"
@@ -449,38 +482,6 @@ export function ProductStory({ children }: { children?: ReactNode }) {
             Learn more about this prototype
           </LearnMore>
         </div>
-      </section>
-      <section
-        id="imagine"
-        className="magazine-imagine"
-        aria-labelledby="imagine-title"
-      >
-        <div className="magazine-imagine-heading">
-          <div>
-            <h2 id="imagine-title">
-              What would
-              <br />
-              <span>you build next?</span>
-            </h2>
-            <p>
-              Pick your crew. Choose an AI companion. Play with the
-              possibilities and see the people, time and AI allowance behind
-              your next chapter.
-            </p>
-          </div>
-          <div className="magazine-build-note">
-            <Sparkles aria-hidden="true" />
-            <p>
-              The founder reports a week and about 500M AI tokens to reach this
-              prototype, building on an existing open-source core. Your next
-              chapter will have its own scope and people.
-            </p>
-            <LearnMore href="/build-story">
-              The story behind the build
-            </LearnMore>
-          </div>
-        </div>
-        <BuildRecipe />
       </section>
       <section
         id="demo-entry"
