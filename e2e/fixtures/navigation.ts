@@ -13,6 +13,11 @@ const sourceTargets: Partial<Record<View, readonly [string, string]>> = {
 
 /** Navigate through the rendered customer hierarchy or the existing staff UI. */
 export async function openWorkspace(page: Page, view: View) {
+  await expect(
+    page.getByRole("navigation", {
+      name: /^(Banking navigation|Main navigation)$/,
+    }),
+  ).toBeVisible();
   const source = page.getByRole("navigation", {
     name: "Banking navigation",
     exact: true,

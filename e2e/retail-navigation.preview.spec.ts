@@ -76,6 +76,8 @@ test("keyboard arrows, Escape, Tab, outside click and pointer leave dismiss safe
   await expect(
     nav.getByRole("button", { name: "Funds Transfer", exact: true }),
   ).toBeFocused();
+  await page.mouse.move(1200, 900);
+  await expect(payments).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("End");
   await expect(
     nav.getByRole("button", {

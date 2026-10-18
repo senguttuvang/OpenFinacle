@@ -74,7 +74,12 @@ export function RetailNavigation({
       onPointerEnter={cancelClose}
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse")
-          timer.current = setTimeout(() => setOpen(null), 180);
+          timer.current = setTimeout(() => {
+            const focused = nav.current
+              ?.querySelector(".retail-menu-panel:not([hidden])")
+              ?.contains(document.activeElement);
+            if (!focused) setOpen(null);
+          }, 180);
       }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null);

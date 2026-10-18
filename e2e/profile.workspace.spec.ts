@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ProfileDetail } from "../src/domain/profile";
 import { serviceCatalog } from "../src/domain/services";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -61,7 +62,7 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "My profile", exact: true }).click();
+  await openWorkspace(page, "profile");
   await expect(page.locator(".detail-grid").first()).toContainText(
     "14 Synthetic Avenue",
   );
@@ -145,7 +146,7 @@ test("unverified and missing profile responses show truthful errors and onboardi
     return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "My profile", exact: true }).click();
+  await openWorkspace(page, "profile");
   await expect(page.locator(".panel").getByRole("alert")).toContainText(
     "could not be verified",
   );
