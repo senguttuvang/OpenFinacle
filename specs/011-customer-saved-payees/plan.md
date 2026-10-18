@@ -17,9 +17,10 @@ metadata insertion is idempotent and original tombstones remain authoritative.
 
 Shared leases cover only payee HTTP routes, CLI wiring, migration restore
 guard, optional dashboard/view summary, and a closed endpoint client parameter.
-Finacle6 owns FormSelect. Finacle8 owns navigation/page until release; coordinator
-serializes the summary and legacy new-payment visibility integration. Merge the
-latest integrated main before final exact-branch verification.
+Finacle6 owns FormSelect. Finacle8 owns navigation; the coordinator serializes
+the page lease for the registered-customer count, metadata refresh callback, and
+legacy new-payment visibility integration. Preserve their reviewed source and
+merge the latest integrated main before final exact-branch verification.
 
 Run `DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check`.
 Run isolated fixture browser project against port 3100 with

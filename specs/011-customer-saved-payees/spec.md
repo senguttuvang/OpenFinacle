@@ -25,7 +25,10 @@ payee ID respectively. Strict request schemas reject caller-supplied ownership.
 Existing demo/session/origin/customer-scope gates apply. The old recipients
 route now projects this same owned list. Optional dashboard `payeeSummary`
 contains count, first saved payee metadata, and the demo maximum; old fixtures
-may omit it. Coordinator owns final page summary and legacy-form integration.
+may omit it. The registered customer overview uses its actual first saved payee
+and count, or an Add a payee state. Payee edits refresh this summary without
+requesting a financial refresh. Duplicate legacy new-payment forms are hidden
+for registered customers; staff and nonregistered legacy controls remain.
 
 ## Transfer authorization and recovery
 
