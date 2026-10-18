@@ -347,8 +347,11 @@ export const refreshLoanCoreView = (session: Session, id: string) =>
         "This application has not been registered in Core.",
       );
     const quote = before.quote;
+    const enquiry = yield* LoanEnquiry;
+    const read =
+      before.loan.status === "active" ? enquiry.statement : enquiry.inspect;
     const fresh = yield* Effect.either(
-      (yield* LoanEnquiry).inspect({
+      read({
         owner: {
           bank_id: quote.bank_id,
           product_id: quote.product_id,

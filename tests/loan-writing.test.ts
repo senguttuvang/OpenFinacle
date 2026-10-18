@@ -160,6 +160,13 @@ const harness = (input: LoanWriteInstruction, options: Options = {}) => {
       }),
   });
   const enquiry = Layer.succeed(LoanEnquiry, {
+    statement: () =>
+      Effect.fail(
+        new BankingError({
+          message: "Financial proof must not request a statement",
+          status: 500,
+        }),
+      ),
     inspect: (lookup) => {
       inspections.push({ afterPost: posted, coreId: lookup.core_id });
       expect(lookup.external_id).toBe(input.external_id);

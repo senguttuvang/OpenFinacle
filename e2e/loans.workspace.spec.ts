@@ -1,11 +1,14 @@
+import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 import type { Role } from "../src/domain/banking";
+import { loanStatementCsv } from "../src/domain/loan-statements";
 import type { LoanDetail, LoanOperation } from "../src/domain/loan-workflow";
 import {
   type LoanCommand,
   type LoanQuote,
   loanAffordability,
 } from "../src/domain/loans";
+import { inventedLoanStatement } from "../tests/fixtures/loan-statement";
 import { loanView } from "../tests/fixtures/loan-view";
 import {
   workflowQuotedAt,
@@ -53,6 +56,7 @@ const setup = async (
     inspections: 0,
     refreshes: 0,
     failRefresh: false,
+    statementEnabled: false,
   };
   const receipts = new Map<
     string,
@@ -204,6 +208,26 @@ const setup = async (
           affordability: loanAffordability(state.quote),
           application_created: false,
           financial_posted: false,
+        },
+      });
+    }
+    if (url.pathname === "/api/loans/statement") {
+      const core = state.saved?.core;
+      if (!core?.snapshot.statement)
+        return route.fulfill({
+          status: 409,
+          json: { error: "No saved statement" },
+        });
+      return route.fulfill({
+        body: loanStatementCsv(
+          core.snapshot.statement,
+          core.snapshot.id,
+          core.synced_at,
+          core.stale,
+        ),
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="openfinacle-loan-${core.snapshot.id}.csv"`,
         },
       });
     }
@@ -365,7 +389,17 @@ const setup = async (
       if (state.saved.core)
         state.saved = {
           ...state.saved,
-          core: { ...state.saved.core, stale: state.failRefresh },
+          core: {
+            ...state.saved.core,
+            stale: state.failRefresh,
+            snapshot:
+              state.statementEnabled && !state.failRefresh
+                ? {
+                    ...state.saved.core.snapshot,
+                    statement: inventedLoanStatement(state.saved.core.snapshot),
+                  }
+                : state.saved.core.snapshot,
+          },
         };
       return route.fulfill({ json: reply() });
     }
@@ -602,6 +636,41 @@ test("loan quote review, saved application and independent Core decisions recove
   await open(page);
   await view(page);
   await expect(
+    page.getByRole("region", { name: "Saved loan statement" }),
+  ).toContainText("No statement has been loaded");
+  state.statementEnabled = true;
+  await page
+    .getByRole("button", { name: "Refresh Core observation", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("table", { name: "Saved Core loan transactions" })
+      .locator("tbody tr"),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("region", { name: "Saved loan statement" }),
+  ).toContainText("Disbursement");
+  await expect(
+    page.getByRole("link", { name: "Download saved CSV", exact: true }),
+  ).toHaveAttribute("href", `/api/loans/statement?id=${state.saved?.loan.id}`);
+  expect(state.financialWrites).toBe(1);
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("link", { name: "Download saved CSV", exact: true })
+    .click();
+  const downloaded = await downloadEvent;
+  expect(downloaded.suggestedFilename()).toBe("openfinacle-loan-71.csv");
+  expect(await downloaded.failure()).toBeNull();
+  const file = await downloaded.path();
+  if (!file) throw new Error("Statement download unavailable");
+  const csv = await readFile(file, "utf8");
+  expect(csv).toContain('"Disbursement"');
+  expect(csv).toContain('"Total repaid","0.00"');
+  await page.screenshot({
+    path: "/tmp/finacle4-loan-statement-desktop.png",
+    fullPage: true,
+  });
+  await expect(
     page.getByRole("button", { name: "Disburse to savings", exact: true }),
   ).toHaveCount(0);
   state.failRefresh = true;
@@ -612,6 +681,14 @@ test("loan quote review, saved application and independent Core decisions recove
     "Observation is stale",
   );
   expect(state.financialWrites).toBe(1);
+  await expect(
+    page.getByRole("region", { name: "Saved loan statement" }),
+  ).toContainText("Stale saved statement");
+  await expect(
+    page
+      .getByRole("table", { name: "Saved Core loan transactions" })
+      .locator("tbody tr"),
+  ).toHaveCount(1);
   await page
     .getByRole("button", { name: "Extra-large text", exact: true })
     .click();
@@ -628,6 +705,15 @@ test("loan quote review, saved application and independent Core decisions recove
   await page.keyboard.press("ArrowRight");
   await expect
     .poll(() => schedule.evaluate((el) => el.scrollLeft))
+    .toBeGreaterThan(0);
+  const transactions = page.getByRole("region", {
+    name: "Loan transactions, scroll horizontally if needed",
+    exact: true,
+  });
+  await transactions.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() => transactions.evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(0);
   await page.screenshot({
     path: "/tmp/finacle4-loan-active-mobile-xl.png",

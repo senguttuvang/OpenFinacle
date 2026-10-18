@@ -63,6 +63,7 @@ import {
   inspectLoanSetup,
   loanSetupStatus,
 } from "./application/loan-setup";
+import { savedLoanStatement } from "./application/loan-statements";
 import { customerProfile } from "./application/profile";
 import {
   actOnRecurringPlan,
@@ -616,6 +617,25 @@ const handle = (request: Request, env: Environment) =>
         : Response.json(advice);
     }
     if (path === "/api/loans" || path.startsWith("/api/loans/")) {
+      if (path === "/api/loans/statement" && request.method === "GET") {
+        const id = url.searchParams.get("id");
+        if (
+          [...url.searchParams.keys()].length !== 1 ||
+          !id ||
+          !/^[a-zA-Z0-9_-]{8,100}$/.test(id)
+        )
+          return yield* Effect.fail(
+            failure("Choose one valid owned loan application reference."),
+          );
+        const statement = yield* savedLoanStatement(session, id);
+        return new Response(statement.csv, {
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="openfinacle-loan-${statement.core_id}.csv"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
       if (path === "/api/loans" && request.method === "GET") {
         const keys = [...url.searchParams.keys()];
         const id = url.searchParams.get("id");

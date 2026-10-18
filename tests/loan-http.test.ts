@@ -124,6 +124,14 @@ test("normal loan routes require a session and demo mode and reject ambiguous or
   expect(
     (
       await handleRequest(
+        new Request("https://demo.test/api/loans/statement?id=application-one"),
+        environment,
+      )
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await handleRequest(
         new Request("https://demo.test/api/loans"),
         environment,
       )
@@ -137,6 +145,14 @@ test("normal loan routes require a session and demo mode and reject ambiguous or
     "?refresh=true",
   ])
     expect((await http(`/loans${suffix}`)).status).toBe(400);
+  for (const suffix of [
+    "",
+    "?id=short",
+    "?id=application-one&id=application-two",
+    "?id=application-one&format=csv",
+    "?key=original-one",
+  ])
+    expect((await http(`/loans/statement${suffix}`)).status).toBe(400);
   expect((await http("/loans", { quote_id: fixture.quote.id })).status).toBe(
     400,
   );
@@ -170,6 +186,7 @@ test("normal loan routes require a session and demo mode and reject ambiguous or
     ["/loans/quote", fixture.quote.terms],
     ["/loans/inspect", { id: fixture.loan.id }],
     ["/loans/refresh", { id: fixture.loan.id }],
+    [`/loans/statement?id=${fixture.loan.id}`, undefined],
   ] as const)
     expect((await http(path, body)).status).toBe(503);
   expect(coreCalls).toBe(0);
@@ -178,6 +195,7 @@ test("normal loan routes require a session and demo mode and reject ambiguous or
 test("normal customer submission records customer origin, strict acceptance and one original receipt; saved recovery never reaches Core", async () => {
   expect(await (await http("/loans")).json()).toEqual({ loans: [] });
   const saved = await readDetail(await submit());
+  expect((await http(`/loans/statement?id=${saved.loan.id}`)).status).toBe(409);
   expect(saved.loan.origin).toBe("customer");
   expect(saved.loan.version).toBe(0);
   expect(saved.recorded_actor).toBe("customer");
@@ -203,6 +221,7 @@ test("normal customer submission records customer origin, strict acceptance and 
     tokenHash,
   ]);
   expect((await http(`/loans?id=${saved.loan.id}`)).status).toBe(404);
+  expect((await http(`/loans/statement?id=${saved.loan.id}`)).status).toBe(404);
   expect((await http("/loans?key=invented-http-key")).status).toBe(404);
   expect(await (await http("/loans")).json()).toEqual({ loans: [] });
   expect(coreCalls).toBe(0);

@@ -4,6 +4,7 @@ import { formatMoney, type Role } from "../src/domain/banking";
 import type { LoanDetail } from "../src/domain/loan-workflow";
 import type { LoanCommand } from "../src/domain/loans";
 import { loanActionLabel, loanReference, loanStatus } from "./loan-api";
+import { LoanPostedStatement } from "./loan-statement";
 import { LoanQuoteFacts, LoanScheduleTable, loanDate } from "./loan-terms";
 
 export const loanActionHelp: Record<LoanCommand["action"], string> = {
@@ -187,6 +188,7 @@ export function LoanDetailView({
           </p>
         )}
       </section>
+      <LoanPostedStatement detail={detail} />
       {detail.unavailable_reason && (
         <p role="status">{detail.unavailable_reason}</p>
       )}

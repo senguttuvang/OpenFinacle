@@ -1,0 +1,27 @@
+# Saved Core loan statements
+
+Execution: `of-9hc.15.11`, under the open [lending contract](loans.md). Evidence checked 18 October 2026. This is a read-only statement capability; repayment posting and fuller servicing remain separate work.
+
+## Source and coverage
+
+Use the pinned Fineract loan enquiry with `transactions` and the Core summary. [LoanTransactionData](https://github.com/apache/fineract/blob/1.15.0/fineract-loan/src/main/java/org/apache/fineract/portfolio/loanaccount/data/LoanTransactionData.java) defines transaction identifiers, dates, amount, allocation components and manual reversal. [LoanSummaryData](https://github.com/apache/fineract/blob/1.15.0/fineract-loan/src/main/java/org/apache/fineract/portfolio/loanaccount/data/LoanSummaryData.java) defines paid and outstanding components. The [read service](https://github.com/apache/fineract/blob/1.15.0/fineract-provider/src/main/java/org/apache/fineract/portfolio/loanaccount/service/LoanReadPlatformServiceImpl.java) supplies these amounts, using zero for null database allocation values in its mapper. The application must receive explicit numeric values; it never invents a missing response component.
+
+The associated customer transaction collection excludes invalid/contra entries and automatic reversals, while retaining manually reversed entries. Label this coverage explicitly. It is not the full accounting ledger or an exhaustive internal audit. Preserve returned rows, source order and manual reversal flags; never infer balances by summing this collection. Pinned [transaction types](https://github.com/apache/fineract/blob/1.15.0/fineract-loan/src/main/java/org/apache/fineract/portfolio/loanaccount/domain/LoanTransactionType.java) 1 and 2 are disbursement and repayment; unrecognized positive type identifiers remain visible as other Core transactions, without an invented business meaning. Do not copy payment details, arbitrary notes or customer identifiers into the statement.
+
+## Authority and persistence
+
+An explicit refresh of an owned active loan obtains one verified Core observation, including the statement. Keep the existing external identity/client/product/savings/terms/date/schedule checks. Statement parsing additionally validates transaction ownership through that parent and any returned per-row loan identifiers, unique IDs, calendar dates, currency, nonnegative exact minor units, reversal facts, explicit allocation components and source summary consistency. Bound the collection; reject an oversized or malformed response rather than truncate it. Require its one unreversed full disbursement to match the owned snapshot's ID, amount and actual date. Repayment allocation must equal the transaction amount. Disbursement allocation fields are not repayments and need not equal the disbursed amount.
+
+Store the normalized statement inside the existing timestamped Core observation, not a second ledger. Existing observations lack this optional field and remain readable; show that no statement has been loaded until explicit refresh. A valid empty collection is distinct from an absent collection and cannot describe an active disbursed loan. Refresh failure retains the prior observation marked stale. Original operation confirmation never requires the optional statement and never changes its dispatch/replay rules. Unfunded loans continue to use their existing enquiry and do not expose a funded statement.
+
+## Workspace and download
+
+Customer and staff see the same saved statement with observation time, freshness, Core paid/outstanding summary, transaction dates, type, amount, allocation and manual reversal state. Display the coverage boundary and distinguish the repayment schedule from posted transactions. Retain readable 18/22px financial values, keyboard scrolling and narrow/zoom reflow in the approved design.
+
+A strict owned CSV download reads saved data only. It carries source, observation time/freshness and coverage, then complete normalized rows; use static labels and numeric identifiers, omit free-form notes/payment data and prevent spreadsheet formulas. The filename uses the verified numeric Core loan identifier. No CSV request, ordinary saved view or page entry calls Core. An unavailable statement returns a clear error rather than an invented empty download.
+
+## Verification and later repayments
+
+Prove source normalization, missing/duplicate/foreign/fractional/reversed rows, allocation and summary consistency, safe CSV, strict session/ownership selectors, saved-only reads, legacy observation handling and stale refresh retention. Complete production-export browser checks, direct full-diff review, exact-tree local/remote gates and private release; verify the real active loan's actual disbursement row and unchanged savings/products after explicit refresh and reload. Fixtures remain independently invented and separate from running-Core proof or reference-bank parity.
+
+Future repayments must use an explicitly reviewed savings-to-owned-loan transfer, durable original identity, shared account reservation before dispatch and positive transaction/full-transfer correlation. They require their own authorization, date/amount/remaining-balance rules, failure/reconciliation protocol, tests and real synthetic accounting proof. A statement, generic service case, balance delta or direct cash repayment endpoint does not establish a savings debit or authorize a financial retry.
