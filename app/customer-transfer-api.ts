@@ -68,6 +68,13 @@ const storageFailure = () =>
     status: 503,
     uncertain: true,
   });
+const reviewFailure = () =>
+  new BankingError({
+    message:
+      "The transfer review could not be verified. No transfer was sent. Refresh the selected account and review again.",
+    status: 409,
+    uncertain: false,
+  });
 const key = (bankId: string) => `openfinacle:customer-transfer:${bankId}`;
 const storage = <A>(operation: () => A) =>
   Effect.try({ try: operation, catch: storageFailure });
@@ -110,7 +117,17 @@ export const customerTransferReviewApi = (
   amount: string,
 ) =>
   api<unknown>("/customer-transfers/review", { recipientId, amount }).pipe(
-    Effect.flatMap(Schema.decodeUnknown(Review)),
+    Effect.mapError(
+      (error) =>
+        new BankingError({
+          message: `No transfer was sent. ${error.message}`,
+          status: error.status,
+          uncertain: false,
+        }),
+    ),
+    Effect.flatMap((input) =>
+      Schema.decodeUnknown(Review)(input).pipe(Effect.mapError(reviewFailure)),
+    ),
     Effect.flatMap((review) =>
       Effect.try({
         try: () => {
@@ -119,13 +136,12 @@ export const customerTransferReviewApi = (
             review.offer.recipient_id !== recipientId ||
             review.offer.amount_minor !== moneyToMinor(Number(amount))
           )
-            throw failure();
+            throw reviewFailure();
           return review;
         },
-        catch: failure,
+        catch: reviewFailure,
       }),
     ),
-    Effect.mapError(failure),
   );
 export const customerTransferOutcome = (
   input: unknown,

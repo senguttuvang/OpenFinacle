@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
+import { enlargeText } from "./fixtures/text-scale";
 
 const household = "synthetic-nila";
 const endpoint = (relationship: string) =>
@@ -156,18 +157,10 @@ test("real local D1 saves budgets and scenarios, permits only consented read-onl
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
-  const readingToggle = page.getByRole("button", {
-    name: "Extra-large text",
-    exact: true,
-  });
-  await expect(readingToggle).toHaveCSS("color", "rgb(23, 61, 134)");
-  await expect(readingToggle).toHaveCSS(
-    "background-color",
-    "rgb(220, 231, 255)",
-  );
+  await enlargeText(page);
+  await expect(
+    page.getByRole("button", { name: "Extra-large text", exact: true }),
+  ).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

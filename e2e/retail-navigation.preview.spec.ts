@@ -2,6 +2,7 @@ import { chromium, expect, test } from "@playwright/test";
 import source from "../specs/010-icici-navigation/source-inventory.json" with {
   type: "json",
 };
+import { enlargeText } from "./fixtures/text-scale";
 
 test("all nine source families and 44 destinations work without bank traffic", async ({
   page,
@@ -231,10 +232,7 @@ for (const size of ["mobile", "extra-large", "zoom-reflow"] as const) {
           : { width: 1440, height: 1000 },
     );
     await page.goto("/navigation-preview");
-    if (size === "extra-large")
-      await page
-        .getByRole("button", { name: "Extra-large text", exact: true })
-        .click();
+    if (size === "extra-large") await enlargeText(page);
     const nav = page.getByRole("navigation", { name: "Main navigation" });
     const toggle = nav.getByRole("button", { name: "Banking menu" });
     if (size !== "extra-large") await toggle.click();
@@ -286,14 +284,18 @@ for (const size of ["mobile", "extra-large", "zoom-reflow"] as const) {
   });
 }
 
-test("touch opens and selects every family at390px", async ({ browser }) => {
+test("touch opens and selects every family at390px", async ({
+  browser,
+  baseURL,
+}) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
   });
   try {
     const page = await context.newPage();
-    await page.goto("http://localhost:3098/navigation-preview");
+    if (!baseURL) throw new Error("Navigation preview baseURL is required.");
+    await page.goto(new URL("/navigation-preview", baseURL).href);
     const nav = page.getByRole("navigation", { name: "Main navigation" });
     for (const family of source.families) {
       await nav.getByRole("button", { name: "Banking menu" }).tap();
@@ -336,7 +338,9 @@ test("native Chromium200% browser zoom keeps all branches within the window", as
     await settings.goto("chrome://settings/appearance");
     await settings.evaluate("chrome.settingsPrivate.setDefaultZoom(2)");
     const page = await context.newPage();
-    await page.goto("http://localhost:3098/navigation-preview");
+    const baseURL = testInfo.project.use.baseURL;
+    if (!baseURL) throw new Error("Navigation preview baseURL is required.");
+    await page.goto(new URL("/navigation-preview", baseURL).href);
     expect(
       await page.evaluate(() => ({
         ratio: outerWidth / innerWidth,

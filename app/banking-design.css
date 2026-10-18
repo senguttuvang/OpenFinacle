@@ -341,8 +341,7 @@ svg {
   background: #f1f5fc;
   color: #426087;
 }
-.command-trigger,
-.reading-toggle {
+.command-trigger {
   min-height: 46px;
   padding: 10px 12px;
   border-radius: 10px;
@@ -350,14 +349,6 @@ svg {
   color: #3f5576;
   background: #f1f5fc;
   border: 1px solid #dbe4f3;
-}
-.reading-toggle[aria-pressed="true"] {
-  color: #174abb;
-  background: #dce7ff;
-  border-color: #668bde;
-}
-.reading-toggle span:not(.sr-only) {
-  white-space: nowrap;
 }
 .command-trigger kbd {
   font-size: 0.67rem;

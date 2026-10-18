@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { DepositDetail, DepositTerms } from "../src/domain/deposits";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test("fixed deposit preserves review/edit, reconciles lost submission and activates across staff roles/reload", async ({
@@ -217,9 +218,7 @@ test("fixed deposit preserves review/edit, reconciles lost submission and activa
   await expect(page.locator(".deposit-detail")).toContainText(
     "Your savings account is unchanged",
   );
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".deposit-facts")).toHaveCSS(
     "grid-template-columns",

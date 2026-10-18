@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
+import { enlargeText } from "./fixtures/text-scale";
 
 test.use({ actionTimeout: 10000 });
 test.setTimeout(60000);
@@ -137,7 +138,7 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Extra-large text" }).click();
+  await enlargeText(page);
   await expect(page.locator("html")).toHaveAttribute("data-reading", "large");
   const width = await page.evaluate(() => ({
     viewport: innerWidth,

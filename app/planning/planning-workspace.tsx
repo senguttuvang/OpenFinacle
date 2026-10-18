@@ -18,7 +18,6 @@ import {
 import { planningHouseholds } from "../../src/domain/planning-fixtures";
 import type { PlanningScenario } from "../../src/domain/planning-state";
 import { FormSelect } from "../form-select";
-import { ReadingSize } from "../reading-size";
 import { PlanningBudgetControls } from "./planning-budget-controls";
 import { PlanningFilters } from "./planning-filters";
 import { PlanningOverview } from "./planning-overview";
@@ -266,7 +265,6 @@ export function PlanningWorkspace({
             <Landmark size={26} />
             OpenFinacle<span>Wealth & Planning</span>
           </a>
-          <ReadingSize />
         </header>
       )}
       <div className="wp-demo">

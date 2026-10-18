@@ -3,6 +3,7 @@ import type { Card } from "../src/domain/cards";
 import { chooseOption } from "./fixtures/form-select";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const fixture = async (
@@ -195,9 +196,7 @@ test("malformed replacement responses remain locked across reload; only a missin
       exact: true,
     }),
   ).toBeDisabled();
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

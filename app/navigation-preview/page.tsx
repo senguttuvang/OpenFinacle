@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { RetailMenuItem } from "../../src/domain/retail-navigation";
 import type { View } from "../navigation";
-import { ReadingSize } from "../reading-size";
 import { RetailNavigation, RetailUnavailable } from "../retail-navigation";
 import "./preview.css";
 
@@ -18,7 +17,6 @@ export default function NavigationPreview() {
       <header>
         <strong>OpenFinacle</strong>
         <span>Navigation preview · synthetic UI only</span>
-        <ReadingSize />
       </header>
       <div className="navigation-preview-layout">
         <RetailNavigation

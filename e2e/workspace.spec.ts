@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { CardCommand, CardDetail } from "../src/domain/cards";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test("persona select supports keyboard, cancellation, typeahead and large mobile options", async ({
@@ -41,9 +42,7 @@ test("persona select supports keyboard, cancellation, typeahead and large mobile
   await expect(trigger).toBeEnabled();
   await expect(trigger).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await trigger.click();
   await expect(page.getByRole("listbox")).toBeVisible();
   const option = await page
@@ -60,7 +59,7 @@ test("persona select supports keyboard, cancellation, typeahead and large mobile
   expect(writes).toEqual(["/api/session/role", "/api/session/role"]);
 });
 
-test("reading size persists across reload and role navigation without financial writes", async ({
+test("header omits the reading toggle across reload and role navigation while text remains readable", async ({
   page,
 }) => {
   const data = savedWorkspace();
@@ -72,39 +71,41 @@ test("reading size persists across reload and role navigation without financial 
     else if (route.request().method() !== "GET") writes.push(path);
     return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
+  await page.addInitScript(() =>
+    localStorage.setItem("openfinacle-reading-size", "large"),
+  );
   await page.goto("/");
   const reading = page.getByRole("button", {
     name: "Extra-large text",
     exact: true,
   });
-  await expect(reading).toHaveAttribute("aria-pressed", "false");
+  await expect(reading).toHaveCount(0);
   expect(
     await page.evaluate(() =>
       Number.parseFloat(getComputedStyle(document.body).fontSize),
     ),
   ).toBeGreaterThanOrEqual(18);
-  await reading.click();
   await page.reload();
-  await expect(reading).toHaveAttribute("aria-pressed", "true");
+  await expect(reading).toHaveCount(0);
   expect(
     await page.evaluate(() =>
       Number.parseFloat(getComputedStyle(document.body).fontSize),
     ),
-  ).toBeGreaterThanOrEqual(22);
+  ).toBe(18);
   await choosePersona(page, "officer");
   await expect(
     page.getByRole("heading", { name: "Branch overview", exact: true }),
   ).toBeVisible();
-  await expect(reading).toHaveAttribute("aria-pressed", "true");
+  await expect(reading).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await reading.click();
+  await enlargeText(page);
   await page.reload();
-  await expect(reading).toHaveAttribute("aria-pressed", "false");
+  await expect(reading).toHaveCount(0);
   expect(writes).toEqual([]);
 });
 
@@ -470,9 +471,7 @@ test("customer balances and navigation remain usable with local fonts on desktop
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await page.screenshot({
     path: "test-results/account-extra-large-mobile.png",
     fullPage: true,

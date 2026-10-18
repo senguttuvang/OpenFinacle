@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test.use({ actionTimeout: 10000 });
@@ -307,7 +308,7 @@ test("actual banking and planning panels match Demo persona at desktop and mobil
   for (const mode of ["desktop", "mobile390-large22"] as const) {
     if (mode === "mobile390-large22") {
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("button", { name: "Extra-large text" }).click();
+      await enlargeText(page);
     }
     await household.press("Enter");
     await expect(
