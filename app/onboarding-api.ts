@@ -11,6 +11,7 @@ export const inspectOpening = () =>
 export const beginOnboarding = (operationId: string) =>
   Effect.gen(function* () {
     yield* api("/session", {});
+    yield* api("/session/role", { role: "customer" });
     return yield* api<OnboardingDraft>("/onboarding/start", { operationId });
   });
 export const continueOnboarding = () =>

@@ -263,3 +263,59 @@ test("mobile, keyboard and extra-large text at 200 percent retain a usable singl
     fullPage: true,
   });
 });
+
+test("an old session-bound application is not silently replaced; a separate applicant requires explicit choice", async ({
+  page,
+}) => {
+  const attempts: string[] = [];
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "openfinacle-onboarding-operation",
+      "old-session-operation-123456",
+    ),
+  );
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/onboarding")
+      return route.fulfill({ status: 401, json: { error: "No session" } });
+    if (path === "/api/onboarding/start") {
+      const input = route.request().postDataJSON();
+      attempts.push(input.operationId);
+      if (input.operationId === "old-session-operation-123456")
+        return route.fulfill({
+          status: 403,
+          json: {
+            error: "This original application belongs to a different session.",
+          },
+        });
+      return route.fulfill({
+        json: {
+          ...record(),
+          id: input.operationId,
+          operationId: input.operationId,
+        },
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.goto("/open-account");
+  await page.getByRole("button", { name: "Start my application" }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Start a separate sample application",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(attempts).toEqual(["old-session-operation-123456"]);
+  await page
+    .getByRole("button", {
+      name: "Start a separate sample application",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Savings account", exact: true }),
+  ).toBeVisible();
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).not.toBe(attempts[0]);
+});

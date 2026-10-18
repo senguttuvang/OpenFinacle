@@ -47,6 +47,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [operationId, setOperationId] = useState<string | null>(null);
+  const [canStartAnother, setCanStartAnother] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
   const focusStep = draft?.status === "draft" ? step : -1;
@@ -139,14 +140,31 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
       true,
     );
   };
-  const start = () => {
+  const start = (separate: boolean) => {
+    if (locked.current) return;
     // Persist before dispatch. A lost response always reuses the original identity.
     try {
-      const identity =
-        operationId ?? localStorage.getItem(storageKey) ?? crypto.randomUUID();
+      const identity = separate
+        ? crypto.randomUUID()
+        : (operationId ??
+          localStorage.getItem(storageKey) ??
+          crypto.randomUUID());
       localStorage.setItem(storageKey, identity);
       setOperationId(identity);
-      execute(beginOnboarding(identity), apply, true);
+      setCanStartAnother(false);
+      if (separate) {
+        setDraft(null);
+        setFields(null);
+      }
+      execute(
+        beginOnboarding(identity).pipe(
+          Effect.tapError((error) =>
+            Effect.sync(() => setCanStartAnother(error.status === 403)),
+          ),
+        ),
+        apply,
+        true,
+      );
     } catch {
       setError(
         "Device storage is unavailable. Enable it to start a resumable application.",
@@ -272,7 +290,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
             type="button"
             className="primary"
             disabled={busy}
-            onClick={start}
+            onClick={() => start(false)}
           >
             {busy
               ? "Starting application…"
@@ -281,6 +299,18 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                 : "Start my application"}
             <ArrowRight size={20} />
           </button>
+          {canStartAnother && (
+            <div className="onboarding-recovery">
+              <p>
+                Your earlier application belongs to a different demo session and
+                remains saved. You can return to that session or start a
+                separate fictional applicant.
+              </p>
+              <button type="button" disabled={busy} onClick={() => start(true)}>
+                Start a separate sample application
+              </button>
+            </div>
+          )}
         </div>
       ) : draft.status !== "draft" ? (
         <div className="onboarding-receipt">
@@ -351,6 +381,15 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
               </button>
             )}
             <a href="/">Return to banking portal</a>
+            {draft.account && (
+              <button
+                type="button"
+                disabled={busy || uncertain}
+                onClick={() => start(true)}
+              >
+                Start another sample application
+              </button>
+            )}
           </div>
         </div>
       ) : (
