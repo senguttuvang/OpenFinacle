@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Role } from "../src/domain/banking";
 import { Deposits } from "./deposits";
+import { followPortalLink } from "./portal-location";
 import type { ServicePerform } from "./service-request-form";
 
 const Recurring = dynamic(
@@ -19,32 +20,54 @@ export function DepositWorkspace(props: {
   accountOpened: boolean;
   openAccount: () => void;
   initialProduct?: "fixed" | "recurring";
+  navigate?: (path: string) => void;
 }) {
-  const [product, setProduct] = useState<"fixed" | "recurring">(
+  const [localProduct, setProduct] = useState<"fixed" | "recurring">(
     props.initialProduct ?? "fixed",
   );
+  const product = props.navigate
+    ? (props.initialProduct ?? "fixed")
+    : localProduct;
   return (
     <>
       <nav
         className="card-workspace deposit-product-switch"
         aria-label="Deposit products"
       >
-        <button
-          type="button"
-          disabled={props.busy}
-          aria-pressed={product === "fixed"}
-          onClick={() => setProduct("fixed")}
+        <a
+          href="/deposits/fixed"
+          aria-disabled={props.busy}
+          aria-current={product === "fixed" ? "page" : undefined}
+          onClick={(event) => {
+            if (props.busy) {
+              event.preventDefault();
+              return;
+            }
+            followPortalLink(event, () => {
+              setProduct("fixed");
+              props.navigate?.("/deposits/fixed");
+            });
+          }}
         >
           Fixed deposits
-        </button>
-        <button
-          type="button"
-          disabled={props.busy}
-          aria-pressed={product === "recurring"}
-          onClick={() => setProduct("recurring")}
+        </a>
+        <a
+          href="/deposits/recurring"
+          aria-disabled={props.busy}
+          aria-current={product === "recurring" ? "page" : undefined}
+          onClick={(event) => {
+            if (props.busy) {
+              event.preventDefault();
+              return;
+            }
+            followPortalLink(event, () => {
+              setProduct("recurring");
+              props.navigate?.("/deposits/recurring");
+            });
+          }}
         >
           Recurring deposits
-        </button>
+        </a>
       </nav>
       {product === "fixed" ? (
         <Deposits key={props.bankId + props.role} {...props} />

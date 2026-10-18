@@ -6,7 +6,7 @@
   "compatibility_date": "2026-10-15",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [{ "pattern": "openfinacle.plts.in", "custom_domain": true }],
-  "assets": { "directory": "./out", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "assets": { "directory": "./out", "binding": "ASSETS", "run_worker_first": ["/api/*"], "not_found_handling": "404-page" },
   "observability": { "enabled": true },
   "vars": { "APP_REVISION": "development", "DEMO_MODE": "true" },
   "d1_databases": [{ "binding": "DB", "database_name": "openfinacle-workflows", "database_id": "37fe4ba4-a2c3-48e3-9819-dd7620305bb4", "migrations_dir": "migrations" }],

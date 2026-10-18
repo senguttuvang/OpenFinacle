@@ -235,12 +235,12 @@ test("service directory validates and reviews details, records one request and r
   });
   await page.keyboard.press("Escape");
   await expect(service).toBeFocused();
-  await page.getByRole("button", { name: /Check your deliverables/ }).click();
+  await page.getByRole("link", { name: /Check your deliverables/ }).click();
   await expect(
     page.getByRole("heading", { name: "No deliverables yet" }),
   ).toBeVisible();
   expect(listViews).toContain("deliveries");
-  await page.getByRole("button", { name: /Raise a new request/ }).click();
+  await page.getByRole("link", { name: /Raise a new request/ }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -323,6 +323,14 @@ for (const interruptedResponse of ["lost", "malformed"] as const) {
     await expect(
       page.getByRole("button", { name: "Confirm request", exact: true }),
     ).not.toBeVisible();
+    await page
+      .getByRole("button", { name: "Close service request", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await openWorkspace(page, "statements");
+    await page.goBack();
+    await expect(page).toHaveURL(/\/customer-service\/service-request$/);
+    expect(keys).toHaveLength(1);
     await page.reload();
     await openWorkspace(page, "services");
     await page

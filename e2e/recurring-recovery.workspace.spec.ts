@@ -6,7 +6,7 @@ const open = async (page: Page) => {
   await page.goto("/");
   await openWorkspace(page, "deposits");
   await page
-    .getByRole("button", { name: "Recurring deposits", exact: true })
+    .getByRole("link", { name: "Recurring deposits", exact: true })
     .click();
 };
 const review = async (page: Page, amount = "2000", months = "6") => {
@@ -125,7 +125,7 @@ test("malformed recurring responses stay locked until a definitive missing-key i
   await page.reload();
   await openWorkspace(page, "deposits");
   await page
-    .getByRole("button", { name: "Recurring deposits", exact: true })
+    .getByRole("link", { name: "Recurring deposits", exact: true })
     .click();
   await inspect.click();
   await expect(

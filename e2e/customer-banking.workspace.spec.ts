@@ -465,7 +465,7 @@ test("standalone shared planning binds its verified registered customer before s
   await expect(
     page.getByRole("heading", { name: "Household net worth" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Category", { exact: true }),
@@ -478,7 +478,7 @@ test("standalone shared planning binds its verified registered customer before s
   ).toBeVisible();
   expect(writes).toBe(1);
   await page.reload();
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Category", { exact: true }),
@@ -554,6 +554,15 @@ for (const mode of ["lost", "malformed"] as const)
       ),
     );
     expect(stored).not.toBeNull();
+    await expect(page).toHaveURL(/\/payments\/transfer$/);
+    await openWorkspace(page, "statements");
+    await expect(page).toHaveURL(/\/statements$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/payments\/transfer$/);
+    await expect(
+      page.getByRole("button", { name: "Inspect original transfer" }),
+    ).toBeVisible();
+    expect(fixture.posts()).toBe(1);
     await page.reload();
     await openWorkspace(page, "transfer");
     await expect(

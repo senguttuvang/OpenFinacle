@@ -12,7 +12,7 @@
   margin: 0;
   padding: 0;
 }
-.retail-menu button {
+.retail-menu :is(button, a) {
   transition: none;
   color: inherit;
   background: transparent;
@@ -48,22 +48,22 @@
   background: #e8f0ff;
   font-weight: 600;
 }
-.retail-menu button:hover,
-.retail-menu button:focus-visible {
+.retail-menu :is(button, a):hover,
+.retail-menu :is(button, a):focus-visible {
   background: #2458d3;
   color: white;
 }
-.retail-menu button[aria-expanded="true"],
-.retail-menu button[aria-current="page"] {
+.retail-menu :is(button, a)[aria-expanded="true"],
+.retail-menu :is(button, a)[aria-current="page"] {
   background: #e8efff;
   color: #174abb;
   font-weight: 600;
 }
-.retail-menu button:focus-visible {
+.retail-menu :is(button, a):focus-visible {
   outline: 3px solid #2458d3;
   outline-offset: -3px;
 }
-.retail-menu button:disabled {
+.retail-menu :is(button, a):disabled {
   opacity: 0.55;
   cursor: wait;
 }
@@ -236,4 +236,12 @@
     margin: 0 8px 8px;
     box-shadow: none;
   }
+}
+
+.retail-menu a {
+  text-decoration: none;
+}
+.retail-menu a[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: wait;
 }

@@ -75,14 +75,14 @@
   min-height: 53px;
   padding: 0 24px;
 }
-.retail-navigation button {
+.retail-navigation :is(button, a) {
   background: transparent;
   color: #526477;
   border-bottom: 3px solid transparent;
   padding: 14px 19px;
   font-size: 13px;
 }
-.retail-navigation button.active {
+.retail-navigation :is(button, a).active {
   color: var(--teal);
   border-bottom-color: var(--teal);
   background: #edf6f1;
@@ -506,7 +506,7 @@
   .retail-help-card {
     grid-column: 1 / -1;
   }
-  .retail-navigation button {
+  .retail-navigation :is(button, a) {
     padding-inline: 12px;
     font-size: 12px;
   }
@@ -558,7 +558,7 @@
     padding: 0 10px;
     justify-content: flex-start;
   }
-  .retail-navigation button {
+  .retail-navigation :is(button, a) {
     flex-shrink: 0;
     white-space: nowrap;
   }
@@ -631,4 +631,19 @@
     padding: 3px 4px;
     font-size: 9px;
   }
+}
+
+.retail-navigation a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.retail-shortcuts a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: inherit;
+  text-decoration: none;
 }

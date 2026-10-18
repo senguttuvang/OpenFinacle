@@ -64,9 +64,9 @@ async function select(page: Page, family: string, child: string) {
     await trigger.press("Enter");
   const panel = nav.locator(".retail-menu-panel:not([hidden])");
   await panel
-    .getByRole("button", { name: child, exact: true })
+    .getByRole("link", { name: child, exact: true })
     .or(
-      panel.getByRole("button", {
+      panel.getByRole("link", {
         name: `${child} Not available in demo`,
         exact: true,
       }),
@@ -116,7 +116,7 @@ test("integrated rail preserves all observed branches, shortcuts, identity and s
   await expect(
     page
       .getByRole("navigation", { name: "Main navigation", exact: true })
-      .getByRole("button", { name: /Customer enquiry/ }),
+      .getByRole("link", { name: /Customer enquiry/ }),
   ).toBeVisible();
   await choosePersona(page, "customer");
   await expect(nav).toBeVisible();
@@ -134,14 +134,14 @@ test("recurring and fixed menu links choose their supported product and retain c
   await expect(
     page
       .getByRole("navigation", { name: "Deposit products" })
-      .getByRole("button", { name: "Recurring deposits", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+      .getByRole("link", { name: "Recurring deposits", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   await select(page, "Deposits", "Fixed Deposits");
   await expect(
     page
       .getByRole("navigation", { name: "Deposit products" })
-      .getByRole("button", { name: "Fixed deposits", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+      .getByRole("link", { name: "Fixed deposits", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   await expect
     .poll(() =>
       [

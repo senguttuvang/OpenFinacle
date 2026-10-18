@@ -51,14 +51,12 @@ export async function openWorkspace(page: Page, view: View) {
       await parent.focus();
       if ((await parent.getAttribute("aria-expanded")) !== "true")
         await parent.press("Enter");
-      await source
-        .getByRole("button", { name: target[1], exact: true })
-        .click();
+      await source.getByRole("link", { name: target[1], exact: true }).click();
       return;
     }
     await page
       .getByRole("navigation", { name: "Workspace shortcuts", exact: true })
-      .getByRole("button", {
+      .getByRole("link", {
         name: view === "cards" ? "Debit cards" : viewLabels[view],
         exact: true,
       })
@@ -78,5 +76,5 @@ export async function openWorkspace(page: Page, view: View) {
         : new RegExp(
             `^${viewLabels[view].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`,
           );
-  await nav.getByRole("button", { name: label }).click();
+  await nav.getByRole("link", { name: label }).click();
 }

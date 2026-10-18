@@ -148,7 +148,7 @@ for (const kind of ["fixed", "recurring"] as const) {
       await openWorkspace(page, "deposits");
       if (kind === "recurring")
         await page
-          .getByRole("button", { name: "Recurring deposits", exact: true })
+          .getByRole("link", { name: "Recurring deposits", exact: true })
           .click();
       await page
         .getByRole("button", { name: `View ${reference}`, exact: true })

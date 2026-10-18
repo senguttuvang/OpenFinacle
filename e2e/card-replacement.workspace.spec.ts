@@ -16,7 +16,9 @@ test("replacement retires its source, needs delivery, reconciles activation afte
   const open = async () => {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await openWorkspace(page, "cards");
-    await button("Replacement requests").click();
+    await page
+      .getByRole("link", { name: "Replacement requests", exact: true })
+      .click();
   };
   const view = () => button("View CR-44444444").click();
   const instruction = async (action: string, note: string) => {
@@ -108,7 +110,9 @@ test("replacement retires its source, needs delivery, reconciles activation afte
     page.getByRole("heading", { name: "Permanently blocked", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".card-history li")).toHaveCount(2);
-  await button("Replacement requests").click();
+  await page
+    .getByRole("link", { name: "Replacement requests", exact: true })
+    .click();
   await view();
   await instruction(
     "Record demo dispatch",
@@ -198,7 +202,9 @@ test("replacement retires its source, needs delivery, reconciles activation afte
     saved.cards().find((card) => card.id === `replacement:${saved.requestId}`)
       ?.settings.online,
   ).toBe(true);
-  await button("Replacement requests").click();
+  await page
+    .getByRole("link", { name: "Replacement requests", exact: true })
+    .click();
   await view();
   await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
