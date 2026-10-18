@@ -48,6 +48,7 @@ import { CommandMenu } from "./command-menu";
 import { CustomerOnboarding } from "./customer-onboarding";
 import { CustomerPicker } from "./customer-picker";
 import { CustomerTransfer } from "./customer-transfer";
+import { FormSelect } from "./form-select";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
 import { ReadingSize } from "./reading-size";
@@ -1624,18 +1625,23 @@ function BankingPage({
                             <CheckCircle2 size={18} />
                           </div>
                         </label>
-                        <label>
+                        <label htmlFor="legacy-beneficiary">
                           To beneficiary
-                          <select
+                          <FormSelect
+                            id="legacy-beneficiary"
                             disabled={!activeBeneficiary}
                             aria-label="Select beneficiary"
-                          >
-                            <option>
-                              {activeBeneficiary
-                                ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
-                                : "Add and confirm a beneficiary first"}
-                            </option>
-                          </select>
+                            value="confirmed-beneficiary"
+                            onValueChange={() => undefined}
+                            options={[
+                              {
+                                value: "confirmed-beneficiary",
+                                label: activeBeneficiary
+                                  ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
+                                  : "Add and confirm a beneficiary first",
+                              },
+                            ]}
+                          />
                         </label>
                         <div className="fields-grid">
                           <label>
