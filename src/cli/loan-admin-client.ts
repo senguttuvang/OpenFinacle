@@ -24,7 +24,14 @@ const readJson = (response: {
       return yield* Effect.fail(loanAdminHttpFailure(response.status, data));
     return data;
   });
-const paths = ["setup", "inspect", "advance", "quote", "pilot"] as const;
+const paths = [
+  "setup",
+  "inspect",
+  "advance",
+  "quote",
+  "pilot",
+  "repayments",
+] as const;
 export const loanAdminClient = (url: string, secrets: string) =>
   Effect.gen(function* () {
     const origin = yield* loanAdminOrigin(url);
