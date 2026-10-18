@@ -5,6 +5,7 @@ import type { Environment } from "./adapters/environment";
 import { loanCatalogueLayer } from "./adapters/loan-catalogue";
 import { loanEngineLayer } from "./adapters/loan-engine";
 import { loanEnquiryLayer } from "./adapters/loan-enquiry";
+import { loanRepayerLayer } from "./adapters/loan-repayments";
 import { loanWriterLayer } from "./adapters/loan-writing";
 import { parseJsonRequest as parse } from "./adapters/request-json";
 import { storeLayer } from "./adapters/store";
@@ -58,6 +59,7 @@ import {
   savedLoanDetail,
   savedLoanForKey,
 } from "./application/loan-records";
+import { runRepaymentPilot } from "./application/loan-repayment-pilot";
 import {
   advanceLoanSetup,
   inspectLoanSetup,
@@ -95,6 +97,7 @@ import { CardCommand } from "./domain/cards";
 import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { LoanPilotCommand } from "./domain/loan-pilot";
+import { RepaymentPilotCommand } from "./domain/loan-repayment-pilot";
 import { LoanSetupCommand } from "./domain/loan-setup";
 import { LoanSubmission } from "./domain/loan-workflow";
 import { LoanCommand, LoanTerms } from "./domain/loans";
@@ -273,6 +276,23 @@ const handle = (request: Request, env: Environment) =>
             yield* parse(request, LoanPilotCommand, false, true),
           ),
         );
+      if (
+        path === "/api/admin/demo/loans/repayments" &&
+        request.method === "POST"
+      ) {
+        if (new URL(request.url).search)
+          return yield* Effect.fail(
+            failure(
+              "Repayment pilot selectors belong in the original request only.",
+              400,
+            ),
+          );
+        return Response.json(
+          yield* runRepaymentPilot(
+            yield* parse(request, RepaymentPilotCommand, false, true),
+          ),
+        );
+      }
       if (path === "/api/admin/demo/backfill" && request.method === "POST") {
         const input = yield* parse(
           request,
@@ -939,6 +959,7 @@ export const handleRequest = (
           : Effect.void,
       ),
       Effect.provide(loanWriterLayer),
+      Effect.provide(loanRepayerLayer),
       Effect.provide(loanEnquiryLayer),
       Effect.provide(Layer.merge(loanCatalogueLayer, loanEngineLayer)),
       Effect.provide(

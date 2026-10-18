@@ -113,6 +113,82 @@ const http = (
   );
 const role = (value: string) =>
   db.run("UPDATE sessions SET role=? WHERE token_hash=?", [value, tokenHash]);
+
+test("repayment pilot is demo-admin only and rejects ambiguous selectors, bad fields and wrong roles before Core", async () => {
+  const path = "/admin/demo/loans/repayments";
+  const id = "b60427be-942d-45f5-b19a-36b855babbc3";
+  expect(
+    (await http(path, { kind: "list", role: "customer", loan_id: id })).status,
+  ).toBe(401);
+  const headers = { Authorization: "Bearer invented-admin" };
+  environment.DEMO_MODE = "false";
+  expect(
+    (
+      await http(
+        path,
+        { kind: "list", role: "customer", loan_id: id },
+        "original-key",
+        headers,
+      )
+    ).status,
+  ).toBe(403);
+  environment.DEMO_MODE = "true";
+  db.run(
+    "INSERT INTO settings(key,value) VALUES('demo_existing_bank','loan-test-bank')",
+  );
+  expect(
+    (
+      await http(
+        `${path}?loan_id=${id}`,
+        { kind: "list", role: "customer", loan_id: id },
+        "original-key",
+        headers,
+      )
+    ).status,
+  ).toBe(400);
+  const invalid = [
+    { kind: "list", role: "customer" },
+    { kind: "list", role: "customer", loan_id: id, bank_id: "foreign-bank" },
+    {
+      kind: "quote",
+      role: "customer",
+      input: { loan_id: id, amount_minor: 1.5 },
+    },
+    {
+      kind: "submit",
+      role: "customer",
+      submission: { offer_id: id, consent: false },
+      key: "original-key",
+    },
+  ];
+  for (const input of invalid)
+    expect((await http(path, input, "original-key", headers)).status).toBe(400);
+  expect(
+    (
+      await http(
+        path,
+        {
+          kind: "quote",
+          role: "officer",
+          input: { loan_id: id, amount_minor: 100000 },
+        },
+        "original-key",
+        headers,
+      )
+    ).status,
+  ).toBe(403);
+  expect(
+    (
+      await http(
+        path,
+        { kind: "list", role: "customer", loan_id: id },
+        "original-key",
+        headers,
+      )
+    ).status,
+  ).toBe(404);
+  expect(coreCalls).toBe(0);
+});
 const submit = () =>
   http("/loans", { quote_id: fixture.quote.id, consent: true });
 const readDetail = async (response: Response) => {
