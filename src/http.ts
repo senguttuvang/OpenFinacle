@@ -106,6 +106,7 @@ import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
+import { planningRequest } from "./planning-http";
 
 const failure = (message: string, status = 400) =>
   new BankingError({ message, status });
@@ -422,6 +423,8 @@ const handle = (request: Request, env: Environment) =>
       );
     }
     const session = yield* getSession(request);
+    if (path === "/api/planning" || path.startsWith("/api/planning/"))
+      return yield* planningRequest(request, session, env.DEMO_MODE);
     if (path === "/api/session/end" && request.method === "POST") {
       yield* store.run(
         "DELETE FROM sessions WHERE token_hash=?",
