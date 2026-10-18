@@ -141,9 +141,14 @@ export function RetailNavigation({
               disabled={busy}
               aria-expanded={open === index}
               aria-controls={`${uid}-${family.id}`}
-              onClick={() => {
+              onClick={(event) => {
                 cancelClose();
-                setOpen(open === index ? null : index);
+                const desktopMouse =
+                  event.detail > 0 &&
+                  event.nativeEvent instanceof PointerEvent &&
+                  event.nativeEvent.pointerType === "mouse" &&
+                  window.matchMedia("(min-width: 901px)").matches;
+                setOpen(desktopMouse ? index : open === index ? null : index);
               }}
               onKeyDown={(event) => {
                 if (

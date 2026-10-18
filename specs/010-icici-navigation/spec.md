@@ -16,7 +16,7 @@ No destination page, personal details, balance, account identifier, cookie, stor
 
 Extend the approved OpenFinacle light/cobalt/mint design, local fonts and 18/22px reading controls. Retain product branding, customer selection and journey separation. Use a left primary rail and adjacent fly-out on desktop, with inline nested disclosures on narrow screens. Preserve both hierarchy levels rather than flattening the 44 entries. Native list/disclosure semantics suit navigation; these are not application command-menu roles.
 
-Mouse hover opens a family above 900px; click and Enter toggle it. Arrow Up/Down and Home/End move between families or between child entries; Arrow Right enters the child list; Arrow Left and Escape close it and return focus. Outside pointer, leaving the rail/panel, and leaving keyboard focus dismiss the fly-out. Touch uses an explicit Banking menu disclosure and family buttons. Busy state disables destination selection. Panels scroll within the viewport, and labels wrap at large text/narrow widths.
+Mouse hover opens a family above 900px; a desktop mouse click preserves its open panel, matching the observed primary click. Enter and touch toggle it. Arrow Up/Down and Home/End move between families or between child entries; Arrow Right enters the child list; Arrow Left and Escape close it and return focus. Outside pointer, leaving the rail/panel, and leaving keyboard focus dismiss the fly-out. Touch uses an explicit Banking menu disclosure and family buttons. Busy state disables destination selection. Panels scroll within the viewport, and labels wrap at large text/narrow widths.
 
 ## Destination contract
 

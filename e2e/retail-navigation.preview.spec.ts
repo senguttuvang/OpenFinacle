@@ -97,6 +97,8 @@ test("keyboard arrows, Escape, Tab, outside click and pointer leave dismiss safe
   await expect(payments).toBeFocused();
   await expect(payments).toHaveAttribute("aria-expanded", "false");
   await payments.hover();
+  await payments.click();
+  await expect(payments).toHaveAttribute("aria-expanded", "true");
   await page
     .getByRole("heading", { name: "Banking navigation preview" })
     .click();
