@@ -123,6 +123,7 @@ export const validateOnboarding = (
 };
 
 export interface OnboardingDraft {
+  canInspectOpening?: boolean;
   id: string;
   operationId: string;
   bankId: string;

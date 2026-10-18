@@ -6,6 +6,8 @@ import type {
 import { api } from "./api";
 
 export const loadOnboarding = () => api<OnboardingDraft>("/onboarding");
+export const inspectOpening = () =>
+  api<OnboardingDraft>("/onboarding/inspect-opening", {});
 export const beginOnboarding = (operationId: string) =>
   Effect.gen(function* () {
     yield* api("/session", {});

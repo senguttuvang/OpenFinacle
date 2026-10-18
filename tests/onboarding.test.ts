@@ -1,5 +1,8 @@
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Effect, Layer } from "effect";
 import { reviewApplication } from "../src/application/banking";
 import {
@@ -20,6 +23,7 @@ import {
 import { completedOnboarding } from "./fixtures/onboarding";
 
 let db: Database;
+let temporaryDirectory: string | null = null;
 let writes: { path: string; key?: string }[];
 let failCore = false;
 let loseAck = false;
@@ -33,8 +37,8 @@ const session: Session = {
   role: "customer",
   expires_at: Number.MAX_SAFE_INTEGER,
 };
-beforeEach(async () => {
-  db = new Database(":memory:");
+const initialize = async (path = ":memory:") => {
+  db = new Database(path);
   for (const file of [...new Bun.Glob("*.sql").scanSync("migrations")].sort())
     db.exec(await Bun.file(`migrations/${file}`).text());
   db.run(
@@ -58,8 +62,15 @@ beforeEach(async () => {
   failSubmission = false;
   coreActive = true;
   clientMatches = true;
+};
+beforeEach(() => initialize());
+afterEach(() => {
+  db.close();
+  if (temporaryDirectory) {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+    temporaryDirectory = null;
+  }
 });
-afterEach(() => db.close());
 const dependencies = () =>
   Layer.merge(
     Layer.succeed(Store, {
@@ -433,4 +444,25 @@ test("missing sample documents fail before reserving submission, and original id
   expect(() =>
     db.run("DELETE FROM onboarding_drafts WHERE bank_id='applicant-a'"),
   ).toThrow("cannot be reset");
+});
+
+test("saved draft and submitted receipt survive closing and reopening persistent workflow storage", async () => {
+  db.close();
+  temporaryDirectory = mkdtempSync(join(tmpdir(), "finacle6-onboarding-"));
+  const path = join(temporaryDirectory, "workflow.sqlite");
+  await initialize(path);
+  const saved = await ready();
+  db.close();
+  db = new Database(path);
+  expect(await run(onboardingStatus(session))).toEqual(saved);
+  const submitted = await run(submitOnboarding(session, id, saved.version));
+  db.close();
+  db = new Database(path);
+  expect(await run(onboardingStatus(session))).toEqual(submitted);
+  expect(submitted).toMatchObject({
+    operationId: id,
+    applicationStatus: "submitted",
+    account: null,
+  });
+  expect(writes).toEqual([]);
 });

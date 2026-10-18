@@ -136,6 +136,9 @@ export const onboardingStatus = (session: Session) =>
           ? ("submitted" as const)
           : saved.status,
       applicationStatus: application?.status ?? null,
+      canInspectOpening:
+        session.role === "approver" &&
+        ["opening", "opening_exception"].includes(application?.status ?? ""),
       account,
     } satisfies OnboardingDraft;
   });
@@ -315,11 +318,12 @@ export const inspectOnboardingOpening = (session: Session) =>
       session.bank_id,
     );
     if (
-      application?.status !== "opening_exception" ||
+      !application ||
+      !["opening", "opening_exception"].includes(application.status) ||
       application.maker !== "officer"
     )
       return yield* fail(
-        "Only a previously authorised opening exception can be reconciled.",
+        "Only a previously authorised opening can be reconciled.",
       );
     const bank = yield* requiredBank(session);
     const core = yield* Core;
@@ -376,7 +380,7 @@ export const inspectOnboardingOpening = (session: Session) =>
         "The original applicant scope changed during inspection. Keep the opening exception for branch review.",
       );
     yield* store.run(
-      "UPDATE applications SET status='approved',review_note='Original active Core opening confirmed by read-only inspection' WHERE id=? AND status='opening_exception'",
+      "UPDATE applications SET status='approved',review_note='Original active Core opening confirmed by read-only inspection' WHERE id=? AND status IN ('opening','opening_exception')",
       application.id,
     );
     return yield* onboardingStatus(session);

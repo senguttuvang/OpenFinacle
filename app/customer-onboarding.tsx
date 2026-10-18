@@ -20,6 +20,7 @@ import {
   beginOnboarding,
   confirmOnboarding,
   continueOnboarding,
+  inspectOpening,
   loadOnboarding,
   saveOnboarding,
 } from "./onboarding-api";
@@ -291,6 +292,15 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
             )}
           </dl>
           <div className="onboarding-actions">
+            {draft.canInspectOpening && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => execute(inspectOpening(), apply, true)}
+              >
+                Inspect original Core opening
+              </button>
+            )}
             <button type="button" disabled={busy} onClick={refresh}>
               Check opening status
             </button>
