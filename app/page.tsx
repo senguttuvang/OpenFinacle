@@ -45,6 +45,7 @@ import type { Dashboard } from "../src/domain/view";
 import { api, setApiCustomerScope } from "./api";
 import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
+import { CustomerOnboarding } from "./customer-onboarding";
 import { CustomerPicker } from "./customer-picker";
 import { CustomerTransfer } from "./customer-transfer";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
@@ -378,9 +379,9 @@ function BankingPage({
               <PendingButton
                 busy={busy}
                 className="primary large"
-                onClick={() => startJourney("new")}
+                onClick={() => window.location.assign("/open-account")}
               >
-                Start your banking story <ArrowRight size={18} />
+                Open my first account <ArrowRight size={18} />
               </PendingButton>
               <span>New customer · Open your first account</span>
               <PendingButton
@@ -391,11 +392,20 @@ function BankingPage({
                 Explore existing customer <ArrowRight size={18} />
               </PendingButton>
               <span>Active account · Salary, payments & statements</span>
+              <PendingButton
+                busy={busy}
+                className="secondary large"
+                onClick={() => startJourney("new")}
+              >
+                Start your banking story · Shared branch demo{" "}
+                <ArrowRight size={18} />
+              </PendingButton>
+              <span>Original shared account-opening demonstration</span>
             </div>
           )}
           {busy && <p role="status">{startupStage}</p>}
           <span className="welcome-note">
-            <LockKeyhole size={14} /> Permanent shared demo · Synthetic data
+            <LockKeyhole size={14} /> Persistent banking demo · Synthetic data
             only
           </span>
           {error && (
@@ -1188,7 +1198,18 @@ function BankingPage({
             </>
           )}
 
-          {view === "application" && (
+          {view === "application" && data.bank.applicant && !staff && (
+            <CustomerOnboarding
+              onOpened={() => {
+                setView("accounts");
+                perform(load(), "Your account is ready.", false);
+              }}
+            />
+          )}
+          {view === "accounts" && data.bank.applicant && !staff && (
+            <a href="/open-account">View opening receipt</a>
+          )}
+          {view === "application" && (!data.bank.applicant || staff) && (
             <div className="form-grid">
               <section className="panel">
                 <div className="panel-heading">
@@ -1724,7 +1745,9 @@ function BankingPage({
                     <h2>Prepare a banking instruction</h2>
                     <p>
                       Customer:{" "}
-                      {data.application?.name ?? "Account not yet opened"}
+                      {account?.clientName ??
+                        data.application?.name ??
+                        "Account not yet opened"}
                     </p>
                   </div>
                   <Wallet size={21} />
