@@ -18,8 +18,11 @@ export function DepositWorkspace(props: {
   perform: ServicePerform;
   accountOpened: boolean;
   openAccount: () => void;
+  initialProduct?: "fixed" | "recurring";
 }) {
-  const [product, setProduct] = useState<"fixed" | "recurring">("fixed");
+  const [product, setProduct] = useState<"fixed" | "recurring">(
+    props.initialProduct ?? "fixed",
+  );
   return (
     <>
       <nav

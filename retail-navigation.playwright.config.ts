@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /retail-navigation\.preview\.spec\.ts/,
+  testMatch: /retail-navigation\.(?:preview|workspace)\.spec\.ts/,
   outputDir: "test-results/retail-navigation",
   timeout: 30000,
   expect: { timeout: 5000 },

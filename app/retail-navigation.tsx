@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Menu, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   type RetailMenuItem,
@@ -13,11 +13,13 @@ export function RetailNavigation({
   view,
   activeItemId,
   busy = false,
+  label = "Main navigation",
   onSelect,
 }: {
   view: View;
   activeItemId?: string;
   busy?: boolean;
+  label?: string;
   onSelect: (item: RetailMenuItem) => void;
 }) {
   const uid = useId();
@@ -68,7 +70,7 @@ export function RetailNavigation({
     <nav
       ref={nav}
       className="retail-menu"
-      aria-label="Main navigation"
+      aria-label={label}
       onPointerEnter={cancelClose}
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse")
@@ -161,6 +163,7 @@ export function RetailNavigation({
               }}
             >
               <span>{family.label}</span>
+              {activeFamily === index && <Check size={18} aria-hidden="true" />}
               <ChevronRight size={18} aria-hidden="true" />
             </button>
             <div
@@ -233,7 +236,12 @@ export function RetailNavigation({
                         onSelect(item);
                       }}
                     >
-                      <span>{item.label}</span>
+                      <span className="retail-menu-leaf-label">
+                        {item.label}
+                        {activeItemId === item.id && (
+                          <Check size={18} aria-hidden="true" />
+                        )}
+                      </span>
                       {item.destination.kind === "unavailable" && (
                         <small>Not available in demo</small>
                       )}
