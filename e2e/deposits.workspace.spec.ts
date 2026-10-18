@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { DepositDetail, DepositTerms } from "../src/domain/deposits";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -110,8 +111,7 @@ test("fixed deposit preserves review/edit, reconciles lost submission and activa
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  const open = () =>
-    page.getByRole("button", { name: "Deposits", exact: true }).click();
+  const open = () => openWorkspace(page, "deposits");
   await page.goto("/");
   await open();
   await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
@@ -278,7 +278,7 @@ test("unverified deposit response stays locked; only confirmed missing key enabl
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await openWorkspace(page, "deposits");
   await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
   await page
     .getByRole("button", { name: "Review application", exact: true })

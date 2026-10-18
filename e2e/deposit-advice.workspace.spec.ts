@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { adviceText, type DepositAdvice } from "../src/domain/deposit-advice";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -143,7 +144,7 @@ for (const kind of ["fixed", "recurring"] as const) {
       await page.evaluate(() =>
         window.scrollTo({ top: 0, behavior: "instant" }),
       );
-      await page.getByRole("button", { name: "Deposits", exact: true }).click();
+      await openWorkspace(page, "deposits");
       if (kind === "recurring")
         await page
           .getByRole("button", { name: "Recurring deposits", exact: true })

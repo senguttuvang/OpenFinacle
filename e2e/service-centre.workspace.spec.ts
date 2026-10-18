@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import type { CaseDetail } from "../src/domain/service-cases";
 import { serviceCatalog } from "../src/domain/services";
 import { chooseOption } from "./fixtures/form-select";
+import { openWorkspace } from "./fixtures/navigation";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const sampleCase = (): CaseDetail => ({
@@ -45,10 +46,7 @@ const sampleCase = (): CaseDetail => ({
 
 async function openServices(page: Page) {
   await page.goto("/");
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: /Service requests/ })
-    .click();
+  await openWorkspace(page, "services");
   await expect(
     page.getByRole("heading", { name: "Customer service", exact: true }),
   ).toBeVisible();
@@ -127,10 +125,7 @@ test("completed maintenance distinguishes applied effects from imported history"
     });
   });
   await page.goto("/");
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Service requests", exact: true })
-    .click();
+  await openWorkspace(page, "services");
   for (const [reference, effect] of [
     ["SR-111111111111", "no recorded profile effect"],
     ["SR-222222222222", "updated the saved synthetic customer profile"],
@@ -329,10 +324,7 @@ for (const interruptedResponse of ["lost", "malformed"] as const) {
       page.getByRole("button", { name: "Confirm request", exact: true }),
     ).not.toBeVisible();
     await page.reload();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: /Service requests/ })
-      .click();
+    await openWorkspace(page, "services");
     await page
       .getByRole("button", { name: /Request a chequebook Choose/ })
       .click();

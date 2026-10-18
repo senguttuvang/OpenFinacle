@@ -1,9 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import { openWorkspace } from "./fixtures/navigation";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const open = async (page: Page) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await openWorkspace(page, "deposits");
   await page
     .getByRole("button", { name: "Recurring deposits", exact: true })
     .click();
@@ -122,7 +123,7 @@ test("malformed recurring responses stay locked until a definitive missing-key i
   });
   await expect(inspect).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await openWorkspace(page, "deposits");
   await page
     .getByRole("button", { name: "Recurring deposits", exact: true })
     .click();
