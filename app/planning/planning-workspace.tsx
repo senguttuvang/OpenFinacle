@@ -18,6 +18,8 @@ import {
 import { planningHouseholds } from "../../src/domain/planning-fixtures";
 import type { PlanningScenario } from "../../src/domain/planning-state";
 import { FormSelect } from "../form-select";
+import { followPortalLink } from "../portal-location";
+import { type PlanningTab, planningSections } from "../portal-routes";
 import { PlanningBudgetControls } from "./planning-budget-controls";
 import { PlanningFilters } from "./planning-filters";
 import { PlanningOverview } from "./planning-overview";
@@ -46,14 +48,25 @@ const emptyFilter: PlanningFilter = {
 };
 export function PlanningWorkspace({
   embedded = false,
+  routeTab,
+  navigate,
+  standalone = false,
 }: {
   embedded?: boolean;
+  routeTab?: PlanningTab;
+  navigate?: (path: string) => void;
+  standalone?: boolean;
 }) {
   const [householdId, setHouseholdId] = useState(households[1]!.id);
   const household = households.find((h) => h.id === householdId)!;
   const repository = usePlanningRepository(household, embedded);
   const { state, ready, busy, error, notice, persist, canEdit } = repository;
-  const [tab, setTab] = useState<Tab>("Overview");
+  const [localTab, updateTab] = useState<Tab>("Overview");
+  const tab = routeTab ?? localTab;
+  const setTab = (next: Tab) => {
+    updateTab(next);
+    navigate?.(`/wealth-planning/${planningSections[next]}`);
+  };
   const [filter, setFilter] = useState<PlanningFilter>(emptyFilter);
   const [preset, setPreset] = useState("90");
   const [selected, setSelected] = useState("baseline");
@@ -309,14 +322,16 @@ export function PlanningWorkspace({
       </div>
       <nav className="wp-tabs" aria-label="Planning sections">
         {tabs.map((name) => (
-          <button
-            type="button"
+          <a
+            href={`/${standalone ? "planning" : "wealth-planning"}/${planningSections[name]}`}
             key={name}
             aria-current={tab === name ? "page" : undefined}
-            onClick={() => {
-              setTab(name);
-              setEditing(null);
-            }}
+            onClick={(event) =>
+              followPortalLink(event, () => {
+                setTab(name);
+                setEditing(null);
+              })
+            }
           >
             {name}
             {name === "Insights" && (
@@ -327,7 +342,7 @@ export function PlanningWorkspace({
                 }
               </span>
             )}
-          </button>
+          </a>
         ))}
       </nav>
       <PlanningSource repository={repository} embedded={embedded} />

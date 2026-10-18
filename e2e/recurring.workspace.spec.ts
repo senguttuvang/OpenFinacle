@@ -168,7 +168,7 @@ test("recurring plan shares review, independent activation and a reload-reconcil
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await openWorkspace(page, "deposits");
     await page
-      .getByRole("button", { name: "Recurring deposits", exact: true })
+      .getByRole("link", { name: "Recurring deposits", exact: true })
       .click();
   };
   const view = () =>

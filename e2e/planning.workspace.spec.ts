@@ -12,7 +12,7 @@ test("planning filters reconcile source transactions and preserve saved househol
   await expect(
     page.getByRole("heading", { name: "Household net worth" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Date range", { exact: true }),
@@ -32,7 +32,7 @@ test("planning filters reconcile source transactions and preserve saved househol
     source.getByRole("cell", { name: /Synthetic Loom/ }).first(),
   ).toBeVisible();
   await expect(source.getByRole("cell", { name: /Dining/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
+  await page.getByRole("link", { name: "Scenario lab", exact: true }).click();
   await page.getByRole("button", { name: "Duplicate", exact: true }).click();
   await page
     .getByLabel("Scenario name", { exact: true })
@@ -47,7 +47,7 @@ test("planning filters reconcile source transactions and preserve saved househol
     "Browser saved education alternative",
   );
   await page.reload();
-  await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
+  await page.getByRole("link", { name: "Scenario lab", exact: true }).click();
   await page.getByLabel("Saved scenario").click();
   await expect(
     page.getByRole("option", {
@@ -101,7 +101,7 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/planning");
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Date range", { exact: true }),
@@ -118,9 +118,9 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
     page.getByText("Over budget", { exact: false }).first(),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("100");
-  await page.getByRole("button", { name: /^Insights/ }).click();
+  await page.getByRole("link", { name: /^Insights/ }).click();
   const insight = page
     .locator(".wp-insight")
     .filter({ hasText: "Provident fund valuation needs a refresh" });
@@ -128,11 +128,11 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
     .getByRole("button", { name: "Acknowledge", exact: true })
     .click();
   await page.reload();
-  await page.getByRole("button", { name: /^Insights/ }).click();
+  await page.getByRole("link", { name: /^Insights/ }).click();
   await expect(
     insight.getByRole("button", { name: "Reopen insight" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.screenshot({
     path: testInfo.outputPath("planning-desktop.png"),
     fullPage: true,
@@ -158,7 +158,7 @@ test("partial-month drilldown preserves source totals and restores filters and k
   page,
 }) => {
   await page.goto("/planning");
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await page.getByLabel("From", { exact: true }).fill("2026-07-20");
   await page.getByLabel("Through", { exact: true }).fill("2026-08-05");
   await chooseOption(

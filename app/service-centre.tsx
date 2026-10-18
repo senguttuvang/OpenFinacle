@@ -15,6 +15,8 @@ import type { CaseDetail, ServiceCase } from "../src/domain/service-cases";
 import type { ServiceDefinition } from "../src/domain/services";
 import type { Dashboard } from "../src/domain/view";
 import { api } from "./api";
+import { followPortalLink } from "./portal-location";
+import { servicePaths } from "./portal-routes";
 import { serviceCaseApi } from "./service-case-api";
 import {
   ServiceCaseDetail,
@@ -46,6 +48,8 @@ export function ServiceCentre({
   openAccount,
   initialSearch = "",
   initialRequest = "",
+  routeTab,
+  navigate,
 }: {
   data: Dashboard;
   busy: boolean;
@@ -53,11 +57,14 @@ export function ServiceCentre({
   openAccount: () => void;
   initialSearch?: string;
   initialRequest?: string;
+  routeTab?: Tab;
+  navigate?: (path: string) => void;
 }) {
   const customer = data.role === "customer";
-  const [tab, setTab] = useState<Tab>(
+  const [localTab, setTab] = useState<Tab>(
     initialRequest ? "requests" : customer ? "directory" : "requests",
   );
+  const tab = routeTab ?? localTab;
   const [catalog, setCatalog] = useState<readonly ServiceDefinition[]>([]);
   const [category, setCategory] = useState("All services");
   const [directoryQuery, setDirectoryQuery] = useState(initialSearch);
@@ -126,6 +133,7 @@ export function ServiceCentre({
   }, [offset, search, tab, revision]);
   const changeTab = (next: Tab) => {
     setTab(next);
+    navigate?.(servicePaths[next]);
     setOffset(0);
     setQuery("");
     setSearch("");
@@ -215,12 +223,18 @@ export function ServiceCentre({
               : []),
           ] as const
         ).map((item) => (
-          <button
-            type="button"
+          <a
+            href={servicePaths[item.id]}
             key={item.id}
-            aria-pressed={tab === item.id}
-            disabled={busy}
-            onClick={() => changeTab(item.id)}
+            aria-current={tab === item.id ? "page" : undefined}
+            aria-disabled={busy}
+            onClick={(event) => {
+              if (busy) {
+                event.preventDefault();
+                return;
+              }
+              followPortalLink(event, () => changeTab(item.id));
+            }}
           >
             <item.icon size={21} aria-hidden="true" />
             <strong>{item.title}</strong>
@@ -228,7 +242,7 @@ export function ServiceCentre({
               {item.label}
               <ArrowRight size={15} aria-hidden="true" />
             </span>
-          </button>
+          </a>
         ))}
       </nav>
       {error && (

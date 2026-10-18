@@ -27,7 +27,7 @@ const open = async (page: Page) => {
   return relationship;
 };
 const dining = async (page: Page) => {
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Category", { exact: true }),
@@ -47,7 +47,7 @@ test("real local D1 saves budgets and scenarios, permits only consented read-onl
   await page.reload();
   await dining(page);
   await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("123");
-  await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
+  await page.getByRole("link", { name: "Scenario lab", exact: true }).click();
   await page.getByRole("button", { name: "Duplicate", exact: true }).click();
   await page
     .getByLabel("Scenario name", { exact: true })
@@ -66,7 +66,7 @@ test("real local D1 saves budgets and scenarios, permits only consented read-onl
     page.getByText("Baseline horizon ended", { exact: true }).first(),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
+  await page.getByRole("link", { name: "Scenario lab", exact: true }).click();
   await page.getByLabel("Saved scenario").click();
   await expect(
     page.getByRole("option", {

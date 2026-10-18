@@ -32,7 +32,7 @@ const setup = async (page: Page) => {
   ).toBeVisible();
 };
 const dining = async (page: Page) => {
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Category", { exact: true }),

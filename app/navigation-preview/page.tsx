@@ -24,6 +24,10 @@ export default function NavigationPreview() {
           view={view}
           activeItemId={selected?.id}
           busy={busy}
+          onFamily={() => {
+            setSelected(undefined);
+            setView("overview");
+          }}
           onSelect={(item) => {
             setSelected(item);
             if (item.destination.kind === "workspace")

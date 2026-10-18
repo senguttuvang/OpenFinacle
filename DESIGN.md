@@ -30,3 +30,5 @@ Reviewed October 17, 2026. These are public marketing/product images, not authen
 - [Wise team finances](https://wise.com/ca/business/manage-team): clear permissions, approval and spending controls; its public imagery separates identity from actionable settings. A public [demo entry](https://wise.com/business-demo) is available; no claim of a full demo walkthrough.
 
 The product remains an explicit synthetic banking demonstration. This presentation change does not claim reference parity or introduce financial/product capabilities.
+
+Navigation destinations use native links with readable paths, active-page semantics, keyboard focus and modified-click behavior. Disclosure triggers remain buttons; each menu panel also links to its family overview. Existing banking visual tokens and comfortable text apply to the link replacements. Unknown links receive a genuine 404 recovery page; role-unavailable links explain the restriction without changing authority.

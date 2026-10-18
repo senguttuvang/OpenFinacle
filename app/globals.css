@@ -2304,3 +2304,13 @@ td:nth-child(5) {
     animation-iteration-count: 1;
   }
 }
+
+.nav-item {
+  text-decoration: none;
+}
+
+:is(.wp-tabs, .centre-entrypoints, .deposit-product-switch) a {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}

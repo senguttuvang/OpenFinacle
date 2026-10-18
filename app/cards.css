@@ -2,7 +2,7 @@
   padding: 24px;
   min-width: 0;
 }
-.card-workspace button {
+.card-workspace :is(button, a) {
   min-height: 44px;
   padding: 10px 16px;
   border: 1px solid var(--line);

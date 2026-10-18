@@ -40,7 +40,6 @@ import {
   formatMoney,
   type Role,
 } from "../src/domain/banking";
-import type { RetailMenuItem } from "../src/domain/retail-navigation";
 import type { Dashboard } from "../src/domain/view";
 import { api, setApiCustomerScope } from "./api";
 import { BranchOverview } from "./branch-overview";
@@ -51,6 +50,13 @@ import { CustomerTransfer } from "./customer-transfer";
 import { FormSelect } from "./form-select";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
+import { followPortalLink, usePortalLocation } from "./portal-location";
+import {
+  resolvePortalRoute,
+  retailPath,
+  routeAllowed,
+  viewPaths,
+} from "./portal-routes";
 import { ProductStory } from "./product-story";
 import { RetailNavigation, RetailUnavailable } from "./retail-navigation";
 import { RetailAccount, RetailOverview } from "./retail-overview";
@@ -186,12 +192,25 @@ function BankingPage({
 }) {
   const [chooseCustomer, setChooseCustomer] = useState(initialPicker);
   const [data, setData] = useState<Dashboard | null>(null);
-  const [view, updateView] = useState<View | "unavailable">("overview");
-  const [retailItem, setRetailItem] = useState<RetailMenuItem>();
-  const setView = useCallback((destination: View) => {
-    setRetailItem(undefined);
-    updateView(destination);
-  }, []);
+  const { path, navigate } = usePortalLocation();
+  const route = resolvePortalRoute(path);
+  const retailItem = route?.item;
+  const allowed =
+    !data ||
+    Boolean(route && routeAllowed(route, data.role, data.bank.journey));
+  const view =
+    !allowed || !route
+      ? "forbidden"
+      : route.family
+        ? "family"
+        : (route.view ?? "unavailable");
+  const setView = useCallback(
+    (destination: View) => navigate(viewPaths[destination]),
+    [navigate],
+  );
+  useEffect(() => {
+    document.title = `${route?.title ?? "Banking"} — OpenFinacle`;
+  }, [route?.title]);
   const [busy, setBusy] = useState(false);
   const [startupStage, setStartupStage] = useState("");
   const [loading, setLoading] = useState(!initialPicker && !initialFresh);
@@ -276,7 +295,7 @@ function BankingPage({
         yield* Effect.sync(() => {
           setApiCustomerScope(result.dashboard.bank.id);
           setData(result.dashboard);
-          setView("overview");
+          if (path === "/") setView("overview");
         });
       }),
       "Your saved demo is ready.",
@@ -290,7 +309,7 @@ function BankingPage({
             setApiCustomerScope(result.dashboard.bank.id);
             setData(result.dashboard);
             setChooseCustomer(false);
-            setView("overview");
+            if (data || path === "/") setView("overview");
           }),
         ),
       ),
@@ -367,6 +386,13 @@ function BankingPage({
     return (
       <main className="product-landing">
         <ProductStory>
+          {path !== "/" && (
+            <p role="status">
+              Open your saved banking demo to continue to{" "}
+              {route?.title ?? "this screen"}. The link does not change your
+              selected customer or role.
+            </p>
+          )}
           {chooseCustomer ? (
             <CustomerPicker
               busy={busy}
@@ -443,7 +469,11 @@ function BankingPage({
     navigation.find((item) => item.view === view)?.label ??
     (view === "unavailable"
       ? (retailItem?.label ?? "Service unavailable")
-      : labels[view]);
+      : view === "forbidden"
+        ? "Screen unavailable for this session"
+        : view === "family"
+          ? route?.title
+          : labels[view]);
   const customerNav: View[] = [
     "statements",
     "cards",
@@ -577,16 +607,18 @@ function BankingPage({
             {navigation.map(({ view: item, label, alias }) => {
               const Icon = navIcons[item];
               return (
-                <button
-                  type="button"
+                <a
+                  href={viewPaths[item]}
                   className={view === item ? "nav-item active" : "nav-item"}
                   aria-current={view === item ? "page" : undefined}
                   aria-label={label}
                   key={item}
-                  onClick={() => {
-                    setView(item);
-                    setSearch("");
-                  }}
+                  onClick={(event) =>
+                    followPortalLink(event, () => {
+                      setView(item);
+                      setSearch("");
+                    })
+                  }
                 >
                   <Icon size={19} />
                   <span>{label}</span>
@@ -598,7 +630,7 @@ function BankingPage({
                     data.application?.status === "awaiting_approval" && (
                       <span className="nav-dot" />
                     )}
-                </button>
+                </a>
               );
             })}
           </nav>
@@ -606,60 +638,80 @@ function BankingPage({
         {retail && (
           <RetailNavigation
             label="Banking navigation"
-            view={view === "unavailable" ? "overview" : view}
+            view={
+              view === "unavailable" ||
+              view === "family" ||
+              view === "forbidden"
+                ? "overview"
+                : view
+            }
             activeItemId={retailItem?.id}
+            onFamily={navigate}
             busy={busy}
             onSelect={(item) => {
               setSearch("");
               setServiceSearch("");
-              if (item.destination.kind === "workspace")
-                setView(item.destination.view);
-              else updateView("unavailable");
-              setRetailItem(item);
+              navigate(retailPath(item));
             }}
           />
         )}
         {retail && (
           <div className="retail-shortcuts">
             <h2>Quick services</h2>
-            <button type="button" onClick={() => setView("statements")}>
+            <a
+              href={viewPaths.statements}
+              onClick={(event) =>
+                followPortalLink(event, () => setView("statements"))
+              }
+            >
               <FileText size={17} />
               Account statement
-            </button>
-            <button type="button" onClick={() => setView("transfer")}>
+            </a>
+            <a
+              href={viewPaths.transfer}
+              onClick={(event) =>
+                followPortalLink(event, () => setView("transfer"))
+              }
+            >
               <ArrowLeftRight size={17} />
               Fund transfer
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setServiceSearch("replacement debit card");
-                setView("services");
-              }}
+            </a>
+            <a
+              href="/customer-service/debit-card"
+              onClick={(event) =>
+                followPortalLink(event, () => {
+                  setServiceSearch("");
+                  navigate("/customer-service/debit-card");
+                })
+              }
             >
               <CreditCard size={17} />
               Request a debit card
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setServiceSearch("chequebook");
-                setView("services");
-              }}
+            </a>
+            <a
+              href="/customer-service/chequebook"
+              onClick={(event) =>
+                followPortalLink(event, () => {
+                  setServiceSearch("");
+                  navigate("/customer-service/chequebook");
+                })
+              }
             >
               <FileCheck2 size={17} />
               Request a chequebook
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setServiceSearch("address");
-                setView("services");
-              }}
+            </a>
+            <a
+              href="/customer-service/address"
+              onClick={(event) =>
+                followPortalLink(event, () => {
+                  setServiceSearch("");
+                  navigate("/customer-service/address");
+                })
+              }
             >
               <Users size={17} />
               Update address
-            </button>
+            </a>
             <div className="retail-shortcuts-note">
               <ShieldCheck size={21} />
               <strong>Bank with confidence</strong>
@@ -824,24 +876,71 @@ function BankingPage({
                   </a>
                 );
               return (
-                <button
-                  type="button"
+                <a
+                  href={viewPaths[item]}
                   key={item}
                   className={view === item ? "active" : ""}
                   aria-current={view === item ? "page" : undefined}
-                  onClick={() => {
-                    setView(item);
-                    setSearch("");
-                  }}
+                  onClick={(event) =>
+                    followPortalLink(event, () => {
+                      setView(item);
+                      setSearch("");
+                    })
+                  }
                 >
                   <Icon size={18} />
                   {item === "cards" ? "Debit cards" : labels[item]}
-                </button>
+                </a>
               );
             })}
           </nav>
         )}
         <main className="content">
+          {view === "forbidden" && (
+            <section className="retail-unavailable" aria-label="Screen access">
+              <h1>{route?.title ?? "Unknown screen"}</h1>
+              <p>
+                This screen is not available for your current persona or banking
+                journey. Opening a link does not change your role or selected
+                customer.
+              </p>
+              <a
+                href={viewPaths.overview}
+                onClick={(event) =>
+                  followPortalLink(event, () => setView("overview"))
+                }
+              >
+                Back to overview
+              </a>
+            </section>
+          )}
+          {view === "family" && route?.family && (
+            <section className="retail-unavailable">
+              <h1>{route.title}</h1>
+              <p>
+                Choose a service. Each link opens its own saved destination.
+              </p>
+              <ul>
+                {route.family.items.map((item) => (
+                  <li key={item.id}>
+                    <a
+                      href={retailPath(item)}
+                      onClick={(event) =>
+                        followPortalLink(event, () =>
+                          navigate(retailPath(item)),
+                        )
+                      }
+                    >
+                      {item.label}
+                    </a>
+                    {item.destination.kind === "unavailable"
+                      ? " · Not available in demo"
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {view === "unavailable" && retailItem && (
             <>
               <div className="page-heading">
@@ -850,7 +949,14 @@ function BankingPage({
               <RetailUnavailable item={retailItem} navigate={setView} />
             </>
           )}
-          <div className="page-heading" hidden={view === "unavailable"}>
+          <div
+            className="page-heading"
+            hidden={
+              view === "unavailable" ||
+              view === "family" ||
+              view === "forbidden"
+            }
+          >
             <div>
               <span className="eyebrow">
                 {staff
@@ -893,7 +999,14 @@ function BankingPage({
               {data.businessDate}
             </span>
           </div>
-          <p className="sync-caption" hidden={view === "unavailable"}>
+          <p
+            className="sync-caption"
+            hidden={
+              view === "unavailable" ||
+              view === "family" ||
+              view === "forbidden"
+            }
+          >
             <Clock3 size={13} />
             {data.core.stale ? "Refresh needed" : "Saved banking view"} · Last
             synced{" "}
@@ -937,7 +1050,12 @@ function BankingPage({
             <RetailAccount data={data} navigate={setView} />
           )}
           {view === "planning" && role !== "approver" && (
-            <Planning key={data.bank.id + data.role} embedded />
+            <Planning
+              key={data.bank.id + data.role}
+              embedded
+              routeTab={route?.planningTab ?? "Overview"}
+              navigate={navigate}
+            />
           )}
           {view === "profile" && (
             <RetailProfile
@@ -2107,6 +2225,7 @@ function BankingPage({
                   ? (retailItem.destination.section ?? "")
                   : "")
               }
+              navigate={navigate}
               initialProduct={
                 retailItem?.destination.kind === "workspace" &&
                 retailItem.destination.section === "recurring"
@@ -2124,6 +2243,8 @@ function BankingPage({
           {view === "cards" && (
             <Cards
               key={data.bank.id + data.role}
+              routeTab={route?.cardTab}
+              navigate={navigate}
               bankId={data.bank.id}
               role={data.role}
               busy={busy}
@@ -2133,9 +2254,24 @@ function BankingPage({
           )}
           {view === "services" && (
             <ServiceCentre
-              key={data.bank.id + data.role + serviceSearch}
+              key={
+                data.bank.id +
+                data.role +
+                serviceSearch +
+                (route?.serviceSearch ?? "")
+              }
+              routeTab={
+                route?.serviceTab ??
+                (serviceSearch.startsWith("case:")
+                  ? "requests"
+                  : retail
+                    ? "directory"
+                    : "requests")
+              }
+              navigate={navigate}
               initialSearch={
-                serviceSearch.startsWith("case:") ? "" : serviceSearch
+                route?.serviceSearch ??
+                (serviceSearch.startsWith("case:") ? "" : serviceSearch)
               }
               initialRequest={
                 serviceSearch.startsWith("case:") ? serviceSearch.slice(5) : ""

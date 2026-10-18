@@ -421,7 +421,7 @@ test("staff cash enquiry shows the selected Core customer even without an onboar
     }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: /Cash & salary/ }).click();
+  await page.getByRole("link", { name: /Cash & salary/ }).click();
   await expect(
     page.getByText("Customer: Demo Selected Customer", { exact: true }),
   ).toBeVisible();

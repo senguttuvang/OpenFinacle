@@ -101,7 +101,7 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
   await expect.poll(() => requestQuery).toBe(reference);
   await choosePersona(page, "officer");
   await page
-    .getByRole("button", { name: "Customer profile", exact: true })
+    .getByRole("link", { name: "Customer profile", exact: true })
     .click();
   await expect(
     page.getByRole("heading", {
@@ -118,7 +118,7 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
   ).toHaveCount(0);
   await page.reload();
   await page
-    .getByRole("button", { name: "Customer profile", exact: true })
+    .getByRole("link", { name: "Customer profile", exact: true })
     .click();
   await expect(page.locator(".detail-grid").first()).toContainText(
     "88 Approved Avenue",

@@ -1,0 +1,9 @@
+# Friendly banking screen links
+
+Every portal workspace, retail menu destination and menu family has a stable, readable URL. Links identify screens, never customers, authorizations or financial commands. Public `/discover`, `/assessment`, `/capabilities`, `/roadmap`, `/build-story`, standalone `/planning` and `/open-account` retain their contracts.
+
+A finite route inventory drives static export and UI links. Ordinary in-app link activation changes history while retaining the banking shell; modified activation remains native (new tab/copy link). Back/Forward restores the route. Direct entry/reload restores the server-selected session/customer, then checks role/journey permissions. A path never selects a customer, changes a role or submits a command. Existing API scope checks and pending-original storage/inspection remain authoritative. A new session's requested deep link survives entry; deliberate customer/persona changes return to the requested allowed destination or safe overview.
+
+Unsupported menu leaves retain distinct links and explain their unavailable status. Menu family pages list actual leaf links. Forbidden destinations remain visibly forbidden with a safe overview link; unknown paths return a truthful 404. All generated deep paths must return real static HTML in the deployed Worker, with no universal SPA fallback.
+
+Verification covers route inventory uniqueness/completeness, static export, native link semantics and keyboard navigation, direct/reload/history, role denial, selected customer scope, existing original-outcome recovery without replay, mobile reflow and the unchanged marketing/financial regression suite. Full local check, private PR CI/main CI and native release proof are required. No schema, API authority, financial product or infrastructure change is part of this unit.

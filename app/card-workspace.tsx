@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Role } from "../src/domain/banking";
 import { Cards } from "./cards";
+import { followPortalLink } from "./portal-location";
 import type { ServicePerform } from "./service-request-form";
 
 const Replacements = dynamic(
@@ -16,31 +17,54 @@ export function CardWorkspace(props: {
   busy: boolean;
   perform: ServicePerform;
   openAccount: () => void;
+  routeTab?: "controls" | "replacements";
+  navigate?: (path: string) => void;
 }) {
-  const [view, setView] = useState<"controls" | "replacements">("controls");
+  const [localView, setView] = useState<"controls" | "replacements">(
+    "controls",
+  );
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
+  const view = props.navigate ? (props.routeTab ?? "controls") : localView;
   return (
     <>
       <nav
         className="card-workspace deposit-product-switch"
         aria-label="Card workspace view"
       >
-        <button
-          type="button"
-          disabled={props.busy}
-          aria-pressed={view === "controls"}
-          onClick={() => setView("controls")}
+        <a
+          href="/cards/controls"
+          aria-disabled={props.busy}
+          aria-current={view === "controls" ? "page" : undefined}
+          onClick={(event) => {
+            if (props.busy) {
+              event.preventDefault();
+              return;
+            }
+            followPortalLink(event, () => {
+              setView("controls");
+              props.navigate?.("/cards/controls");
+            });
+          }}
         >
           Card controls
-        </button>
-        <button
-          type="button"
-          disabled={props.busy}
-          aria-pressed={view === "replacements"}
-          onClick={() => setView("replacements")}
+        </a>
+        <a
+          href="/cards/replacements"
+          aria-disabled={props.busy}
+          aria-current={view === "replacements" ? "page" : undefined}
+          onClick={(event) => {
+            if (props.busy) {
+              event.preventDefault();
+              return;
+            }
+            followPortalLink(event, () => {
+              setView("replacements");
+              props.navigate?.("/cards/replacements");
+            });
+          }}
         >
           Replacement requests
-        </button>
+        </a>
       </nav>
       {view === "controls" ? (
         <Cards {...props} selectedCardId={selectedCardId} />
@@ -50,6 +74,7 @@ export function CardWorkspace(props: {
           openCard={(id) => {
             setSelectedCardId(id);
             setView("controls");
+            props.navigate?.("/cards/controls");
           }}
         />
       )}

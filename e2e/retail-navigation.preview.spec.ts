@@ -75,20 +75,20 @@ test("keyboard arrows, Escape, Tab, outside click and pointer leave dismiss safe
   await expect(payments).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(
-    nav.getByRole("button", { name: "Funds Transfer", exact: true }),
+    nav.getByRole("link", { name: "Funds Transfer", exact: true }),
   ).toBeFocused();
   await page.mouse.move(1200, 900);
   await expect(payments).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("End");
   await expect(
-    nav.getByRole("button", {
+    nav.getByRole("link", {
       name: "Wire Transfer Not available in demo",
       exact: true,
     }),
   ).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(
-    nav.getByRole("button", { name: "Funds Transfer", exact: true }),
+    nav.getByRole("link", { name: "Funds Transfer", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("ArrowLeft");
   await expect(payments).toBeFocused();

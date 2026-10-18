@@ -27,3 +27,5 @@ OpenFinacle. The user requests a colorful, modern, professional interface with X
 ## Accessibility & Inclusion
 
 Comfortable large text by default. The user removed the separate extra-large text button on18October2026; retain browser zoom and enlarged-text reflow support. Generous controls, strong contrast, keyboard operation, responsive reflow, and readable financial values take priority over decorative density.
+
+Portal screens have stable bookmarkable links, including unavailable menu destinations. Links restore the currently saved customer session; they do not select customers or grant roles. Back/Forward only navigates. Card, deposit, service and embedded/standalone planning sections retain their selected destination on reload. Financial original-outcome recovery stays independent of URL state.

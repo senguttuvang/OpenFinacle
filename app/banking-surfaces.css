@@ -408,13 +408,13 @@
 .centre-timeline small {
   font-size: 0.78rem;
 }
-.centre-entrypoints > button {
+.centre-entrypoints > :is(button, a) {
   background: #edf2ff;
 }
-.centre-entrypoints > button:nth-child(2) {
+.centre-entrypoints > :is(button, a):nth-child(2) {
   background: #e5f4ee;
 }
-.centre-entrypoints > button:nth-child(3) {
+.centre-entrypoints > :is(button, a):nth-child(3) {
   background: #fff1dc;
 }
 .centre-reconcile {
@@ -432,7 +432,7 @@
 .command-footer {
   font-size: 0.78rem;
 }
-.app-shell .card-workspace button {
+.app-shell .card-workspace :is(button, a) {
   font-size: 0.94rem;
   min-height: 50px;
 }

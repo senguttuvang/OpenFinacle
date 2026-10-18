@@ -54,6 +54,7 @@
   overflow-wrap: anywhere;
 }
 .wealth-planning button,
+.wealth-planning .wp-tabs a,
 .wealth-planning input,
 .wealth-planning select {
   font: inherit;
@@ -61,7 +62,7 @@
   border-radius: 8px;
   padding: 10px 14px;
 }
-.wealth-planning button {
+.wealth-planning :is(button, .wp-tabs a) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -192,13 +193,13 @@
   overflow-x: auto;
   padding: 0 0 12px;
 }
-.wealth-planning .wp-tabs button {
+.wealth-planning .wp-tabs :is(button, a) {
   white-space: nowrap;
   color: #52627a;
   background: transparent;
   border: 1px solid transparent;
 }
-.wealth-planning .wp-tabs button[aria-current] {
+.wealth-planning .wp-tabs :is(button, a)[aria-current] {
   background: #2458d3;
   color: white;
 }

@@ -53,7 +53,7 @@ test("server planning snapshots survive an actual Worker restart without reseedi
   await expect(
     page.getByRole("button", { name: "Set up this synthetic household" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByRole("link", { name: "Cash flow", exact: true }).click();
   await chooseOption(
     page,
     page.getByLabel("Category", { exact: true }),

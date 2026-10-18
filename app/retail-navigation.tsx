@@ -7,6 +7,8 @@ import {
   retailMenu,
 } from "../src/domain/retail-navigation";
 import type { View } from "./navigation";
+import { followPortalLink } from "./portal-location";
+import { retailPath } from "./portal-routes";
 import "./retail-navigation.css";
 
 export function RetailNavigation({
@@ -15,12 +17,14 @@ export function RetailNavigation({
   busy = false,
   label = "Main navigation",
   onSelect,
+  onFamily,
 }: {
   view: View;
   activeItemId?: string;
   busy?: boolean;
   label?: string;
   onSelect: (item: RetailMenuItem) => void;
+  onFamily: (path: string) => void;
 }) {
   const uid = useId();
   const nav = useRef<HTMLElement>(null);
@@ -66,7 +70,7 @@ export function RetailNavigation({
     setOpen(index);
     // State must commit before focus moves into the newly disclosed list.
     requestAnimationFrame(() => {
-      const buttons = nav.current?.querySelectorAll<HTMLButtonElement>(
+      const buttons = nav.current?.querySelectorAll<HTMLAnchorElement>(
         `[data-family="${index}"] .retail-menu-leaf`,
       );
       buttons?.[last ? buttons.length - 1 : 0]?.focus();
@@ -202,7 +206,18 @@ export function RetailNavigation({
               hidden={open !== index}
             >
               <div className="retail-menu-panel-heading">
-                <strong>{family.label}</strong>
+                <a
+                  href={`/${family.id}`}
+                  onClick={(event) =>
+                    followPortalLink(event, () => {
+                      setOpen(null);
+                      setMobileOpen(false);
+                      onFamily(`/${family.id}`);
+                    })
+                  }
+                >
+                  {family.label} overview
+                </a>
                 <button
                   type="button"
                   aria-label={`Close ${family.label}`}
@@ -217,10 +232,10 @@ export function RetailNavigation({
               <ul>
                 {family.items.map((item, leafIndex) => (
                   <li key={item.id}>
-                    <button
-                      type="button"
+                    <a
+                      href={retailPath(item)}
                       className="retail-menu-leaf"
-                      disabled={busy}
+                      aria-disabled={busy}
                       aria-current={
                         activeItemId === item.id ? "page" : undefined
                       }
@@ -242,7 +257,7 @@ export function RetailNavigation({
                                   family.items.length;
                           event.currentTarget
                             .closest("ul")
-                            ?.querySelectorAll<HTMLButtonElement>(
+                            ?.querySelectorAll<HTMLAnchorElement>(
                               ".retail-menu-leaf",
                             )
                             [next]?.focus();
@@ -252,18 +267,24 @@ export function RetailNavigation({
                           triggers.current[index]?.focus();
                         }
                       }}
-                      onClick={() => {
-                        cancelClose();
-                        setOpen(null);
-                        setMobileOpen(false);
-                        if (window.matchMedia("(max-width: 900px)").matches)
-                          nav.current
-                            ?.querySelector<HTMLButtonElement>(
-                              ".retail-menu-toggle",
-                            )
-                            ?.focus();
-                        else triggers.current[index]?.focus();
-                        onSelect(item);
+                      onClick={(event) => {
+                        if (busy) {
+                          event.preventDefault();
+                          return;
+                        }
+                        followPortalLink(event, () => {
+                          cancelClose();
+                          setOpen(null);
+                          setMobileOpen(false);
+                          if (window.matchMedia("(max-width: 900px)").matches)
+                            nav.current
+                              ?.querySelector<HTMLButtonElement>(
+                                ".retail-menu-toggle",
+                              )
+                              ?.focus();
+                          else triggers.current[index]?.focus();
+                          onSelect(item);
+                        });
                       }}
                     >
                       <span className="retail-menu-leaf-label">
@@ -275,7 +296,7 @@ export function RetailNavigation({
                       {item.destination.kind === "unavailable" && (
                         <small>Not available in demo</small>
                       )}
-                    </button>
+                    </a>
                   </li>
                 ))}
               </ul>

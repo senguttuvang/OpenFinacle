@@ -111,7 +111,7 @@ const open = async (page: Page, navigate = true) => {
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await openWorkspace(page, "cards");
   await page
-    .getByRole("button", { name: "Replacement requests", exact: true })
+    .getByRole("link", { name: "Replacement requests", exact: true })
     .click();
 };
 const review = async (page: Page) => {
@@ -179,6 +179,11 @@ test("malformed replacement responses remain locked across reload; only a missin
   });
   await expect(inspect).toBeVisible();
   await expect.poll(() => saved.posts.length).toBe(1);
+  await openWorkspace(page, "statements");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/cards\/replacements$/);
+  await expect(inspect).toBeVisible();
+  expect(saved.posts).toHaveLength(1);
   await page.reload();
   await open(page, false);
   await inspect.click();
