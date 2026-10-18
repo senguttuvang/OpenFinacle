@@ -24,7 +24,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "A working banking slice. An inspectable boundary.",
+      name: "Banking, seen from both sides.",
     }),
   ).toBeVisible();
   await page.screenshot({

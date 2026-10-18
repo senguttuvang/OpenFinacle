@@ -10,7 +10,7 @@ web
 
 Customers managing their banking, and branch officers and independent approvers handling the same relationship. Older customers need comfortably readable screens.
 
-The public product page additionally addresses bank decision-makers evaluating the demonstration and production-readiness gaps. It credits Finacle as inspiration and Apache Fineract as the actual core, discloses synthetic screenshots and capability limits, and labels founder build metrics and engineering estimates separately from measured evidence.
+The public landing is a capability-led marketing magazine for bank/product decision-makers and people exploring how far AI-assisted rebuilding can go. Varied editorial sections, actual synthetic screens and short paragraphs introduce the experience and path to production. One comparison section is capped at ten selected areas. Detailed capabilities, roadmap and build-method inner pages carry deeper explanations. The interactive build recipe is central: talent mix, founder-supplied INR pay scales, scope, AI-assisted/AI-first allocation, dated USD API usage and explicitly assumed impact/ROI. No simulated financial product, scope estimate, token budget or return is presented as accepted production capability.
 
 ## Product Purpose
 

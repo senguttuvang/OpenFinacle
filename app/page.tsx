@@ -347,6 +347,14 @@ function BankingPage({
       "Two synthetic documents attached.",
     );
 
+  useEffect(() => {
+    // Public story links arrive while the session check still renders loading.
+    // Restore the requested entry anchor after the journey controls mount.
+    if (!loading && !data && window.location.hash === "#demo-entry") {
+      document.getElementById("demo-entry")?.scrollIntoView();
+    }
+  }, [loading, data]);
+
   if (loading)
     return (
       <main className="loading">
@@ -357,7 +365,7 @@ function BankingPage({
     );
   if (!data)
     return (
-      <main className="assessment-page">
+      <main className="product-landing">
         <ProductStory>
           {chooseCustomer ? (
             <CustomerPicker
