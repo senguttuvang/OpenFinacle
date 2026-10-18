@@ -3,7 +3,7 @@ import { chooseOption } from "./fixtures/form-select";
 
 const title = "A working banking slice. An inspectable boundary.";
 
-test("evidence precedes demo entry; filters, scenarios and original journeys work without banking writes", async ({
+test("detailed report retains filters and scenarios without banking writes", async ({
   page,
 }) => {
   const writes: string[] = [];
@@ -22,34 +22,12 @@ test("evidence precedes demo entry; filters, scenarios and original journeys wor
       json: { error: "No session", uncertain: false },
     });
   });
-  await page.goto("/");
+  await page.goto("/assessment");
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(
     page.getByRole("heading", { name: "What the selected scope contains" }),
   ).toBeInViewport();
-  await expect(
-    page.getByRole("button", {
-      name: "Explore existing customer",
-      exact: true,
-    }),
-  ).not.toBeInViewport();
-  await expect(page.locator(".evidence-nav")).not.toContainText(
-    /demo|journey/i,
-  );
-  expect(
-    await page
-      .locator("#readiness")
-      .evaluate(
-        (element) =>
-          !!(
-            element.compareDocumentPosition(
-              document.querySelector("#demo-entry") as Node,
-            ) & Node.DOCUMENT_POSITION_FOLLOWING
-          ),
-      ),
-  ).toBe(true);
-
   const matrix = page.getByRole("table", {
     name: /Selected capability comparison/,
   });
@@ -145,28 +123,6 @@ test("evidence precedes demo entry; filters, scenarios and original journeys wor
       .toBe(true);
   }
   await expect(page.locator(".story-gallery img")).toHaveCount(5);
-  await page
-    .getByRole("button", { name: "Explore existing customer", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Choose an existing customer",
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Back to journeys", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", {
-      name: "Start your banking story · Shared branch demo",
-      exact: false,
-    }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Open my first account", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/open-account\/?$/);
   expect(writes).toEqual([]);
   expect(errors).toEqual([]);
 });

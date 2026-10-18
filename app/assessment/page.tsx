@@ -1,4 +1,4 @@
-import { ProductStory } from "../product-story";
+import { AssessmentReport } from "./assessment-report";
 
 export const metadata = {
   title: "OpenFinacle — Banking capability assessment",
@@ -9,7 +9,7 @@ export const metadata = {
 export default function AssessmentPage() {
   return (
     <main className="assessment-page">
-      <ProductStory />
+      <AssessmentReport />
     </main>
   );
 }
