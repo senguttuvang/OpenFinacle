@@ -357,24 +357,8 @@ function BankingPage({
     );
   if (!data)
     return (
-      <main className="welcome" id="demo-entry">
-        <div className="welcome-copy">
-          <a className="brand" href="/">
-            <span className="brand-symbol">
-              <Landmark size={25} />
-            </span>
-            OpenFinacle<span className="brand-dot">.</span>
-          </a>
-          <span className="eyebrow">A WORKING BANKING SANDBOX</span>
-          <h1>
-            A bank is more
-            <br />
-            than a balance.
-          </h1>
-          <p>
-            Open an account. Make your first deposit. Send money to someone you
-            know. See the same story from both sides of the counter.
-          </p>
+      <main className="assessment-page">
+        <ProductStory>
           {chooseCustomer ? (
             <CustomerPicker
               busy={busy}
@@ -382,84 +366,55 @@ function BankingPage({
               onCancel={() => setChooseCustomer(false)}
             />
           ) : (
-            <div className="journey-options">
-              <PendingButton
-                busy={busy}
-                className="primary large"
-                onClick={() => window.location.assign("/open-account")}
-              >
-                Open my first account <ArrowRight size={18} />
-              </PendingButton>
-              <span>New customer · Open your first account</span>
-              <PendingButton
-                busy={busy}
-                className="secondary large"
-                onClick={() => setChooseCustomer(true)}
-              >
-                Explore existing customer <ArrowRight size={18} />
-              </PendingButton>
-              <span>Active account · Salary, payments & statements</span>
-              <PendingButton
-                busy={busy}
-                className="secondary large"
-                onClick={() => startJourney("new")}
-              >
-                Start your banking story · Shared branch demo{" "}
-                <ArrowRight size={18} />
-              </PendingButton>
-              <span>Original shared account-opening demonstration</span>
+            <div className="journey-options evidence-journeys">
+              <div>
+                <PendingButton
+                  busy={busy}
+                  className="primary large"
+                  onClick={() => window.location.assign("/open-account")}
+                >
+                  Open my first account <ArrowRight size={18} />
+                </PendingButton>
+                <p>
+                  New customer · staged synthetic application and staff review.
+                </p>
+              </div>
+              <div>
+                <PendingButton
+                  busy={busy}
+                  className="secondary large"
+                  onClick={() => setChooseCustomer(true)}
+                >
+                  Explore existing customer <ArrowRight size={18} />
+                </PendingButton>
+                <p>
+                  Saved customers · account facts, payments, statements and
+                  planning.
+                </p>
+              </div>
+              <div>
+                <PendingButton
+                  busy={busy}
+                  className="secondary large"
+                  onClick={() => startJourney("new")}
+                >
+                  Start your banking story · Shared branch demo{" "}
+                  <ArrowRight size={18} />
+                </PendingButton>
+                <p>
+                  Original shared account-opening demonstration · customer and
+                  staff views.
+                </p>
+              </div>
             </div>
           )}
           {busy && <p role="status">{startupStage}</p>}
-          <span className="welcome-note">
-            <LockKeyhole size={14} /> Persistent banking demo · Synthetic data
-            only
-          </span>
-          <a className="story-entry-link" href="#project">
-            About the project, capabilities & bank readiness{" "}
-            <ArrowDownToLine size={16} aria-hidden="true" />
-          </a>
           {error && (
             <div role="alert" className="notice error">
               {error}
             </div>
           )}
-          <div className="welcome-footer">
-            Built on Apache Fineract <span>Customer + staff experiences</span>
-          </div>
-        </div>
-        <div className="welcome-art">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="welcome-card">
-            <div className="card-top">
-              <Landmark size={23} />
-              <span>EVERYDAY SAVINGS</span>
-            </div>
-            <p>
-              Good things
-              <br />
-              start here.
-            </p>
-            <div className="card-bottom">
-              <span>MIRA KRISHNAN</span>
-              <span>● ● ● ● &nbsp; DEMO</span>
-            </div>
-          </div>
-          <div className="floating-proof">
-            <span className="proof-icon">
-              <CheckCheck size={20} />
-            </span>
-            <div>
-              One connected banking story
-              <small>From application to salary day</small>
-            </div>
-          </div>
-          <div className="art-caption">
-            REAL WORKFLOWS. REAL POSTINGS. DEMO MONEY.
-          </div>
-        </div>
-        <ProductStory />
+        </ProductStory>
       </main>
     );
 

@@ -23,7 +23,9 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
   page.on("pageerror", (error) => browserErrors.push(error.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "A bank is more than a balance." }),
+    page.getByRole("heading", {
+      name: "A working banking slice. An inspectable boundary.",
+    }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/welcome-desktop.png",
