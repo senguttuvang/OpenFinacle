@@ -417,3 +417,20 @@ test("recovery refuses an inactive or mismatched original Core account without d
   );
   expect(writes).toEqual([]);
 });
+
+test("missing sample documents fail before reserving submission, and original identities cannot be reset", async () => {
+  const saved = await ready();
+  db.run("DELETE FROM documents WHERE bank_id='applicant-a'");
+  await expect(
+    run(submitOnboarding(session, id, saved.version)),
+  ).rejects.toThrow("Attach the sample");
+  expect((await run(onboardingStatus(session))).status).toBe("draft");
+  expect(() =>
+    db.run(
+      "UPDATE onboarding_drafts SET operation_id='replacement' WHERE bank_id='applicant-a'",
+    ),
+  ).toThrow("permanent");
+  expect(() =>
+    db.run("DELETE FROM onboarding_drafts WHERE bank_id='applicant-a'"),
+  ).toThrow("cannot be reset");
+});

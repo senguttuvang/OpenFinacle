@@ -128,3 +128,13 @@ test("route validates payloads, stores resumable draft and rejects unknown field
   ).rejects.toThrow("invalid");
   expect(await route("/unrelated", undefined, actor)).toBeNull();
 });
+
+test("legacy application route cannot bypass the staged record while original legacy flow remains", async () => {
+  expect(await route("/application", {})).toBeNull();
+  const saved = (await (
+    await route("/onboarding/start", { operationId })
+  )?.json()) as OnboardingDraft;
+  await expect(
+    route("/application", {}, { ...session, bank_id: saved.bankId }),
+  ).rejects.toThrow("staged savings application");
+});

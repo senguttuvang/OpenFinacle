@@ -249,6 +249,23 @@ export const submitOnboarding = (
     if (Object.keys(errors).length)
       return yield* fail(Object.values(errors).join(" "), 400);
     const store = yield* Store;
+    const documents = yield* store.all<{ kind: string; name: string }>(
+      "SELECT kind,name FROM documents WHERE bank_id=?",
+      session.bank_id,
+    );
+    if (
+      !["identity", "address"].every((kind) =>
+        documents.some(
+          (document) =>
+            document.kind === kind &&
+            document.name === `Demo-onboarding-${kind}.txt`,
+        ),
+      )
+    )
+      return yield* fail(
+        "Attach the sample identity and address pack before submitting.",
+        400,
+      );
     const claimed = yield* store.run(
       "UPDATE onboarding_drafts SET status='submitting',version=version+1,updated_at=CURRENT_TIMESTAMP WHERE bank_id=? AND operation_id=? AND version=? AND status='draft'",
       session.bank_id,

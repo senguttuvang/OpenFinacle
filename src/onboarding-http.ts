@@ -13,13 +13,29 @@ import {
   startOnboardingDraft,
   submitOnboarding,
 } from "./application/onboarding";
-import type { Session } from "./domain/banking";
+import { BankingError, type Session } from "./domain/banking";
 import { OnboardingSave } from "./domain/onboarding";
 import { Store } from "./domain/ports";
 
 export const onboardingRoute = (request: Request, session: Session) =>
   Effect.gen(function* () {
     const path = new URL(request.url).pathname;
+    if (path === "/api/application" && request.method === "POST") {
+      const store = yield* Store;
+      const staged = yield* store.one(
+        "SELECT id FROM onboarding_drafts WHERE bank_id=?",
+        session.bank_id,
+      );
+      if (staged)
+        return yield* Effect.fail(
+          new BankingError({
+            message:
+              "Use the staged savings application to review and submit this applicant's details.",
+            status: 409,
+          }),
+        );
+      return null;
+    }
     if (path === "/api/onboarding/start" && request.method === "POST") {
       const input = yield* parseJsonRequest(
         request,
