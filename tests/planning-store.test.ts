@@ -26,9 +26,7 @@ beforeEach(async () => {
   db.exec(
     "PRAGMA foreign_keys=ON; CREATE TABLE banks(id TEXT PRIMARY KEY); INSERT INTO banks(id) VALUES('planning-owner'),('other-owner');",
   );
-  db.exec(
-    await Bun.file("migrations/0015_planning.sql").text(),
-  );
+  db.exec(await Bun.file("migrations/0015_planning.sql").text());
   interfere = undefined;
 });
 const layer = () =>
