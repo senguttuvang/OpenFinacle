@@ -384,7 +384,9 @@ for (const mode of ["lost", "malformed"] as const)
     });
     await prepareTransfer(page);
     await page.getByRole("button", { name: "Confirm transfer once" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(
+      page.locator(".customer-transfer").getByRole("alert"),
+    ).toBeVisible();
     expect(fixture.posts()).toBe(1);
     const stored = await page.evaluate(() =>
       sessionStorage.getItem(
