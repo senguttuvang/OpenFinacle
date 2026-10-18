@@ -68,6 +68,56 @@
 .customer-switch {
   white-space: normal;
 }
+.customer-payees {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--rule, #dae2ef);
+  border-radius: 0.5rem;
+  background: var(--panel, #fff);
+}
+.customer-payees summary {
+  min-height: 2.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--teal, #2458d3);
+  overflow-wrap: anywhere;
+}
+.customer-payees ul {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin-block: 1rem;
+}
+.customer-payees li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--rule, #dae2ef);
+  min-width: 0;
+}
+.customer-payee-name {
+  display: grid;
+  flex: 1 1 12ch;
+  min-width: 0;
+  gap: 0.25rem;
+  overflow-wrap: anywhere;
+}
+.customer-payee-name small {
+  color: var(--muted, #52627a);
+}
+.customer-payees li button {
+  margin: 0;
+  min-height: 2.75rem;
+  white-space: normal;
+}
+.customer-payees h3:focus-visible {
+  outline: 3px solid var(--teal, #2458d3);
+  outline-offset: 4px;
+}
 @media (max-width: 700px) {
   .customer-directory,
   .customer-transfer {

@@ -46,7 +46,13 @@ test("real payee CLI preserves bounded JSON through a process pipe and verifies 
             max_active: 15,
           },
           progress: { membershipsAdded: 0, ownersCompleted: 0 },
-          owners: [],
+          owners: Array.from({ length: 10 }, (_, index) => ({
+            owner_id: `owner-${"x".repeat(88)}-${index}`,
+            ordinal: 91 + index,
+            status: "complete",
+            active_count: 15,
+            removed_count: 0,
+          })),
         });
       }
       throw new Error("Unexpected CLI route");
@@ -134,6 +140,10 @@ test("real payee CLI preserves bounded JSON through a process pipe and verifies 
       expect(pipeCode).toBe(0);
       expect(stderr).toBe("");
       expect(stdout.trim().split("\n")).toHaveLength(1);
+      expect(
+        (JSON.parse(stdout) as { result: { owners: unknown[] } }).result.owners,
+      ).toHaveLength(10);
+      expect(new TextEncoder().encode(stdout).length).toBeLessThan(4096);
       expect(JSON.parse(stdout)).toMatchObject({
         revision: sha,
         result: {

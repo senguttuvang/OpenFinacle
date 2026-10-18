@@ -23,6 +23,10 @@ export function CustomerPayees({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const active = useRef(true);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (review) reviewHeading.current?.focus();
+  }, [review]);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -70,7 +74,10 @@ export function CustomerPayees({
       <ul aria-label="Saved payees">
         {payees.payees.map((payee) => (
           <li key={payee.id}>
-            {payee.display_name} · ending {payee.account_suffix}{" "}
+            <span className="customer-payee-name">
+              {payee.display_name}
+              <small>Account ending {payee.account_suffix}</small>
+            </span>
             <button
               type="button"
               className="secondary"
@@ -139,7 +146,9 @@ export function CustomerPayees({
         </form>
       ) : (
         <div>
-          <h3>Check payee details</h3>
+          <h3 ref={reviewHeading} tabIndex={-1}>
+            Check payee details
+          </h3>
           <p>
             {review.display_name} · account ending {review.account_suffix}
           </p>

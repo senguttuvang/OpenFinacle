@@ -596,6 +596,9 @@ test("empty future customer adds a known account by holder name, reviews it and 
     page.getByRole("heading", { name: "Check payee details" }),
   ).toBeVisible();
   await expect(
+    page.getByRole("heading", { name: "Check payee details" }),
+  ).toBeFocused();
+  await expect(
     page.getByRole("combobox", { name: "Recipient", exact: true }),
   ).toBeDisabled();
   await page
@@ -677,41 +680,86 @@ for (const width of [390, 720])
     await page
       .getByRole("button", { name: "Pay & transfer", exact: true })
       .click();
-    await page
-      .getByRole("combobox", { name: "Recipient", exact: true })
-      .press("ArrowDown");
-    await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(15);
-    expect(
-      await page
-        .getByRole("listbox")
-        .getByRole("option")
-        .evaluateAll((items) =>
-          items
-            .filter((item) => item.scrollWidth > item.clientWidth + 1)
-            .map((item) => ({
-              name: item.textContent,
-              width: item.clientWidth,
-              scrollWidth: item.scrollWidth,
-            })),
+    for (const selected of [null, "sample-aadhya", "registered-14"]) {
+      const trigger = page.getByRole("combobox", {
+        name: "Recipient",
+        exact: true,
+      });
+      if (selected) await chooseOption(page, trigger, selected);
+      await trigger.press("ArrowDown");
+      await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(
+        15,
+      );
+      await expect(
+        page.locator('.form-select-option[data-state="checked"]'),
+      ).toHaveCount(selected ? 1 : 0);
+      expect(
+        await page
+          .getByRole("listbox")
+          .getByRole("option")
+          .evaluateAll((items) =>
+            items
+              .filter((item) => {
+                const text = item.querySelector("span");
+                if (!text) return true;
+                const range = document.createRange();
+                range.selectNodeContents(text);
+                const box = item.getBoundingClientRect();
+                return (
+                  item.scrollWidth > item.clientWidth + 1 ||
+                  Array.from(range.getClientRects()).some(
+                    (rect) => rect.left < box.left || rect.right > box.right,
+                  )
+                );
+              })
+              .map((item) => ({
+                name: item.textContent,
+                width: item.clientWidth,
+                scrollWidth: item.scrollWidth,
+              })),
+          ),
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth + 1,
         ),
-    ).toEqual([]);
+      ).toBe(true);
+      await expect(page.locator("#registered-recipient")).toHaveAttribute(
+        "data-state",
+        "open",
+      );
+      await page.screenshot({
+        path: `test-results/saved-payees-${width}-200percent-${selected ?? "unselected"}.png`,
+        fullPage: false,
+      });
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("combobox", { name: "Recipient", exact: true }),
+      ).toBeFocused();
+    }
+    await page.getByText("Manage saved payees (15)", { exact: true }).click();
+    const list = page.getByRole("list", { name: "Saved payees", exact: true });
+    await expect(list.getByRole("listitem")).toHaveCount(15);
+    await expect(list.getByRole("button", { name: /^Remove / })).toHaveCount(
+      15,
+    );
+    expect(
+      await list
+        .getByRole("listitem")
+        .evaluateAll((items) =>
+          items.every((item) => item.scrollWidth <= item.clientWidth + 1),
+        ),
+    ).toBe(true);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,
       ),
     ).toBe(true);
-    await expect(page.locator("#registered-recipient")).toHaveAttribute(
-      "data-state",
-      "open",
-    );
+    await list.getByRole("listitem").first().scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: `test-results/saved-payees-${width}-200percent.png`,
+      path: `test-results/saved-payee-manager-${width}-200percent.png`,
       fullPage: false,
     });
-    await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("combobox", { name: "Recipient", exact: true }),
-    ).toBeFocused();
   });
 
 for (const empty of [false, true])
