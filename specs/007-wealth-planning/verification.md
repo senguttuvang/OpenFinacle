@@ -30,7 +30,7 @@ The `prepare` CLI was run once against this dedicated local database. It execute
 On 17 October 2026, the complete current-source gate passed:
 
 ```sh
-DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check
+bun run check
 ```
 
 It ran TypeScript, Biome, Oxlint, Knip, dependency boundaries, type coverage, 122 Bun tests / 1,201 assertions, static production export and the Worker/container deployment dry run. Existing repository lint warnings are retained. Focused planning tests passed 18 tests / 627 assertions.
