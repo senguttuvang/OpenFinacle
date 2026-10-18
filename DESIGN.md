@@ -1,5 +1,7 @@
 # OpenFinacle design
 
+The public entry page retains its cream/navy banking illustration and journey controls. Its product story speaks to bank decision-makers: editorial sections, actual synthetic-screen captures, explicit capability boundaries, readiness gates and an interactive resource calculator. Reuse the shared Radix FormSelect and local fonts. Coverage is a disclosed local checklist, never a Finacle-parity or production-readiness score.
+
 Operate mode: customers and branch staff must read financial values, understand state, and complete familiar banking tasks. The user requested a modern, colorful professional experience alongside Xero and Payoneer, with comfortable large text. The separate extra-large toggle was removed at the user's request on18October2026.
 
 The shared system uses a light workspace, white navigation, cobalt actions and account summaries, with restrained mint, amber and lilac sections. Values and status remain legible without relying on hue. Account enquiry separates available funds, customer identity and account facts. Branch overview colors identify different kinds of work; counts always come from existing records.

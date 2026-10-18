@@ -10,6 +10,8 @@ web
 
 Customers managing their banking, and branch officers and independent approvers handling the same relationship. Older customers need comfortably readable screens.
 
+The public product page additionally addresses bank decision-makers evaluating the demonstration and production-readiness gaps. It credits Finacle as inspiration and Apache Fineract as the actual core, discloses synthetic screenshots and capability limits, and labels founder build metrics and engineering estimates separately from measured evidence.
+
 ## Product Purpose
 
 Reconstruct customer internet banking and branch workflows in a working demonstration with persistent, synthetic data. Specifications under `specs/006-reference-banking-experience/` own capability requirements and evidence boundaries.
