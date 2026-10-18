@@ -132,6 +132,11 @@
 .magazine-header nav a:hover {
   text-decoration: underline;
 }
+.magazine-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
 .magazine-skip {
   position: absolute;
   top: 0;
