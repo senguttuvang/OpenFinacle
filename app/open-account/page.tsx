@@ -1,5 +1,5 @@
 "use client";
-import { CustomerOnboarding } from "../customer-onboarding";
+import { CustomerOnboarding } from "../../src/platform/account-opening/ui/customer-onboarding";
 export default function OpenAccountPage() {
   return (
     <main className="onboarding-page">

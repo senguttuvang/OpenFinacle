@@ -1,11 +1,11 @@
 import {
   loanRepaymentCoreKey,
   loanRepaymentMarker,
-} from "../../src/domain/loan-repayment-identity";
+} from "../../src/platform/lending/domain/repayments/loan-repayment-identity";
 import type {
   LoanRepaymentInstruction,
   LoanRepaymentLookup,
-} from "../../src/domain/loan-repayments";
+} from "../../src/platform/lending/domain/repayments/loan-repayments";
 import { inventedLoanStatement } from "./loan-statement";
 import {
   workflowQuote,

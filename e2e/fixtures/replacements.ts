@@ -5,13 +5,13 @@ import {
   type ReplacementTerms,
   replacementActions,
   replacementTransition,
-} from "../../src/domain/card-replacements";
+} from "../../src/platform/cards/domain/card-replacements";
 import {
   allowedCardActions,
   type Card,
   type CardDetail,
   cardTransition,
-} from "../../src/domain/cards";
+} from "../../src/platform/cards/domain/cards";
 import { savedWorkspace } from "./workspace";
 
 export const replacementWorkspace = async (page: Page) => {

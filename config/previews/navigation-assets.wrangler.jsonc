@@ -1,0 +1,6 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "openfinacle-navigation-preview",
+  "compatibility_date": "2026-10-15",
+  "assets": { "directory": "../../out" }
+}

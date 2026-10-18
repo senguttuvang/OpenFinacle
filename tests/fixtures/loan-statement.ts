@@ -1,5 +1,5 @@
-import type { CoreLoanSnapshot } from "../../src/domain/loan-engine";
-import type { LoanStatement } from "../../src/domain/loan-statements";
+import type { CoreLoanSnapshot } from "../../src/platform/lending/domain/origination/loan-engine";
+import type { LoanStatement } from "../../src/platform/lending/domain/origination/loan-statements";
 
 // Invented saved-view example. Actual Core statement proof is separate.
 export const inventedLoanStatement = (
