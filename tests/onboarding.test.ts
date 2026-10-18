@@ -25,6 +25,7 @@ import { completedOnboarding } from "./fixtures/onboarding";
 let db: Database;
 let temporaryDirectory: string | null = null;
 let writes: { path: string; key?: string }[];
+let reads: string[];
 let failCore = false;
 let loseAck = false;
 let failSubmission = false;
@@ -57,6 +58,7 @@ const initialize = async (path = ":memory:") => {
       [kind, `Demo-onboarding-${kind}.txt`, kind, `sample/${kind}`],
     );
   writes = [];
+  reads = [];
   failCore = false;
   loseAck = false;
   failSubmission = false;
@@ -113,6 +115,7 @@ const dependencies = () =>
               );
             return { resourceId: path === "clients" ? 51 : 61 } as T;
           }
+          reads.push(path);
           if (path === "clients/51")
             return {
               id: 51,
@@ -403,6 +406,11 @@ test("approver reconciles a fully active original Core outcome with no creation 
     applicationStatus: "approved",
     account: { id: 61, accountNo: "SYNTHETIC-61" },
   });
+  expect(reads).toEqual([
+    "savingsaccounts/external-id/applicant-a-customer",
+    "clients/51",
+    "savingsaccounts/61",
+  ]);
   expect(writes).toEqual([]);
 });
 test("recovery refuses an inactive or mismatched original Core account without dispatch", async () => {

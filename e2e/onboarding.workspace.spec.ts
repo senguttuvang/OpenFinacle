@@ -170,6 +170,9 @@ test("seven-stage application validates, preserves edits and resume, confirms on
   await expect(
     page.getByRole("region", { name: "Confirm application submission" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Send this application for review?" }),
+  ).toBeFocused();
   await page
     .getByRole("button", { name: "Confirm and submit application" })
     .click();
