@@ -18,11 +18,21 @@ export async function openWorkspace(page: Page, view: View) {
       name: /^(Banking navigation|Main navigation)$/,
     }),
   ).toBeVisible();
+  await expect(
+    page.locator('[role="combobox"][aria-label="Demo persona"]'),
+  ).toBeEnabled();
   const source = page.getByRole("navigation", {
     name: "Banking navigation",
     exact: true,
   });
   if (await source.isVisible()) {
+    if (view === "application") {
+      await page
+        .getByRole("navigation", { name: "Workspace shortcuts", exact: true })
+        .getByRole("link", { name: "Account opening", exact: true })
+        .click();
+      return;
+    }
     const target = sourceTargets[view];
     if (target) {
       const toggle = source.getByRole("button", {

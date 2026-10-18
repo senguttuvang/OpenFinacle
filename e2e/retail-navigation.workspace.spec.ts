@@ -47,6 +47,11 @@ async function select(page: Page, family: string, child: string) {
     name: "Banking navigation",
     exact: true,
   });
+  await expect(
+    page
+      .getByRole("navigation", { name: "Workspace shortcuts", exact: true })
+      .getByRole("link", { name: "Account opening", exact: true }),
+  ).toHaveAttribute("href", "/open-account");
   const toggle = nav.getByRole("button", { name: "Banking menu" });
   if (
     (await toggle.isVisible()) &&

@@ -13,6 +13,7 @@
   padding: 0;
 }
 .retail-menu button {
+  transition: none;
   color: inherit;
   background: transparent;
   border: 0;
@@ -172,6 +173,24 @@
 }
 .has-retail-menu .retail-shortcuts {
   margin-top: 24px;
+}
+.has-retail-menu .retail-onboarding-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 19px;
+  color: #52627a;
+  text-decoration: none;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+.has-retail-menu .retail-onboarding-link:hover {
+  background: #e8efff;
+  color: #174abb;
+}
+.has-retail-menu .retail-onboarding-link:focus-visible {
+  outline: 3px solid #2458d3;
+  outline-offset: -3px;
 }
 .has-retail-menu .page-heading[hidden],
 .has-retail-menu .sync-caption[hidden] {

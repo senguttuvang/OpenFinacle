@@ -845,6 +845,17 @@ function BankingPage({
           <nav className="retail-navigation" aria-label="Workspace shortcuts">
             {customerNav.map((item) => {
               const Icon = navIcons[item];
+              if (item === "application")
+                return (
+                  <a
+                    key={item}
+                    className="retail-onboarding-link"
+                    href="/open-account"
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    {labels[item]}
+                  </a>
+                );
               return (
                 <button
                   type="button"
