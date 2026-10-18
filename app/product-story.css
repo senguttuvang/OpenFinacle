@@ -3,6 +3,7 @@
   min-width: 0;
   background: #f8f8f1;
   color: #172b4d;
+  overflow-wrap: anywhere;
   font-size: 1.125rem;
   line-height: 1.7;
   --story-rule: #d5ded6;
@@ -367,6 +368,8 @@
   }
   .story-calculation dd {
     text-align: left;
+    flex-shrink: 1;
+    max-width: 100%;
   }
 }
 
