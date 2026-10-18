@@ -113,6 +113,7 @@
 }
 .onboarding-field > label {
   font-weight: 500;
+  font-size: 1rem;
 }
 .customer-onboarding input:not([type="checkbox"]):not([type="radio"]),
 .customer-onboarding select {
@@ -131,6 +132,7 @@
   color: #52627a;
 }
 .customer-onboarding .onboarding-choice {
+  font-size: 1rem;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
