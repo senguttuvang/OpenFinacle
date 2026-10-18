@@ -3,6 +3,7 @@ import { bankingDate } from "../src/domain/banking";
 import { planningHouseholds } from "../src/domain/planning-fixtures";
 import { initialPlanningState } from "../src/domain/planning-state";
 import type { Dashboard } from "../src/domain/view";
+import { chooseOption } from "./fixtures/form-select";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const installCustomers = async (
@@ -340,7 +341,11 @@ test("standalone shared planning binds its verified registered customer before s
     page.getByRole("heading", { name: "Household net worth" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
   await page.getByLabel("Dining monthly budget INR").fill("123");
   await page.getByRole("button", { name: "Save budget", exact: true }).click();
   await expect(
@@ -349,7 +354,11 @@ test("standalone shared planning binds its verified registered customer before s
   expect(writes).toBe(1);
   await page.reload();
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
   await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("123");
 });
 

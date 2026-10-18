@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { CaseDetail } from "../src/domain/service-cases";
 import { serviceCatalog } from "../src/domain/services";
+import { chooseOption } from "./fixtures/form-select";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const sampleCase = (): CaseDetail => ({
@@ -309,10 +310,12 @@ for (const interruptedResponse of ["lost", "malformed"] as const) {
     await page
       .getByRole("button", { name: /Request a chequebook Choose/ })
       .click();
-    await page.getByLabel("Number of cheque leaves").selectOption("25");
-    await page
-      .getByLabel("Delivery preference")
-      .selectOption("Collect at branch");
+    await chooseOption(page, page.getByLabel("Number of cheque leaves"), "25");
+    await chooseOption(
+      page,
+      page.getByLabel("Delivery preference"),
+      "Collect at branch",
+    );
     await page
       .getByRole("button", { name: "Review request", exact: true })
       .click();
@@ -392,9 +395,11 @@ test("staff reviews versioned actions and refreshes a conflicting case before an
     name: "Service request",
     exact: true,
   });
-  await dialog
-    .getByRole("combobox", { name: "Action", exact: true })
-    .selectOption("start");
+  await chooseOption(
+    page,
+    dialog.getByRole("combobox", { name: "Action", exact: true }),
+    "start",
+  );
   await dialog.getByRole("button", { name: "Review action" }).click();
   const confirmation = page.getByRole("alertdialog");
   await expect(
@@ -418,12 +423,14 @@ test("staff reviews versioned actions and refreshes a conflicting case before an
     { id: recorded.request.id, version: 0, action: "start", note: "" },
   ]);
   await dialog.getByRole("button", { name: "Refresh request history" }).click();
+  await dialog.getByRole("combobox", { name: "Action", exact: true }).click();
   await expect(
-    dialog.getByRole("combobox", { name: "Action", exact: true }),
-  ).toContainText("Record completion");
+    page.getByRole("option", { name: "Record completion", exact: true }),
+  ).toBeVisible();
   await expect(
-    dialog.getByRole("combobox", { name: "Action", exact: true }),
-  ).not.toContainText("Start processing");
+    page.getByRole("option", { name: "Start processing", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expect(dialog).toContainText("Being processed");
   expect(actions).toHaveLength(1);
 });

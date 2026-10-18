@@ -22,6 +22,7 @@ import {
   replacementLabels,
   replacementReasons,
 } from "./card-replacement-terms";
+import { FormSelect } from "./form-select";
 import type { ServicePerform } from "./service-request-form";
 
 const Pending = Schema.Struct({
@@ -417,17 +418,16 @@ export function CardReplacements({
         <div className="deposit-form">
           <label>
             Source demo card
-            <select
+            <FormSelect
+              aria-label="Source demo card"
               disabled={locked}
               value={selected?.id ?? ""}
-              onChange={(event) => setSourceId(event.target.value)}
-            >
-              {eligible.map((card) => (
-                <option key={card.id} value={card.id}>
-                  Demo {card.suffix} · {card.status}
-                </option>
-              ))}
-            </select>
+              onValueChange={setSourceId}
+              options={eligible.map((card) => ({
+                value: card.id,
+                label: `Demo ${card.suffix} · ${card.status}`,
+              }))}
+            />
           </label>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { chooseOption } from "./fixtures/form-select";
 import { choosePersona } from "./fixtures/persona";
 
 const start = async (page: Page) => {
@@ -30,7 +31,11 @@ const setup = async (page: Page) => {
 };
 const dining = async (page: Page) => {
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
 };
 
 test("existing portal tab saves actual D1 records, preserves banking navigation, and reflows at large mobile text", async ({

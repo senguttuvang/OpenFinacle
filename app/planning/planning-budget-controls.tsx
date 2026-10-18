@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PlanningState } from "../../src/domain/planning-state";
+import { FormSelect } from "../form-select";
 
 type Props = {
   category: string;
@@ -56,21 +57,18 @@ export function PlanningBudgetControls({
         <summary>Copy or delete this budget</summary>
         <label>
           Copy monthly limit from
-          <select
+          <FormSelect
             aria-label={`${category} copy budget from`}
             disabled={!canEdit}
             value={source}
-            onChange={(e) => setSource(e.target.value)}
-          >
-            <option value="">Choose another category</option>
-            {Object.keys(state.budgets)
-              .filter((name) => name !== category)
-              .map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-          </select>
+            onValueChange={setSource}
+            options={[
+              { value: "", label: "Choose another category" },
+              ...Object.keys(state.budgets)
+                .filter((name) => name !== category)
+                .map((name) => ({ value: name, label: name })),
+            ]}
+          />
         </label>
         <div className="wp-actions">
           <button

@@ -5,6 +5,7 @@ import {
   planningAnchor,
   planningRange,
 } from "../../src/domain/planning";
+import { FormSelect } from "../form-select";
 
 type Props = {
   household: PlanningHousehold;
@@ -34,19 +35,18 @@ export function PlanningFilters({
       <div className="wp-filter-grid">
         <label>
           Date range
-          <select
+          <FormSelect
             aria-label="Date range"
             value={preset}
-            onChange={(e) => {
-              setPreset(e.target.value);
-              if (e.target.value !== "custom")
+            onValueChange={(value) => {
+              setPreset(value);
+              if (value !== "custom")
                 setFilter({
                   ...filter,
-                  ...planningRange(e.target.value),
+                  ...planningRange(value),
                 });
             }}
-          >
-            {[
+            options={[
               ["30", "Last 30 days"],
               ["90", "Last 90 days"],
               ["month", "This month"],
@@ -55,12 +55,8 @@ export function PlanningFilters({
               ["prior-fy", "Prior financial year"],
               ["all", "All recorded history"],
               ["custom", "Custom dates"],
-            ].map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            ].map(([value, label]) => ({ value, label }))}
+          />
         </label>
         <label>
           From
@@ -94,46 +90,47 @@ export function PlanningFilters({
         </label>
         <label>
           Account
-          <select
+          <FormSelect
             aria-label="Account"
             value={filter.account}
-            onChange={(e) => setFilter({ ...filter, account: e.target.value })}
-          >
-            <option value="">All accounts</option>
-            {household.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => setFilter({ ...filter, account: value })}
+            options={[
+              { value: "", label: "All accounts" },
+              ...household.accounts.map((a) => ({
+                value: a.id,
+                label: a.label,
+              })),
+            ]}
+          />
         </label>
         <label>
           Member
-          <select
+          <FormSelect
             aria-label="Member"
             value={filter.member}
-            onChange={(e) => setFilter({ ...filter, member: e.target.value })}
-          >
-            <option value="">All members</option>
-            {household.members.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
+            onValueChange={(value) => setFilter({ ...filter, member: value })}
+            options={[
+              { value: "", label: "All members" },
+              ...household.members.map((name) => ({
+                value: name,
+                label: name,
+              })),
+            ]}
+          />
         </label>
         <label>
           Category
-          <select
+          <FormSelect
             aria-label="Category"
             value={filter.category}
-            onChange={(e) => setFilter({ ...filter, category: e.target.value })}
-          >
-            <option value="">All categories</option>
-            {[...new Set(household.postings.map((p) => p.category))]
-              .sort()
-              .map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-          </select>
+            onValueChange={(value) => setFilter({ ...filter, category: value })}
+            options={[
+              { value: "", label: "All categories" },
+              ...[...new Set(household.postings.map((p) => p.category))]
+                .sort()
+                .map((c) => ({ value: c, label: c })),
+            ]}
+          />
         </label>
         <label>
           Merchant search

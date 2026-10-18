@@ -10,6 +10,7 @@ import type {
   PlanningScenario,
   PlanningState,
 } from "../../src/domain/planning-state";
+import { FormSelect } from "../form-select";
 import { assumptionFields, ScenarioEditor } from "./planning-editor";
 import { Trend } from "./planning-trend";
 
@@ -123,19 +124,18 @@ export function PlanningProjection({
         <div className="wp-actions">
           <label>
             Saved scenario
-            <select
+            <FormSelect
+              aria-label="Saved scenario"
               value={selected}
-              onChange={(e) => {
-                setSelected(e.target.value);
+              onValueChange={(value) => {
+                setSelected(value);
                 setEditing(null);
               }}
-            >
-              {state.scenarios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · v{s.version}
-                </option>
-              ))}
-            </select>
+              options={state.scenarios.map((s) => ({
+                value: s.id,
+                label: `${s.name} · v${s.version}`,
+              }))}
+            />
           </label>
           <button
             type="button"
