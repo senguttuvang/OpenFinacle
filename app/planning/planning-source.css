@@ -1,0 +1,37 @@
+.wp-source {
+  margin: 20px 0 24px;
+  padding: 22px;
+  border: 1px solid #dae2ef;
+  border-radius: 12px;
+  background: white;
+}
+.wp-source > p {
+  margin-top: 14px;
+  color: #52627a;
+}
+.wealth-planning .wp-source button[aria-pressed="true"] {
+  background: #e4ecfc;
+  border-color: #2458d3;
+  color: #173d86;
+}
+.wp-preview-session {
+  border-top: 1px solid #dae2ef;
+  padding-top: 8px;
+}
+.wp-pending {
+  margin-top: 20px;
+  background: #fff3dc;
+  padding: 20px;
+  border-radius: 8px;
+}
+.wp-pending pre {
+  max-width: 100%;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85em;
+}
+.wealth-planning .wp-source input:disabled {
+  background: #edf1f8;
+}
