@@ -36,7 +36,7 @@ async function fixture(page: Page) {
       json: { error: `No fixture for ${path}` },
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByRole("navigation", { name: "Banking navigation", exact: true }),
   ).toBeVisible();

@@ -3,7 +3,7 @@ import { openWorkspace } from "./fixtures/navigation";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const open = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "deposits");
   await page
     .getByRole("link", { name: "Recurring deposits", exact: true })

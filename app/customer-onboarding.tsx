@@ -370,7 +370,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                       apply(saved);
                       if (saved.account) {
                         if (onOpened) onOpened();
-                        else window.location.assign("/");
+                        else window.location.assign("/overview");
                       }
                     },
                     true,
@@ -381,7 +381,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                 <ArrowRight size={20} />
               </button>
             )}
-            <a href="/">Return to banking portal</a>
+            <a href="/demo">Return to banking demo</a>
             {draft.account && (
               <button
                 type="button"

@@ -17,7 +17,7 @@ test("persona select supports keyboard, cancellation, typeahead and large mobile
       data.role = route.request().postDataJSON().role;
     return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   const trigger = page.getByRole("combobox", { name: "Demo persona" });
   await trigger.focus();
   await page.keyboard.press("Space");
@@ -74,7 +74,7 @@ test("header omits the reading toggle across reload and role navigation while te
   await page.addInitScript(() =>
     localStorage.setItem("openfinacle-reading-size", "large"),
   );
-  await page.goto("/");
+  await page.goto("/demo");
   const reading = page.getByRole("button", {
     name: "Extra-large text",
     exact: true,
@@ -214,7 +214,7 @@ test("card controls review, recover a lost response after reload and share staff
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "cards");
   await expect(
     page.getByRole("heading", { name: "My debit card" }),
@@ -336,7 +336,7 @@ test("branch queues reflect records, filter before display and stay usable on mo
           : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByRole("button", { name: /Awaiting authorization/ }),
   ).toContainText("01");
@@ -437,7 +437,7 @@ test("customer balances and navigation remain usable with local fonts on desktop
           : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(page.getByTestId("balance")).toHaveText("₹1,20,000.00");
   await page.getByRole("button", { name: "Hide balances" }).click();
   await expect(page.getByTestId("balance")).toHaveText("₹ ••••••");
@@ -503,7 +503,7 @@ test("commands search customer screens, trap focus and return it without banking
     if (route.request().method() !== "GET") mutations.push(path);
     return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   const trigger = page.getByRole("button", { name: /Find a screen/ });
   await trigger.focus();
   await page.keyboard.press("Control+k");
@@ -548,7 +548,7 @@ test("busy role changes cannot open command navigation", async ({ page }) => {
     }
     await route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await choosePersona(page, "officer");
   const trigger = page.getByRole("button", { name: /Find a screen/ });
   await expect(trigger).toBeDisabled();
@@ -574,7 +574,7 @@ test("staff aliases open teller screens; menu navigation never posts an instruct
           : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: /Find a screen/ }).click();
   await page.getByRole("combobox", { name: "Banking screens" }).fill("TM");
   await page.keyboard.press("ArrowDown");

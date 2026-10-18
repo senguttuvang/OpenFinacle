@@ -286,7 +286,7 @@ test("actual banking and planning panels match Demo persona at desktop and mobil
   await page.route("**/api/**", (route) =>
     route.fulfill({ json: savedWorkspace() }),
   );
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("combobox", { name: "Demo persona", exact: true })
     .press("Enter");

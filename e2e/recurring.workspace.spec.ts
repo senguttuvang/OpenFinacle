@@ -173,7 +173,7 @@ test("recurring plan shares review, independent activation and a reload-reconcil
   };
   const view = () =>
     page.getByRole("button", { name: "View RD-22222222", exact: true }).click();
-  await page.goto("/");
+  await page.goto("/demo");
   await open();
   await page
     .getByRole("button", { name: "Open a demo recurring deposit" })

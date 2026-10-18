@@ -107,7 +107,7 @@ const fixture = async (
   return { data, source, posts, state };
 };
 const open = async (page: Page, navigate = true) => {
-  if (navigate) await page.goto("/");
+  if (navigate) await page.goto("/demo");
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await openWorkspace(page, "cards");
   await page
@@ -384,7 +384,7 @@ test("card controls restore a pending command before a failed card list read", a
       ),
     { bankId: saved.data.bank.id, sourceId: saved.source.id },
   );
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "cards");
   await expect(
     page.getByRole("heading", {
@@ -411,7 +411,7 @@ test("foreign card lists fail closed before displaying controls", async ({
   page,
 }) => {
   const saved = await fixture(page, { foreignCards: true });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "cards");
   await expect(
     page.locator(".card-workspace").getByRole("alert"),

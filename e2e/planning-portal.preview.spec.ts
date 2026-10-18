@@ -17,7 +17,7 @@ const start = async (page: Page) => {
   await page.addInitScript(() =>
     localStorage.setItem("openfinacle-planning-source", "device"),
   );
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Wealth & Planning", exact: true })
     .click();

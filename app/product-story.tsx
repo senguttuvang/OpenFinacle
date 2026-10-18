@@ -508,7 +508,7 @@ export function ProductStory({ children }: { children?: ReactNode }) {
           </p>
         </div>
         {children ?? (
-          <a className="magazine-action" href="/#demo-entry">
+          <a className="magazine-action" href="/demo">
             Open the banking workspace{" "}
             <ArrowRight size={18} aria-hidden="true" />
           </a>

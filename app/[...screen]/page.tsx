@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import BankingPage from "../page";
+import BankingPage from "../banking-page";
 import PlanningPage from "../planning/page";
 import {
   exportedPortalPaths,

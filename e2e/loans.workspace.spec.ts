@@ -493,7 +493,7 @@ test("loan quote review, saved application and independent Core decisions recove
     lostSubmit: true,
     uncertainDisburse: true,
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await expect(
     page.getByRole("heading", { name: "No loan applications yet" }),
@@ -740,7 +740,7 @@ test("an absent original Core receipt never enables resend or local discard afte
     initial: "recommended",
     missingRegister: true,
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await view(page);
   await decide(page, "register");
@@ -775,7 +775,7 @@ test("malformed application acknowledgement preserves the original across reload
   page,
 }) => {
   const state = await setup(page, { malformedSubmit: true });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await begin(page);
   await page
@@ -810,7 +810,7 @@ test("unavailable original storage blocks application submission before any POST
       return set.call(this, key, value);
     };
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await begin(page);
   await page
@@ -835,7 +835,7 @@ test("an in-flight original loan command disables role changes and duplicate con
   });
   const state = await setup(page, { initial: "recommended", pauseRegister });
   try {
-    await page.goto("/");
+    await page.goto("/demo");
     await open(page);
     await view(page);
     await decide(page, "register");
@@ -871,7 +871,7 @@ test("a definite version conflict refreshes the same owned application without r
     initial: "recommended",
     conflictRegister: true,
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await view(page);
   await decide(page, "register");
@@ -896,7 +896,7 @@ test("expired and unaffordable quotes keep application submission unavailable wh
   page,
 }) => {
   const state = await setup(page);
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await page
     .getByRole("button", { name: "Apply for a personal loan", exact: true })
@@ -939,7 +939,7 @@ test("a quote near Indian midnight shows the earlier banking deadline and expire
   page,
 }) => {
   const state = await setup(page, { now: Date.parse("2026-10-17T18:29:00Z") });
-  await page.goto("/");
+  await page.goto("/demo");
   await open(page);
   await begin(page);
   await expect(page.locator(".loan-form").getByRole("status")).toContainText(

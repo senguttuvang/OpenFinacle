@@ -154,7 +154,7 @@ for (const kind of ["fixed", "recurring"] as const) {
         .getByRole("button", { name: `View ${reference}`, exact: true })
         .click();
     };
-    await page.goto("/");
+    await page.goto("/demo");
     await open();
     await page
       .getByRole("button", { name: "View demo opening advice" })

@@ -326,7 +326,7 @@ test("explicit picker, reviewed transfer, switch and reload show each customer's
   page,
 }) => {
   const fixture = await installCustomers(page);
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await expect(
     page.getByRole("heading", { name: "Choose an existing customer" }),
@@ -399,7 +399,7 @@ for (const viewport of [
   }) => {
     await installCustomers(page);
     await page.setViewportSize(viewport);
-    await page.goto("/");
+    await page.goto("/demo");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
@@ -488,7 +488,7 @@ test("standalone shared planning binds its verified registered customer before s
 });
 
 const prepareTransfer = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
   await openWorkspace(page, "transfer");
@@ -658,7 +658,7 @@ test("history read failure blocks a fresh transfer rather than hiding an unresol
   page,
 }) => {
   const fixture = await installCustomers(page, { historyFailure: true });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
   await openWorkspace(page, "transfer");
@@ -675,7 +675,7 @@ test("empty future customer adds a known account by holder name, reviews it and 
   page,
 }) => {
   const fixture = await installCustomers(page, { emptyPayees: true });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
   await openWorkspace(page, "transfer");
@@ -790,7 +790,7 @@ for (const width of [390, 720])
   }) => {
     await installCustomers(page, { payeeCount: 15 });
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/");
+    await page.goto("/demo");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
@@ -886,7 +886,7 @@ for (const empty of [false, true])
     page,
   }) => {
     await installCustomers(page, { emptyPayees: empty });
-    await page.goto("/");
+    await page.goto("/demo");
     await page
       .getByRole("button", { name: "Explore existing customer" })
       .click();

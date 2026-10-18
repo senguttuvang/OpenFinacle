@@ -385,7 +385,7 @@ test("primary new-customer entry opens the staged flow and preserves the explici
       json: { error: "Choose a demo journey" },
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByRole("button", {
       name: /Start your banking story.*Shared branch demo/,
@@ -420,7 +420,7 @@ test("staff cash enquiry shows the selected Core customer even without an onboar
           : {},
     }),
   );
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("link", { name: /Cash & salary/ }).click();
   await expect(
     page.getByText("Customer: Demo Selected Customer", { exact: true }),
@@ -448,7 +448,7 @@ test("fresh opened-receipt reload binds the applicant scope before continuing to
   await page
     .getByRole("button", { name: "Continue to my account", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/overview$/);
   await expect(page.locator(".person").first()).toContainText(
     "Demo Ananya Rao",
   );
