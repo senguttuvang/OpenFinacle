@@ -3,16 +3,21 @@ import type {
   OnboardingDraft,
   OnboardingFields,
 } from "../src/domain/onboarding";
-import { api } from "./api";
+import { api, setApiCustomerScope } from "./api";
 
 export const loadOnboarding = () => api<OnboardingDraft>("/onboarding");
 export const inspectOpening = () =>
   api<OnboardingDraft>("/onboarding/inspect-opening", {});
 export const beginOnboarding = (operationId: string) =>
   Effect.gen(function* () {
-    yield* api("/session", {});
+    const current = yield* api<{ bankId: string }>("/session", {});
+    yield* Effect.sync(() => setApiCustomerScope(current.bankId));
     yield* api("/session/role", { role: "customer" });
-    return yield* api<OnboardingDraft>("/onboarding/start", { operationId });
+    const saved = yield* api<OnboardingDraft>("/onboarding/start", {
+      operationId,
+    });
+    yield* Effect.sync(() => setApiCustomerScope(saved.bankId));
+    return saved;
   });
 export const continueOnboarding = () =>
   Effect.gen(function* () {

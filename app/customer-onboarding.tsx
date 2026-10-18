@@ -25,6 +25,7 @@ import {
   saveOnboarding,
 } from "./onboarding-api";
 import "./onboarding.css";
+import { setApiCustomerScope } from "./api";
 
 const storageKey = "openfinacle-onboarding-operation";
 const statusText: Record<string, string> = {
@@ -53,6 +54,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
   const focusStep = draft?.status === "draft" ? step : -1;
   const locked = useRef(false);
   const apply = useCallback((saved: OnboardingDraft) => {
+    setApiCustomerScope(saved.bankId);
     setDraft(saved);
     setFields(saved.fields);
     setStep(saved.step);

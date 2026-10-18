@@ -4,6 +4,7 @@ import {
   type OnboardingDraft,
 } from "../src/domain/onboarding";
 import { completedOnboarding } from "../tests/fixtures/onboarding";
+import { savedWorkspace } from "./fixtures/workspace";
 
 const operationId = "c566af34-e49e-471e-aa84-97cf0d4f917a";
 const record = (): OnboardingDraft => ({
@@ -21,11 +22,16 @@ async function fixture(page: Page, initial: OnboardingDraft | null = null) {
   let saved = initial;
   let submissions = 0;
   let writes = 0;
+  let continued = false;
   const documents: { name: string; kind: string }[] = [];
   let loseResponse = false;
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (path === "/api/session")
+      return route.fulfill({
+        json: { bankId: saved?.bankId ?? "entry-branch" },
+      });
     if (path === "/api/onboarding/start") {
       const input = request.postDataJSON();
       saved ??= {
@@ -39,7 +45,17 @@ async function fixture(page: Page, initial: OnboardingDraft | null = null) {
       return route.fulfill(
         saved ? { json: saved } : { status: 404, json: { error: "No draft" } },
       );
+    if (path === "/api/onboarding/continue" && saved) {
+      expect(request.headers()["x-customer-scope"]).toBe(saved.bankId);
+      continued = true;
+      return route.fulfill({ json: saved });
+    }
+    if (path === "/api/session/role" && saved) {
+      expect(request.headers()["x-customer-scope"]).toBe(saved.bankId);
+      return route.fulfill({ json: { role: "customer" } });
+    }
     if (path === "/api/onboarding/draft" && saved) {
+      expect(request.headers()["x-customer-scope"]).toBe(saved.bankId);
       writes++;
       const input = request.postDataJSON();
       expect(input.version).toBe(saved.version);
@@ -52,6 +68,7 @@ async function fixture(page: Page, initial: OnboardingDraft | null = null) {
       return route.fulfill({ json: saved });
     }
     if (path === "/api/onboarding/submit" && saved) {
+      expect(request.headers()["x-customer-scope"]).toBe(saved.bankId);
       expect(request.postDataJSON().operationId).toBe(saved.operationId);
       submissions++;
       saved = {
@@ -71,8 +88,29 @@ async function fixture(page: Page, initial: OnboardingDraft | null = null) {
       documents.push({ name: `Demo-onboarding-${kind}.txt`, kind });
       return route.fulfill({ json: { id: kind } });
     }
-    if (path === "/api/dashboard")
-      return route.fulfill({ json: { documents } });
+    if (path === "/api/dashboard") {
+      const dashboard = savedWorkspace();
+      if (saved?.account && dashboard.account) {
+        dashboard.bank = {
+          ...dashboard.bank,
+          id: saved.bankId,
+          applicant: true,
+        };
+        dashboard.account = {
+          ...dashboard.account,
+          id: saved.account.id,
+          accountNo: saved.account.accountNo,
+          clientName: saved.fields.name,
+        };
+        dashboard.customer = {
+          id: saved.bankId,
+          display_name: saved.fields.name,
+          reference: saved.id,
+          account_suffix: "0091",
+        };
+      }
+      return route.fulfill({ json: { ...dashboard, documents } });
+    }
     return route.fulfill({ json: {} });
   });
   return {
@@ -86,6 +124,9 @@ async function fixture(page: Page, initial: OnboardingDraft | null = null) {
       return writes;
     },
     documents,
+    get continued() {
+      return continued;
+    },
     loseNextSubmission() {
       loseResponse = true;
     },
@@ -318,4 +359,88 @@ test("an old session-bound application is not silently replaced; a separate appl
   ).toBeVisible();
   expect(attempts).toHaveLength(2);
   expect(attempts[1]).not.toBe(attempts[0]);
+});
+
+test("primary new-customer entry opens the staged flow and preserves the explicitly labelled shared demonstration", async ({
+  page,
+}) => {
+  let writes = 0;
+  await page.route("**/api/**", (route) => {
+    if (route.request().method() === "POST") writes++;
+    const path = new URL(route.request().url()).pathname;
+    return route.fulfill({
+      status: path === "/api/onboarding" ? 404 : 401,
+      json: { error: "Choose a demo journey" },
+    });
+  });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", {
+      name: /Start your banking story.*Shared branch demo/,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open my first account", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/open-account\/?$/);
+  await expect(
+    page.getByRole("heading", { name: "Open a savings account", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start my application", exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+});
+
+test("staff cash enquiry shows the selected Core customer even without an onboarding application", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  data.role = "officer";
+  if (!data.account) throw new Error("Cash fixture requires an active account");
+  data.account.clientName = "Demo Selected Customer";
+  data.application = null;
+  await page.route("**/api/**", (route) =>
+    route.fulfill({
+      json:
+        new URL(route.request().url()).pathname === "/api/dashboard"
+          ? data
+          : {},
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: /Cash & salary/ }).click();
+  await expect(
+    page.getByText("Customer: Demo Selected Customer", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Account not yet opened", { exact: false }),
+  ).toHaveCount(0);
+});
+
+test("fresh opened-receipt reload binds the applicant scope before continuing to their own portal", async ({
+  page,
+}) => {
+  const state = await fixture(page, {
+    ...record(),
+    fields: completedOnboarding,
+    status: "submitted",
+    applicationStatus: "approved",
+    account: { id: 91, accountNo: "CORE-SYNTHETIC-91" },
+  });
+  await page.goto("/open-account");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Your savings account is open" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Continue to my account", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator(".person").first()).toContainText(
+    "Demo Ananya Rao",
+  );
+  expect(state.continued).toBe(true);
+  expect(state.submissions).toBe(0);
+  expect(state.saved?.bankId).toBe("independent-applicant");
 });
