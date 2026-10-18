@@ -154,7 +154,16 @@ PRAGMA ignore_check_constraints=OFF;
 CREATE TEMP TABLE workflow_repayment_schema_guard (complete INTEGER NOT NULL CHECK(complete=1));
 INSERT INTO workflow_repayment_schema_guard SELECT count(*) IN (0,4) FROM sqlite_schema
   WHERE type='table' AND name IN ('loan_repayment_offers','loan_repayment_requests','loan_repayment_operations','loan_repayment_events');
-DROP TABLE workflow_repayment_schema_guard;`,
+DROP TABLE workflow_repayment_schema_guard;
+CREATE TEMP TABLE workflow_planning_schema_guard (complete INTEGER NOT NULL CHECK(complete=1));
+INSERT INTO workflow_planning_schema_guard
+SELECT (tables=0 AND triggers=0) OR (tables=2 AND triggers=3)
+FROM (
+  SELECT
+    (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('planning_households','planning_events')) AS tables,
+    (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND tbl_name='planning_events' AND name IN ('planning_apply','planning_immutable_update','planning_immutable_delete')) AS triggers
+);
+DROP TABLE workflow_planning_schema_guard;`,
     [
       "settings",
       "banks",

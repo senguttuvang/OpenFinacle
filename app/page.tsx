@@ -29,6 +29,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Users,
   Wallet,
   X,
@@ -74,6 +75,14 @@ const RetailProfile = dynamic(
   },
 );
 
+const Planning = dynamic(
+  () =>
+    import("./planning/planning-workspace").then(
+      (module) => module.PlanningWorkspace,
+    ),
+  { loading: () => <p role="status">Loading wealth and planning…</p> },
+);
+
 const roles: Record<Role, { name: string; person: string; initials: string }> =
   {
     customer: { name: "Customer", person: "Mira Krishnan", initials: "MK" },
@@ -99,6 +108,7 @@ const navIcons = {
   cards: CreditCard,
   deposits: Landmark,
   loans: Landmark,
+  planning: TrendingUp,
   cash: Wallet,
   approvals: ShieldCheck,
   operations: Building2,
@@ -746,13 +756,15 @@ export default function Page() {
                       : "Your money, your next step, and everything in between."
                   : view === "application"
                     ? "A simple beginning. Carefully reviewed."
-                    : view === "transfer"
-                      ? "Send money confidently to the people who matter."
-                      : view === "cash"
-                        ? "Record the instruction here. A separate approver posts it."
-                        : view === "approvals"
-                          ? "Review the details. Keep the maker and approver separate."
-                          : "Your banking activity, clearly connected."}
+                    : view === "planning"
+                      ? "Explore synthetic household spending, wealth and future decisions. Planning is separate from your bank balances."
+                      : view === "transfer"
+                        ? "Send money confidently to the people who matter."
+                        : view === "cash"
+                          ? "Record the instruction here. A separate approver posts it."
+                          : view === "approvals"
+                            ? "Review the details. Keep the maker and approver separate."
+                            : "Your banking activity, clearly connected."}
               </p>
             </div>
             <span className="business-date">
@@ -802,6 +814,9 @@ export default function Page() {
           )}
           {view === "accounts" && (
             <RetailAccount data={data} navigate={setView} />
+          )}
+          {view === "planning" && role !== "approver" && (
+            <Planning key={data.bank.id + data.role} embedded />
           )}
           {view === "profile" && (
             <RetailProfile
