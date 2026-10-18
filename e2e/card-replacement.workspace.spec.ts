@@ -3,6 +3,7 @@ import { chooseOption } from "./fixtures/form-select";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { replacementWorkspace } from "./fixtures/replacements";
+import { enlargeText } from "./fixtures/text-scale";
 
 test("replacement retires its source, needs delivery, reconciles activation after reload and keeps distinct controls", async ({
   page,
@@ -199,7 +200,7 @@ test("replacement retires its source, needs delivery, reconciles activation afte
   ).toBe(true);
   await button("Replacement requests").click();
   await view();
-  await button("Extra-large text").click();
+  await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

@@ -7,6 +7,7 @@ import {
 } from "../src/domain/recurring-deposits";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test("recurring plan shares review, independent activation and a reload-reconciled installment", async ({
@@ -302,9 +303,7 @@ test("recurring plan shares review, independent activation and a reload-reconcil
   await expect(page.locator(".recurring-schedule li").nth(1)).toContainText(
     "upcoming",
   );
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

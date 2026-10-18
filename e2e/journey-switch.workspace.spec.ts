@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 for (const extraLarge of [false, true]) {
@@ -24,10 +25,7 @@ for (const extraLarge of [false, true]) {
       return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
     });
     await page.goto("/");
-    if (extraLarge)
-      await page
-        .getByRole("button", { name: "Extra-large text", exact: true })
-        .click();
+    if (extraLarge) await enlargeText(page);
     const switcher = page.getByRole("button", {
       name: "Choose another journey",
       exact: false,

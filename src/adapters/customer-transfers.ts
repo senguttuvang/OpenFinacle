@@ -44,19 +44,21 @@ const savings = Schema.Struct({
   allowOverdraft: Schema.Boolean,
   withdrawalFeeForTransfers: Schema.Boolean,
   summary: Schema.Struct({ availableBalance: money, accountBalance: money }),
-  transactions: Schema.Array(
-    Schema.Struct({
-      id,
-      accountId: Schema.optional(id),
-      currency,
-      date: dateParts,
-      amount: money,
-      reversed: Schema.Boolean,
-      isReversal: Schema.optional(Schema.NullOr(Schema.Boolean)),
-      transactionType: Schema.Struct({ id }),
-      transfer: Schema.optional(Schema.NullOr(transfer)),
-    }),
-  ).pipe(Schema.maxItems(10000)),
+  transactions: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        id,
+        accountId: Schema.optional(id),
+        currency,
+        date: dateParts,
+        amount: money,
+        reversed: Schema.Boolean,
+        isReversal: Schema.optional(Schema.NullOr(Schema.Boolean)),
+        transactionType: Schema.Struct({ id }),
+        transfer: Schema.optional(Schema.NullOr(transfer)),
+      }),
+    ).pipe(Schema.maxItems(10000)),
+  ),
 });
 const fullTransfer = Schema.Struct({
   id,
@@ -76,7 +78,8 @@ const fullTransfer = Schema.Struct({
 });
 const unavailable = () =>
   new BankingError({
-    message: "The original owned INR savings references could not be verified.",
+    message:
+      "The selected INR savings accounts could not be verified. Refresh the selected account before reviewing again.",
     status: 503,
   });
 const uncertain = () =>
@@ -137,7 +140,18 @@ export const customerTransferLayer = Layer.effect(
           !client.active
         )
           return yield* Effect.fail(unavailable());
-        return { account, office: client.officeId };
+        // Core omits the association for a newly opened, empty account. Never
+        // interpret missing history on a funded account as an empty statement.
+        if (
+          account.transactions === undefined &&
+          (account.summary.accountBalance !== 0 ||
+            account.summary.availableBalance !== 0)
+        )
+          return yield* Effect.fail(unavailable());
+        return {
+          account: { ...account, transactions: account.transactions ?? [] },
+          office: client.officeId,
+        };
       });
     const pair = (sender: RegisteredCustomer, recipient: RegisteredCustomer) =>
       Effect.gen(function* () {

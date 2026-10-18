@@ -7,13 +7,6 @@
   color: #2458d3;
   text-underline-offset: 0.2em;
 }
-.onboarding-page .reading-toggle {
-  max-width: 100%;
-  white-space: normal;
-}
-.onboarding-page .reading-toggle span:not(.sr-only) {
-  white-space: normal;
-}
 .onboarding-page {
   overflow-wrap: anywhere;
 }

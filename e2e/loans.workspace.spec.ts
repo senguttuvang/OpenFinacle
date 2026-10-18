@@ -16,6 +16,7 @@ import {
 } from "../tests/fixtures/loan-workflow";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test.use({ actionTimeout: 10000 });
@@ -687,9 +688,7 @@ test("loan quote review, saved application and independent Core decisions recove
       .getByRole("table", { name: "Saved Core loan transactions" })
       .locator("tbody tr"),
   ).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(() =>

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { adviceText, type DepositAdvice } from "../src/domain/deposit-advice";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 for (const kind of ["fixed", "recurring"] as const) {
@@ -238,9 +239,7 @@ for (const kind of ["fixed", "recurring"] as const) {
     await expect(preview.getByRole("heading")).toBeFocused();
     await expect(preview).toContainText(reference);
     await page.screenshot({ path: `/tmp/finacle4-${kind}-advice-desktop.png` });
-    await page
-      .getByRole("button", { name: "Extra-large text", exact: true })
-      .click();
+    await enlargeText(page);
     await page.setViewportSize({ width: 390, height: 844 });
     expect(
       await page.evaluate(

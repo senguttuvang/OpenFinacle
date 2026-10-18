@@ -49,9 +49,14 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
     if (response.status >= 400)
       return yield* Effect.fail(
         new ApiError({
-          message: `${(json as { error?: string }).error ?? "The request could not be completed."} Reference: ${response.headers["x-request-id"] ?? "unavailable"}`,
+          message: `${typeof json === "object" && json !== null && "error" in json && typeof json.error === "string" ? json.error : "The request could not be completed."} Reference: ${response.headers["x-request-id"] ?? "unavailable"}`,
           status: response.status,
-          uncertain: (json as { uncertain?: unknown }).uncertain !== false,
+          uncertain: !(
+            typeof json === "object" &&
+            json !== null &&
+            "uncertain" in json &&
+            json.uncertain === false
+          ),
         }),
       );
     return json as T;

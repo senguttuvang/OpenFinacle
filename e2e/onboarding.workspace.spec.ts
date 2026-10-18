@@ -5,6 +5,7 @@ import {
 } from "../src/domain/onboarding";
 import { completedOnboarding } from "../tests/fixtures/onboarding";
 import { chooseOption } from "./fixtures/form-select";
+import { enlargeText } from "./fixtures/text-scale";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const operationId = "c566af34-e49e-471e-aa84-97cf0d4f917a";
@@ -287,7 +288,7 @@ test("mobile, keyboard and extra-large text at 200 percent retain a usable singl
   await expect(
     page.getByRole("heading", { name: "Personal details", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Extra-large text/ }).click();
+  await enlargeText(page);
   await page.screenshot({
     path: "test-results/onboarding-mobile.png",
     fullPage: true,

@@ -51,7 +51,6 @@ import { CustomerTransfer } from "./customer-transfer";
 import { FormSelect } from "./form-select";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
-import { ReadingSize } from "./reading-size";
 import { RetailNavigation, RetailUnavailable } from "./retail-navigation";
 import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
@@ -767,7 +766,6 @@ function BankingPage({
             <strong>{viewTitle}</strong>
           </div>
           <div className="topbar-right">
-            <ReadingSize />
             <CommandMenu
               role={role}
               journey={data.bank.journey}

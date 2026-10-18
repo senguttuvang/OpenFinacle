@@ -16,6 +16,7 @@ const installCustomers = async (
     emptyPayees?: boolean;
     stalePayee?: boolean;
     payeeCount?: number;
+    reviewFailure?: "funds" | "null" | "malformed";
   } = {},
 ) => {
   const first = savedWorkspace(),
@@ -199,6 +200,22 @@ const installCustomers = async (
     if (path === "/api/customer-transfers/inspect" && lastOutcome)
       return route.fulfill({ json: lastOutcome });
     if (path === "/api/customer-transfers/review") {
+      if (options.reviewFailure === "funds")
+        return route.fulfill({
+          status: 400,
+          json: {
+            error: "The transfer exceeds current available funds.",
+            uncertain: false,
+          },
+        });
+      if (options.reviewFailure === "null")
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: "null",
+        });
+      if (options.reviewFailure === "malformed")
+        return route.fulfill({ json: { offer: { id: "incomplete-review" } } });
       offer = {
         id: `offer-registered-${++reviews}`,
         bank_id: selected.bank.id,
@@ -482,6 +499,41 @@ const prepareTransfer = async (page: Page) => {
     .getByRole("button", { name: "Review transfer", exact: true })
     .click();
 };
+for (const mode of ["funds", "null", "malformed"] as const)
+  test(`${mode} review failure explains that no transfer was sent and never creates an original command`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const fixture = await installCustomers(page, { reviewFailure: mode });
+    await prepareTransfer(page);
+    const alert = page.locator(".customer-transfer").getByRole("alert");
+    await expect(alert).toContainText("No transfer was sent.");
+    if (mode === "funds")
+      await expect(alert).toContainText("current available funds");
+    if (mode === "null")
+      await expect(alert).toContainText("The request could not be completed.");
+    await expect(
+      page.getByRole("button", {
+        name: "Inspect original transfer",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Confirm transfer once", exact: true }),
+    ).toHaveCount(0);
+    expect(fixture.posts()).toBe(0);
+    expect(
+      await page.evaluate(
+        () =>
+          Object.keys(sessionStorage).filter((key) =>
+            key.startsWith("openfinacle:customer-transfer:"),
+          ).length,
+      ),
+    ).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
 for (const mode of ["lost", "malformed"] as const)
   test(`${mode} transfer acknowledgement retains original across reload even with empty history`, async ({
     page,

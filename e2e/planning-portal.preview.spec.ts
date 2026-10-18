@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
 import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
+import { enlargeText } from "./fixtures/text-scale";
 
 const start = async (page: Page) => {
   const relationship = `synthetic-preview-${crypto.randomUUID()}`;
@@ -121,9 +122,7 @@ test("existing portal tab saves actual D1 records, preserves banking navigation,
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Extra-large text", exact: true })
-    .click();
+  await enlargeText(page);
   await expect(page.locator("html")).toHaveAttribute("data-reading", "large");
   expect(
     await page.evaluate(

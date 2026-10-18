@@ -128,6 +128,7 @@ export const customerHarness = (filename = ":memory:") => {
   let hideCredit = false;
   let rejectWrite = false;
   let isoTransferDates = false;
+  let omittedHistory: { account: number; emptyOnly: boolean } | null = null;
   const core = Layer.succeed(Core, {
     request: <T>(method: string, path: string, body?: unknown, key?: string) =>
       Effect.try({
@@ -186,6 +187,16 @@ export const customerHarness = (filename = ":memory:") => {
               ).transactions.filter(
                 (row) => row.transactionType.id !== 1 || !row.transfer,
               );
+            if (
+              result &&
+              (result as Savings).id === omittedHistory?.account &&
+              (!omittedHistory.emptyOnly ||
+                (result as Savings).transactions.length === 0)
+            ) {
+              const { transactions: _history, ...withoutHistory } =
+                result as Savings;
+              result = withoutHistory;
+            }
           } else if (method === "GET" && parts[0] === "accounttransfers")
             result = transfers.get(Number(parts[1]));
           else if (method === "POST") {
@@ -414,6 +425,9 @@ export const customerHarness = (filename = ":memory:") => {
     },
     useISOTransferDates: () => {
       isoTransferDates = true;
+    },
+    omitTransactionHistoryFor: (account: number, emptyOnly = true) => {
+      omittedHistory = { account, emptyOnly };
     },
   };
 };

@@ -214,6 +214,53 @@ test("one retail confirmation creates exact debit and credit; reload/switch obse
   ).toEqual({ status: "confirmed" });
 });
 
+test("a newly opened zero-balance recipient may omit empty Core history and receives one proven transfer", async () => {
+  const { h, source, recipientId } = await twoCustomers();
+  const account = h.accounts.get(200);
+  if (!account) throw Error("Missing recipient fixture");
+  account.summary.availableBalance = account.summary.accountBalance = 0;
+  account.transactions = [];
+  h.omitTransactionHistoryFor(200);
+  const before = h.calls.filter((call) => call.method === "POST").length;
+  const { offer } = await run(
+    h,
+    reviewCustomerTransfer(source, recipientId, "400"),
+  );
+  expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(before);
+  const result = await run(
+    h,
+    confirmCustomerTransfer(source, offer.id, "empty-recipient-original"),
+  );
+  expect(result.status).toBe("posted");
+  expect(result.receipt).toMatchObject({
+    amount_minor: 40000,
+    recipient_balance_minor: 40000,
+  });
+  expect(account.transactions).toHaveLength(1);
+  await run(
+    h,
+    confirmCustomerTransfer(source, offer.id, "empty-recipient-original"),
+  );
+  expect(
+    h.calls.filter(
+      (call) => call.method === "POST" && call.path === "accounttransfers",
+    ),
+  ).toHaveLength(1);
+});
+
+test("an omitted history on a funded account stays unavailable before any transfer dispatch", async () => {
+  const { h, source, recipientId } = await twoCustomers();
+  h.omitTransactionHistoryFor(200, false);
+  const before = h.calls.filter((call) => call.method === "POST").length;
+  expect(
+    await run(
+      h,
+      reviewCustomerTransfer(source, recipientId, "400").pipe(Effect.flip),
+    ),
+  ).toMatchObject({ status: 503 });
+  expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(before);
+});
+
 test("concurrent confirmations, different keys and overdraft cannot double post", async () => {
   const { h, source, recipientId } = await twoCustomers();
   const { offer } = await run(
