@@ -68,7 +68,7 @@ reruns send no Core writes and preserve changed balances and all existing data.
 ## Verification contract
 
 `bun run check` is the full branch gate, with
-`DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock`. Owned tests use
+the machine’s Docker context or `DOCKER_HOST`. Owned tests use
 the real workflow SQL/application/adapters against a deterministic Core
 fixture: 100 distinct registered customers, interrupted stages, disk reopen,
 exact money, both statement legs, receipt tampering, concurrent confirmations,

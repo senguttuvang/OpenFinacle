@@ -21,7 +21,7 @@ Finacle4 alone performs GitHub merge, protected exact-source backup, actual targ
 Full exact-source repository gate:
 
 ```sh
-DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check
+bun run check
 ```
 
 This includes the current banking tests, strict types/lint/static/dependency checks, production export and Worker/container dry run. The authenticated HTTP tests cover absent/expired sessions, the existing production-identity/demo guard, context mismatch, command replay/conflict, consent/revocation and approver exclusion, and assert zero Core calls or banking command/event writes.

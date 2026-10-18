@@ -22,7 +22,7 @@ the page lease for the registered-customer count, metadata refresh callback, and
 legacy new-payment visibility integration. Preserve their reviewed source and
 merge the latest integrated main before final exact-branch verification.
 
-Run `DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check`.
+Run `bun run check`.
 Run isolated fixture browser project against port 3100 with
 `BASE_URL=http://127.0.0.1:3100 bunx playwright test --project=workspace`.
 Directly inspect the final diff, scan with redacted output, verify private repo

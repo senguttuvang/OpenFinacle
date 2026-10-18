@@ -4,6 +4,8 @@
 
 [Explore the product](https://openfinacle.plts.in/discover) · [Try the demo](https://openfinacle.plts.in/demo) · [Capabilities](https://openfinacle.plts.in/capabilities) · [Roadmap](https://openfinacle.plts.in/roadmap) · [Finacle, the inspiration](https://www.finacle.com/solution/core-banking-solution/)
 
+[MIT license](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+
 <a href="https://openfinacle.plts.in/discover"><img src="public/product/accounts.webp" alt="OpenFinacle customer account screen showing a synthetic savings relationship, account details and banking navigation" width="800"></a>
 
 *An actual acceptance-fixture screenshot. Names, balances and transactions are sample data; the image is not a live account view.*
@@ -146,4 +148,8 @@ Deployment uses the repository-owned `bun run deploy` CLI. Schema changes requir
 | Bookmarkable screens | [Friendly route specification](specs/012-friendly-routes/spec.md) |
 | Feature intent and contracts | [Specifications](specs/) |
 
-Source access is currently private. The website is available for public demonstration; a GitHub link does not change repository access or licensing.
+## License and Contributions
+
+The original application code and documentation are available under the [MIT license](LICENSE). Fineract, fonts and other dependencies retain their own licenses and notices; see [third-party attribution](THIRD_PARTY_NOTICES.md). The application remains a prototype using synthetic data, rather than a production-ready banking system.
+
+Contributions are welcome through focused issues and pull requests. The [contribution guide](CONTRIBUTING.md) explains local setup, safe fixture tests, validation and deployment boundaries. Report vulnerabilities privately using the [security policy](SECURITY.md). The package's `private` flag prevents accidental npm publication; it does not restrict the source license or set GitHub repository visibility.

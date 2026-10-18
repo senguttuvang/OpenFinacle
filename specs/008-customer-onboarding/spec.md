@@ -20,7 +20,7 @@ New modules only until serialized shared-file lease. Migration0017 is additive a
 
 ## Verification
 
-Domain validation; durable draft reload/conflict/scope isolation; submission concurrency and response-loss recovery; officer/approver Core provisioning and Core failure; browser stepper back/next/edit/resume/confirmation/receipt and mobile/keyboard/200% zoom. Full exact-branch gate: `DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check`. Fixture browser tests are distinct from real-Core evidence.
+Domain validation; durable draft reload/conflict/scope isolation; submission concurrency and response-loss recovery; officer/approver Core provisioning and Core failure; browser stepper back/next/edit/resume/confirmation/receipt and mobile/keyboard/200% zoom. Full exact-branch gate: `bun run check`. Fixture browser tests are distinct from real-Core evidence.
 
 ## Evidence classification
 
