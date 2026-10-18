@@ -5,6 +5,7 @@ import {
   recurringActions,
   recurringSchedule,
 } from "../src/domain/recurring-deposits";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -164,9 +165,7 @@ test("recurring plan shares review, independent activation and a reload-reconcil
   });
   const open = async () => {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    await page
-      .getByRole("button", { name: "Deposits", exact: true })
-      .click({ timeout: 10000 });
+    await openWorkspace(page, "deposits");
     await page
       .getByRole("button", { name: "Recurring deposits", exact: true })
       .click();

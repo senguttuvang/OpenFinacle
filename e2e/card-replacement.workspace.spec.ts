@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { replacementWorkspace } from "./fixtures/replacements";
 
@@ -13,7 +14,7 @@ test("replacement retires its source, needs delivery, reconciles activation afte
     page.getByRole("button", { name, exact: true });
   const open = async () => {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    await button("Cards").click({ timeout: 10000 });
+    await openWorkspace(page, "cards");
     await button("Replacement requests").click();
   };
   const view = () => button("View CR-44444444").click();

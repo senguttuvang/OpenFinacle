@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { Card } from "../src/domain/cards";
 import { chooseOption } from "./fixtures/form-select";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -107,7 +108,7 @@ const fixture = async (
 const open = async (page: Page, navigate = true) => {
   if (navigate) await page.goto("/");
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await page
     .getByRole("button", { name: "Replacement requests", exact: true })
     .click();
@@ -380,7 +381,7 @@ test("card controls restore a pending command before a failed card list read", a
     { bankId: saved.data.bank.id, sourceId: saved.source.id },
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await expect(
     page.getByRole("heading", {
       name: "Check your saved instruction",
@@ -407,7 +408,7 @@ test("foreign card lists fail closed before displaying controls", async ({
 }) => {
   const saved = await fixture(page, { foreignCards: true });
   await page.goto("/");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await expect(
     page.locator(".card-workspace").getByRole("alert"),
   ).toContainText("different relationship");

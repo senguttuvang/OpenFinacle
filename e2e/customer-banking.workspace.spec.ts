@@ -4,6 +4,7 @@ import { planningHouseholds } from "../src/domain/planning-fixtures";
 import { initialPlanningState } from "../src/domain/planning-state";
 import type { Dashboard } from "../src/domain/view";
 import { chooseOption } from "./fixtures/form-select";
+import { openWorkspace } from "./fixtures/navigation";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const installCustomers = async (
@@ -214,9 +215,7 @@ test("explicit picker, reviewed transfer, switch and reload show each customer's
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".person strong")).toHaveText("Mira Krishnan");
-  await page
-    .getByRole("button", { name: "Pay & transfer", exact: true })
-    .click();
+  await openWorkspace(page, "transfer");
   await page
     .getByLabel("Recipient", { exact: true })
     .selectOption("sample-aadhya");
@@ -244,7 +243,7 @@ test("explicit picker, reviewed transfer, switch and reload show each customer's
     .fill("Aadhya");
   await page.getByRole("button", { name: /Aadhya Iyer.*SYN-002/ }).click();
   await expect(page.locator(".person strong")).toHaveText("Aadhya Iyer");
-  await page.getByRole("button", { name: "Statements", exact: true }).click();
+  await openWorkspace(page, "statements");
   await expect(
     page.getByRole("cell", { name: "Deposit", exact: true }),
   ).toBeVisible();
@@ -254,7 +253,7 @@ test("explicit picker, reviewed transfer, switch and reload show each customer's
     .getByRole("button", { name: "Switch customer", exact: true })
     .click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
-  await page.getByRole("button", { name: "Statements", exact: true }).click();
+  await openWorkspace(page, "statements");
   await expect(
     page.getByRole("cell", { name: "Withdrawal", exact: true }),
   ).toBeVisible();
@@ -366,9 +365,7 @@ const prepareTransfer = async (page: Page) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
-  await page
-    .getByRole("button", { name: "Pay & transfer", exact: true })
-    .click();
+  await openWorkspace(page, "transfer");
   await page
     .getByLabel("Recipient", { exact: true })
     .selectOption("sample-aadhya");
@@ -396,9 +393,7 @@ for (const mode of ["lost", "malformed"] as const)
     );
     expect(stored).not.toBeNull();
     await page.reload();
-    await page
-      .getByRole("button", { name: "Pay & transfer", exact: true })
-      .click();
+    await openWorkspace(page, "transfer");
     await expect(
       page.getByRole("heading", { name: "Review your transfer" }),
     ).toBeVisible();
@@ -446,9 +441,7 @@ test("history read failure blocks a fresh transfer rather than hiding an unresol
   await page.goto("/");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
-  await page
-    .getByRole("button", { name: "Pay & transfer", exact: true })
-    .click();
+  await openWorkspace(page, "transfer");
   await expect(
     page.locator(".customer-transfer").getByRole("alert"),
   ).toContainText("original transfer");
