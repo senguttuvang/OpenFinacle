@@ -1,0 +1,450 @@
+import { expect, type Page, test } from "@playwright/test";
+import { bankingDate } from "../src/domain/banking";
+import { planningHouseholds } from "../src/domain/planning-fixtures";
+import { initialPlanningState } from "../src/domain/planning-state";
+import type { Dashboard } from "../src/domain/view";
+import { savedWorkspace } from "./fixtures/workspace";
+
+const installCustomers = async (
+  page: Page,
+  options: {
+    lostResponse?: boolean;
+    malformedResponse?: boolean;
+    historyFailure?: boolean;
+  } = {},
+) => {
+  const first = savedWorkspace(),
+    second = savedWorkspace();
+  first.customer = {
+    id: "legacy-mira",
+    display_name: "Mira Krishnan",
+    reference: "SYN-001",
+    account_suffix: "0001",
+  };
+  second.bank = { ...second.bank, id: "sample-branch-002" };
+  second.customer = {
+    id: "sample-aadhya",
+    display_name: "Aadhya Iyer",
+    reference: "SYN-002",
+    account_suffix: "0200",
+  };
+  if (!first.account || !second.account)
+    throw new Error("Customer fixture requires accounts");
+  first.account.transactions = [];
+  second.account = {
+    ...second.account,
+    id: 200,
+    clientId: 100,
+    accountNo: "SYN-0200",
+    clientName: "Aadhya Iyer",
+    summary: { availableBalance: 15000, accountBalance: 15000 },
+    transactions: [],
+  };
+  const rows: Dashboard[] = [first, second];
+  let selected: Dashboard | undefined;
+  let posts = 0;
+  let lostResponse = options.lostResponse ?? false;
+  let lastOutcome: Record<string, unknown> | null = null;
+  let offer: {
+    id: string;
+    bank_id: string;
+    sender_id: string;
+    recipient_id: string;
+    amount_minor: number;
+    payment_date: string;
+    expires_at: number;
+  } | null = null;
+  await page.route("**/api/**", (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname;
+    const input = request.method() === "POST" ? request.postDataJSON() : null;
+    if (path === "/api/customers")
+      return route.fulfill({
+        json: { customers: rows.map((row) => row.customer) },
+      });
+    if (path === "/api/customer-selection") {
+      selected = rows.find((row) => row.customer?.id === input.customerId);
+      if (!selected)
+        return route.fulfill({
+          status: 404,
+          json: { error: "Choose a registered customer" },
+        });
+      selected.role = "customer";
+      return route.fulfill({ json: { dashboard: selected } });
+    }
+    if (path === "/api/session/end") {
+      selected = undefined;
+      return route.fulfill({ json: { ended: true } });
+    }
+    if (path === "/api/telemetry-config") return route.fulfill({ json: {} });
+    if (!selected)
+      return route.fulfill({
+        status: 401,
+        json: { error: "Choose a customer" },
+      });
+    if (path === "/api/dashboard") return route.fulfill({ json: selected });
+    if (path === "/api/customers/recipients")
+      return route.fulfill({
+        json: {
+          customers: rows
+            .filter((row) => row.bank.id !== selected?.bank.id)
+            .map((row) => row.customer),
+        },
+      });
+    if (path === "/api/customer-transfers/history" && options.historyFailure)
+      return route.fulfill({
+        status: 503,
+        json: { error: "Original history unavailable" },
+      });
+    if (path === "/api/customer-transfers/history")
+      return route.fulfill({ json: { transfers: [] } });
+    if (path === "/api/customer-transfers/inspect" && lastOutcome)
+      return route.fulfill({ json: lastOutcome });
+    if (path === "/api/customer-transfers/review") {
+      offer = {
+        id: "offer-registered-123",
+        bank_id: selected.bank.id,
+        sender_id: selected.customer?.id ?? "",
+        recipient_id: input.recipientId,
+        amount_minor: Math.round(Number(input.amount) * 100),
+        payment_date: bankingDate(Date.now()),
+        expires_at: Date.now() + 600000,
+      };
+      const recipient = rows.find(
+        (row) => row.customer?.id === input.recipientId,
+      );
+      return route.fulfill({
+        json: {
+          offer,
+          sender_name: selected.account?.clientName,
+          sender_suffix: selected.customer?.account_suffix,
+          recipient_name: recipient?.account?.clientName,
+          recipient_suffix: recipient?.customer?.account_suffix,
+        },
+      });
+    }
+    if (path === "/api/customer-transfers/confirm") {
+      expect(request.headers()["x-customer-scope"]).toBe(selected.bank.id);
+      expect(input.offerId).toBe(offer?.id);
+      if (!offer || !selected.account?.summary)
+        throw new Error("Missing reviewed transfer");
+      const recipient = rows.find(
+        (row) => row.customer?.id === offer?.recipient_id,
+      );
+      if (!recipient?.account?.summary)
+        throw new Error("Missing registered destination");
+      posts++;
+      const amount = offer.amount_minor / 100;
+      selected.account.summary.accountBalance -= amount;
+      selected.account.summary.availableBalance =
+        selected.account.summary.accountBalance;
+      recipient.account.summary.accountBalance += amount;
+      recipient.account.summary.availableBalance =
+        recipient.account.summary.accountBalance;
+      const transaction = {
+        date: [2026, 10, 18],
+        amount,
+        reversed: false,
+        note: "OpenFinacle transfer saved-original",
+      };
+      selected.account.transactions?.push({
+        ...transaction,
+        id: 501,
+        runningBalance: selected.account.summary.accountBalance,
+        transactionType: { value: "Withdrawal", withdrawal: true },
+      });
+      recipient.account.transactions?.push({
+        ...transaction,
+        id: 502,
+        runningBalance: recipient.account.summary.accountBalance,
+        transactionType: { value: "Deposit", deposit: true },
+      });
+      lastOutcome = {
+        id: "saved-original",
+        bank_id: selected.bank.id,
+        offer_id: offer.id,
+        key: input.key,
+        status: "posted",
+        receipt: {
+          transfer_id: 701,
+          debit_id: 501,
+          credit_id: 502,
+          amount_minor: offer.amount_minor,
+          date: offer.payment_date,
+          source_balance_minor: Math.round(
+            selected.account.summary.accountBalance * 100,
+          ),
+          recipient_balance_minor: Math.round(
+            recipient.account.summary.accountBalance * 100,
+          ),
+        },
+      };
+      if (lostResponse) {
+        lostResponse = false;
+        return route.abort("failed");
+      }
+      return route.fulfill({
+        json: options.malformedResponse
+          ? { ...lastOutcome, key: "different-original-key" }
+          : lastOutcome,
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  return { posts: () => posts };
+};
+
+test("explicit picker, reviewed transfer, switch and reload show each customer's own statement", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Choose an existing customer" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(0);
+  await page
+    .getByLabel("Search name, reference or account suffix")
+    .fill("0001");
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".person strong")).toHaveText("Mira Krishnan");
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await page
+    .getByLabel("Recipient", { exact: true })
+    .selectOption("sample-aadhya");
+  await page.getByLabel("Amount in INR").fill("1234.56");
+  await page
+    .getByRole("button", { name: "Review transfer", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Review your transfer" }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(0);
+  await page.getByRole("button", { name: "Confirm transfer once" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Transfer completed" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Sender debit 501 · Recipient credit 502"),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(1);
+  await page
+    .getByRole("button", { name: "Switch customer", exact: true })
+    .click();
+  await page
+    .getByLabel("Search name, reference or account suffix")
+    .fill("Aadhya");
+  await page.getByRole("button", { name: /Aadhya Iyer.*SYN-002/ }).click();
+  await expect(page.locator(".person strong")).toHaveText("Aadhya Iyer");
+  await page.getByRole("button", { name: "Statements", exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: "Deposit", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".person strong")).toHaveText("Aadhya Iyer");
+  await page
+    .getByRole("button", { name: "Switch customer", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page.getByRole("button", { name: "Statements", exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: "Withdrawal", exact: true }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(1);
+  await page.screenshot({
+    path: "test-results/customer-statement-desktop.png",
+    fullPage: true,
+  });
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 720, height: 900 },
+])
+  test(`customer picker reflows at${viewport.width}px with200percent text`, async ({
+    page,
+  }) => {
+    await installCustomers(page);
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await page
+      .getByRole("button", { name: "Explore existing customer" })
+      .click();
+    const picker = page.getByRole("region", {
+      name: "Choose an existing customer",
+    });
+    await expect(picker).toBeVisible();
+    await page
+      .getByLabel("Search name, reference or account suffix")
+      .fill("Aadhya");
+    await expect(
+      page.getByRole("button", { name: /Aadhya Iyer.*SYN-002/ }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `test-results/customer-picker-${viewport.width}.png`,
+      fullPage: true,
+    });
+  });
+
+test("standalone shared planning binds its verified registered customer before saving", async ({
+  page,
+}) => {
+  const relationship = "sample-branch-002";
+  let state = initialPlanningState(planningHouseholds()[1]);
+  let writes = 0;
+  await page.addInitScript(() =>
+    localStorage.setItem("openfinacle-planning-source", "shared"),
+  );
+  await page.route("**/api/**", (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname;
+    if (path === "/api/planning/context")
+      return route.fulfill({
+        json: { relationship, role: "customer", readOnly: false },
+      });
+    if (path === "/api/planning" && request.method() === "GET")
+      return route.fulfill({
+        json: { state, relationship, readOnly: false, history: [] },
+      });
+    if (path === "/api/planning" && request.method() === "POST") {
+      expect(request.headers()["x-customer-scope"]).toBe(relationship);
+      writes++;
+      state = { ...request.postDataJSON(), version: state.version + 1 };
+      return route.fulfill({
+        json: {
+          state,
+          relationship,
+          confirmedKey: request.headers()["idempotency-key"],
+        },
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
+  await page.goto("/planning");
+  await expect(
+    page.getByRole("heading", { name: "Household net worth" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await page.getByLabel("Dining monthly budget INR").fill("123");
+  await page.getByRole("button", { name: "Save budget", exact: true }).click();
+  await expect(
+    page.getByText("Saved on the planning server", { exact: false }),
+  ).toBeVisible();
+  expect(writes).toBe(1);
+  await page.reload();
+  await page.getByRole("button", { name: "Cash flow", exact: true }).click();
+  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("123");
+});
+
+const prepareTransfer = async (page: Page) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await page
+    .getByLabel("Recipient", { exact: true })
+    .selectOption("sample-aadhya");
+  await page.getByLabel("Amount in INR").fill("12.34");
+  await page
+    .getByRole("button", { name: "Review transfer", exact: true })
+    .click();
+};
+for (const mode of ["lost", "malformed"] as const)
+  test(`${mode} transfer acknowledgement retains original across reload even with empty history`, async ({
+    page,
+  }) => {
+    const fixture = await installCustomers(page, {
+      lostResponse: mode === "lost",
+      malformedResponse: mode === "malformed",
+    });
+    await prepareTransfer(page);
+    await page.getByRole("button", { name: "Confirm transfer once" }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    expect(fixture.posts()).toBe(1);
+    const stored = await page.evaluate(() =>
+      sessionStorage.getItem(
+        "openfinacle:customer-transfer:synthetic-workspace",
+      ),
+    );
+    expect(stored).not.toBeNull();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Pay & transfer", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Review your transfer" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Confirm transfer once" }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Inspect original transfer" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Transfer completed" }),
+    ).toBeVisible();
+    expect(fixture.posts()).toBe(1);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem(
+          "openfinacle:customer-transfer:synthetic-workspace",
+        ),
+      ),
+    ).toBeNull();
+  });
+test("transfer storage failure or unavailable original history prevents dispatch", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page);
+  await page.addInitScript(() => {
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("openfinacle:customer-transfer:"))
+        throw new DOMException("Storage unavailable", "SecurityError");
+      return write.call(this, key, value);
+    };
+  });
+  await prepareTransfer(page);
+  await page.getByRole("button", { name: "Confirm transfer once" }).click();
+  await expect(
+    page.locator(".customer-transfer").getByRole("alert"),
+  ).toContainText("storage is unavailable");
+  expect(fixture.posts()).toBe(0);
+});
+test("history read failure blocks a fresh transfer rather than hiding an unresolved original", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page, { historyFailure: true });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await expect(
+    page.locator(".customer-transfer").getByRole("alert"),
+  ).toContainText("original transfer");
+  await expect(
+    page.getByRole("button", { name: "Review transfer", exact: true }),
+  ).toHaveCount(0);
+  expect(fixture.posts()).toBe(0);
+});

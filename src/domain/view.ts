@@ -9,8 +9,15 @@ import type {
   Role,
   ServiceRequest,
 } from "./banking";
+import type { CustomerChoice } from "./customer-registry";
 export interface Dashboard {
-  bank: { id: string; created_at: string; journey: CustomerJourney };
+  bank: {
+    id: string;
+    created_at: string;
+    journey: CustomerJourney;
+    applicant?: boolean;
+  };
+  customer?: CustomerChoice | null;
   role: Role;
   account: Account | null;
   recipient: {

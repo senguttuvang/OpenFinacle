@@ -622,6 +622,7 @@ test("HTTP recurring endpoints enforce authentication, strict fields, ownership 
     APP_REVISION: "recurring-tests",
     DEMO_MODE: "true",
   } satisfies Environment;
+  let httpScope = customer.bank_id;
   const http = (path: string, body?: unknown, cookie = true) =>
     handleRequest(
       new Request(`https://demo.test/api${path}`, {
@@ -629,6 +630,7 @@ test("HTTP recurring endpoints enforce authentication, strict fields, ownership 
         headers: {
           ...(cookie ? { Cookie: `of_session=${token}` } : {}),
           Origin: "https://demo.test",
+          "X-Customer-Scope": httpScope,
           "Content-Type": "application/json",
           "Idempotency-Key": path.endsWith("/action")
             ? "http-recurring-action"
@@ -662,6 +664,7 @@ test("HTTP recurring endpoints enforce authentication, strict fields, ownership 
     ).status,
   ).toBe(403);
   db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  httpScope = "other";
   expect((await http(`/recurring-deposits?id=${saved.plan.id}`)).status).toBe(
     404,
   );

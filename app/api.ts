@@ -12,11 +12,20 @@ class ApiError extends Data.TaggedError("ApiError")<{
   transportFailure?: boolean;
   uncertain?: boolean;
 }> {}
+let customerScope: string | null = null;
+export const setApiCustomerScope = (scope: string | null) => {
+  customerScope = scope;
+};
 export const api = <T>(path: string, body?: unknown, key?: string) =>
   Effect.gen(function* () {
+    const expectedScope = customerScope;
     let request = HttpClientRequest.make(body === undefined ? "GET" : "POST")(
       `/api${path}`,
     );
+    if (expectedScope)
+      request = request.pipe(
+        HttpClientRequest.setHeader("X-Customer-Scope", expectedScope),
+      );
     if (body !== undefined)
       request =
         body instanceof FormData
@@ -28,6 +37,15 @@ export const api = <T>(path: string, body?: unknown, key?: string) =>
       );
     const response = yield* HttpClient.execute(request);
     const json = yield* response.json;
+    if (customerScope !== expectedScope)
+      return yield* Effect.fail(
+        new ApiError({
+          message:
+            "Customer selection changed. Discarded the previous customer's response; reload the selected workspace.",
+          status: 409,
+          uncertain: false,
+        }),
+      );
     if (response.status >= 400)
       return yield* Effect.fail(
         new ApiError({
