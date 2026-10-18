@@ -6,6 +6,7 @@ import {
   type RecurringTerms,
   recurringMaturityMinor,
 } from "../src/domain/recurring-deposits";
+import { FormSelect } from "./form-select";
 
 export const recurringAction = {
   recommend: "Recommend for approval",
@@ -214,28 +215,28 @@ export function RecurringForm({
                 </label>
                 <label>
                   Relationship
-                  <select
+                  <FormSelect
+                    aria-label="Relationship"
                     value={terms.nominee.relationship}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setTerms({
                         ...terms,
                         nominee: {
                           name: terms.nominee?.name ?? "",
-                          relationship: event.target.value as NonNullable<
+                          relationship: value as NonNullable<
                             RecurringTerms["nominee"]
                           >["relationship"],
                         },
                       })
                     }
-                  >
-                    {["spouse", "parent", "child", "sibling", "other"].map(
-                      (value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ),
-                    )}
-                  </select>
+                    options={[
+                      "spouse",
+                      "parent",
+                      "child",
+                      "sibling",
+                      "other",
+                    ].map((value) => ({ value, label: value }))}
+                  />
                 </label>
               </>
             )}

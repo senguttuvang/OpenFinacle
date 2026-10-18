@@ -4,6 +4,7 @@ import {
   type OnboardingDraft,
 } from "../src/domain/onboarding";
 import { completedOnboarding } from "../tests/fixtures/onboarding";
+import { chooseOption } from "./fixtures/form-select";
 import { savedWorkspace } from "./fixtures/workspace";
 
 const operationId = "c566af34-e49e-471e-aa84-97cf0d4f917a";
@@ -156,7 +157,11 @@ test("seven-stage application validates, preserves edits and resume, confirms on
   await page
     .getByLabel("Sample email", { exact: true })
     .fill("ananya@example.test");
-  await page.getByLabel("Sample mobile contact").selectOption("DEMO-PHONE-01");
+  await chooseOption(
+    page,
+    page.getByLabel("Sample mobile contact"),
+    "DEMO-PHONE-01",
+  );
   await page
     .getByRole("button", { name: "Complete simulated contact check" })
     .click();
@@ -164,14 +169,18 @@ test("seven-stage application validates, preserves edits and resume, confirms on
   await page
     .getByLabel("Fictional full name", { exact: true })
     .fill("Demo Ananya Rao");
-  await page.getByLabel("Sample date of birth").selectOption("1990-01-01");
+  await chooseOption(
+    page,
+    page.getByLabel("Sample date of birth"),
+    "1990-01-01",
+  );
   await next(page);
   await page
     .getByLabel("Fictional residential address")
     .fill("Demo 14 Sample Avenue");
-  await page.getByLabel("City", { exact: true }).selectOption("Chennai");
+  await chooseOption(page, page.getByLabel("City", { exact: true }), "Chennai");
   await page.getByLabel("Postal code").fill("600020");
-  await page.getByLabel("Occupation").selectOption("Salaried");
+  await chooseOption(page, page.getByLabel("Occupation"), "Salaried");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await page.reload();
   await expect(page.getByLabel("Fictional residential address")).toHaveValue(
@@ -180,9 +189,11 @@ test("seven-stage application validates, preserves edits and resume, confirms on
   await next(page);
   await page.getByLabel("Add an adult sample nominee").check();
   await page.getByLabel("Fictional nominee name").fill("Demo Kavya Rao");
-  await page
-    .getByLabel("Relationship", { exact: true })
-    .selectOption("Sibling");
+  await chooseOption(
+    page,
+    page.getByLabel("Relationship", { exact: true }),
+    "Sibling",
+  );
   await next(page);
   await page.getByRole("button", { name: "Use sample identity pack" }).click();
   await expect(

@@ -73,7 +73,8 @@
 .form-select-option > span:last-child {
   flex-shrink: 0;
 }
-.form-select-option[data-state="checked"] {
+.form-select-option[data-state="checked"],
+.form-select-option[data-current] {
   background: #e8efff;
   color: #174abb;
   font-weight: 600;

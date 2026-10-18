@@ -7,6 +7,7 @@ import {
   type ServiceDefinition,
   validateServiceFields,
 } from "../src/domain/services";
+import { FormSelect } from "./form-select";
 import { serviceCaseApi } from "./service-case-api";
 
 export type ServicePerform = <A>(
@@ -60,18 +61,21 @@ export function ServiceFields({
           {field.label}
           <span className="sr-only"> (required)</span>
           {field.type === "select" ? (
-            <select
+            <FormSelect
               id={`${prefix}-${field.key}`}
               required
               value={values[field.key] ?? ""}
               disabled={disabled}
-              onChange={(event) => onChange(field.key, event.target.value)}
-            >
-              <option value="">Select an option</option>
-              {field.options?.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
+              onValueChange={(value) => onChange(field.key, value)}
+              placeholder="Select an option"
+              options={[
+                { value: "", label: "Select an option" },
+                ...(field.options ?? []).map((option) => ({
+                  value: option,
+                  label: option,
+                })),
+              ]}
+            />
           ) : field.type === "textarea" ? (
             <textarea
               id={`${prefix}-${field.key}`}
