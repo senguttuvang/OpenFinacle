@@ -1,93 +1,149 @@
 # OpenFinacle
 
-A working everyday banking demonstration, with an original customer portal and a staff workspace over Apache Fineract. Private source; synthetic customers and demonstration money.
+**Banking, seen from both sides.** OpenFinacle is a working retail-banking prototype that connects a customer's everyday money journey with the branch team behind it. This repository contains the customer portal, staff workflows and integration with Apache Fineract, using persistent synthetic customers and demonstration money.
 
-## Run and check
+[Explore the product](https://openfinacle.plts.in/discover) · [Try the demo](https://openfinacle.plts.in/#demo-entry) · [Capabilities](https://openfinacle.plts.in/capabilities) · [Roadmap](https://openfinacle.plts.in/roadmap) · [Finacle, the inspiration](https://www.finacle.com/solution/core-banking-solution/)
 
-The full check and protected workflow-release commands require `sqlite3` 3.38+ with safe mode and JSON support. CI installs it explicitly. SQL restore verification runs only in a disposable in-memory database and rejects every failed statement.
+<a href="https://openfinacle.plts.in/discover"><img src="public/product/accounts.webp" alt="OpenFinacle customer account screen showing a synthetic savings relationship, account details and banking navigation" width="800"></a>
 
-The [protected loan origination pilot](specs/006-reference-banking-experience/contracts/loan-origination.md) documents explicit operator demonstration actions, original-key recovery and release proof before customer lending routes/screens are enabled.
+*An actual acceptance-fixture screenshot. Names, balances and transactions are sample data; the image is not a live account view.*
+
+## Why We Built It
+
+Banking is a connected story: opening an account, receiving a salary, paying someone, asking for help and planning for the future. Customers and branch teams see different parts of that story. OpenFinacle explores how those viewpoints can work together in a clear, usable experience.
+
+The project also asks a practical question: how far can a founder working with AI coding tools get when building on an established open-source banking core? The result is something to inspect and try, with explicit distinctions between working financial journeys, simulated product workflows and future ideas.
+
+**Our vision:** banking that people—and the AI assistants they choose—can understand and navigate, with clear permission and visible outcomes.
+
+**Our mission:** make connected banking journeys tangible, test their behaviour against a real core, and show the engineering and operational work still needed for adoption by a bank.
+
+## What You Can Explore Today
+
+| Capability | What works in the prototype | Boundary |
+| --- | --- | --- |
+| Customer relationships | Choose from a persistent synthetic customer directory; return to the selected customer's account and history | Demo sessions and persona switching, not production identity |
+| Account opening | Staged application, saved progress, synthetic documents and an independently opened relationship | No real KYC, identity verification or external onboarding checks |
+| Savings and statements | Core account enquiry, transaction history and statement export | Selected INR savings journeys |
+| Payees and transfers | Customer-specific saved payees, reviewed transfers and genuine debit/credit records in Fineract | Internal transfers between registered demo accounts; no external payment rails |
+| Branch operations | Officer and independent approver viewpoints, teller cash journeys, queues and audit | Maker/checker is enforced by the application over a technical Core principal |
+| Deposits, cards and service | Persistent fixed/recurring deposit models, debit-card controls, replacement requests, profile and service histories | Simulated products and fulfilment; no investment of funds, card network or physical dispatch |
+| Personal lending | Selected loan-origination and savings-funded repayment pilot | Broader servicing, collections and product coverage remain incomplete |
+| Wealth & Planning | Synthetic household cash flow, budgets, goals, retirement projections, saved scenarios and consented adviser review | No regulated advice, market execution or custody |
+| Navigation and accessibility | Readable bookmarked routes for menus and sections, browser history, keyboard controls and responsive layouts | Opening a link retains the saved session; it does not select a customer or grant a role |
+
+Fineract owns financial balances and postings. The application keeps workflow records, simulated product records and planning models separately. An uncertain financial outcome stays inspectable under its original reference; the application does not silently send the instruction again.
+
+## A Look Inside
+
+These are the same synthetic acceptance-fixture images used on the product website. Click an image to inspect it at full resolution.
+
+| Customer statement | Branch workspace |
+| --- | --- |
+| [![Synthetic statement with transaction search and export](public/product/statements.webp)](public/product/statements.webp) | [![Branch overview with customer context and staff queues](public/product/branch.webp)](public/product/branch.webp) |
+
+<details>
+<summary><strong>See account opening and household planning</strong></summary>
+
+### Account Opening
+
+[![Staged synthetic account-opening form](public/product/onboarding.webp)](public/product/onboarding.webp)
+
+### Wealth & Planning
+
+[![Synthetic household planning with cash flow, goals and scenarios](public/product/planning.webp)](public/product/planning.webp)
+
+</details>
+
+## Try a Connected Journey
+
+Start at the [demo chooser](https://openfinacle.plts.in/#demo-entry). Use invented details only; customers and demonstration records persist between visits.
+
+1. **Meet an existing customer.** Choose a customer explicitly, inspect their [accounts](https://openfinacle.plts.in/accounts) and [statements](https://openfinacle.plts.in/statements), and explore their saved payees.
+2. **Follow a payment.** Review an internal [transfer](https://openfinacle.plts.in/payments/transfer), inspect its receipt, then switch to the recipient to see the other side. Confirming a transfer changes persistent demonstration balances.
+3. **Start a new relationship.** Try [staged account opening](https://openfinacle.plts.in/open-account) and follow the saved application into its own customer workspace.
+4. **Cross the counter.** Use the demo persona control to explore the officer and approver viewpoints. Teller cash operations require separate maker/checker decisions.
+5. **Look beyond today's balance.** Explore [planning cash flow](https://openfinacle.plts.in/wealth-planning/cash-flow), goals and saved scenarios. These use a separate synthetic household model.
+
+Direct banking links resume the current saved session or ask you to enter the demo. Staff links require an appropriate demo persona. Unsupported menu items explain their status rather than pretending to perform a banking service.
+
+## From Prototype to a Bank-Owned System
+
+The roadmap is a direction, not a delivery commitment. The [production-readiness assessment](https://openfinacle.plts.in/assessment#readiness) explains the gaps in more detail.
+
+| Workstream | Next evidence needed |
+| --- | --- |
+| Reliable everyday journeys | Measured latency, stronger operational reconciliation, clear exception handling and broader acceptance coverage |
+| Production identity and compliance | Bank-approved customer/staff identity, access controls, KYC/AML and jurisdiction-specific integrations |
+| Payments and operations | External rails, settlement, reconciliation, fraud controls, dispute handling and operating procedures |
+| Resilience and assurance | Independent security review, load and recovery testing, observability, service objectives and a support team |
+| Bank rollout | Product-rule validation, migration rehearsals, data governance, independent bank acceptance and a controlled pilot |
+| Broader wealth services | Market data, suitability/advice controls, execution, custody, settlement and reconciliation |
+| Banking AI chatbot | Grounded answers, privacy boundaries, evaluation and human escalation; proposed, not implemented |
+| Customer AI / MCP access | Scoped, revocable access for a customer's own AI harness, with explicit confirmation before financial instructions; proposed, not implemented |
+
+The agent-connected vision starts with the customer's control:
+
+```mermaid
+flowchart LR
+    Customer[Customer] --> Consent[Specific, revocable consent]
+    Consent --> Assistant[Customer's AI assistant]
+    Assistant --> Tools[Scoped bank tools]
+    Tools --> Review[Human review for a financial instruction]
+    Review --> Bank[Bank controls and core]
+    Bank --> Receipt[Durable outcome and audit]
+```
+
+*This diagram describes a proposed direction. The customer-facing chatbot and MCP service do not exist in the current prototype.*
+
+## The Build Story
+
+Created by **SenG with AI assistance**, reusing the capabilities of Apache Fineract and the wider open-source ecosystem. SenG reports roughly **one week and 500 million tokens** to reach this stage. That is a founder-reported account of the prototype build, not independently measured effort or the cost of developing the underlying core.
+
+The [build story and interactive estimator](https://openfinacle.plts.in/build-story) explore team composition, scope, human effort and AI usage. Estimates are scenarios with assumptions, not observed delivery results, a promise of production readiness or a percentage of Finacle rebuilt. Token volume alone does not measure engineering quality, speed or bank acceptance.
+
+## Inspiration and Credits
+
+- **[Infosys Finacle](https://www.finacle.com/solution/core-banking-solution/)** is a product inspiration and public reference for connected banking capabilities. Finacle has a much broader product and operating scope. OpenFinacle is an independent prototype and working name, with no affiliation, endorsement or product-equivalence claim.
+- **[Apache Fineract](https://fineract.apache.org/)** is the banking engine actually used here. The project builds version **1.15.0** from the official distribution; upstream source, licensing and notices remain applicable. See the [core decision](specs/decisions/001-banking-core.md) and [container build](infrastructure/fineract/Dockerfile).
+- **[PhotoCraft](https://github.com/storytold/photocraft)** is a reference for the broader idea of exploring familiar software through an independent implementation. It is not an Adobe project or a banking dependency.
+- **Next.js, React, Effect, Radix UI, Lucide and the Cloudflare platform** provide application and interface foundations. PostgreSQL persists the Fineract databases.
+
+The [detailed assessment](https://openfinacle.plts.in/assessment) links capability evidence and public sources. Comparisons distinguish selected prototype journeys from commercial core, digital banking and wealth product suites.
+
+## For Developers
+
+The stack separates the experience, workflow orchestration and financial system of record:
+
+| Layer | Responsibility |
+| --- | --- |
+| Next.js / React | Customer, staff and product experiences, exported as static assets |
+| Effect / Cloudflare Workers | APIs, ownership checks, approval workflows, command recovery and Core adapters |
+| Apache Fineract / Cloudflare Containers | Financial accounts, postings and banking calculations for supported journeys |
+| PostgreSQL | Persistent Fineract tenant registry and banking database |
+| Cloudflare D1 / R2 | Application workflow/audit records and private synthetic documents |
 
 ```sh
 bun install --frozen-lockfile
-bun run check
-bun run test:e2e
+bun run dev       # UI at http://localhost:3048
+bun run check     # Types, lint, static analysis, tests, export and Worker dry run
 ```
 
-The browser journey defaults to https://openfinacle.plts.in. Set `BASE_URL` to verify another deployed environment. It creates an isolated demo workspace and verifies account opening, independent approval, deposit, beneficiary confirmation, both legs of a transfer, salary debit/credit, statement export, insufficient funds and mobile layout.
+The local Next.js server provides the UI; it does not provide the banking API by itself. The full check requires Docker for the container dry run and SQLite 3.38+ with safe-mode and JSON support. CI installs the SQLite verifier explicitly.
 
-## What to try
+Browser tests use `bun run test:e2e`; read the relevant [Playwright projects and configuration](playwright.config.ts) first. Live financial acceptance tests can create persistent synthetic records and should run only against the intended authorised sandbox. `BASE_URL` selects a different target.
 
-1. Choose **Start your banking story** for a new applicant, or **Explore existing customer** for an active account with sample activity. Each browser session has its own customer, beneficiary and funded employer. Reloading resumes the workspace; **Choose another journey** ends that demo session and returns to the chooser.
-2. Open **Account opening**, attach the provided synthetic documents and submit.
-3. Switch to **Bank officer** and recommend opening. Switch to **Approver** and approve.
-4. As the officer, prepare an initial deposit. The separate approver authorises it.
-5. As the customer, add Arjun as a beneficiary, confirm the displayed demo code, and transfer funds.
-6. As the officer, prepare salary from Northstar Studio. Approve it separately and inspect the customer, beneficiary and employer balances.
-7. Explore statement export, cash reversal, debit restrictions, service requests and audit.
+Deployment uses the repository-owned `bun run deploy` CLI. Schema changes require the [protected backup, restore-verification and migration workflow](docs/workflow-release.md). Application rollback must preserve financial records and additive schema; it is not a data reset. Provider credentials belong in protected runtime configuration, never source control.
 
-Persona switching is explicitly a demonstration control, not production identity management. No real documents, SMS, cards, cheque dispatch or external bank transfers are involved. Every supported financial effect executes in Fineract; there is no mock-balance fallback.
+| Need | Start here |
+| --- | --- |
+| Core architecture, bootstrap and recovery | [Development and operations](docs/development-and-operations.md) |
+| Financial Core choice and boundaries | [Banking Core decision](specs/decisions/001-banking-core.md) |
+| Capability interpretation | [Capability map](docs/capabilities.md) |
+| Live acceptance history | [Verification records](docs/verification.md) |
+| Releases and workflow migrations | [Workflow release guide](docs/workflow-release.md) |
+| Monitoring and telemetry | [Observability](docs/observability.md) |
+| Bookmarkable screens | [Friendly route specification](specs/012-friendly-routes/spec.md) |
+| Feature intent and contracts | [Specifications](specs/) |
 
-The existing-customer journey begins at ₹1,21,300: ₹40,000 opening funds + ₹85,000 employer-funded salary − ₹2,500 internal payment − ₹1,200 cash withdrawal. All four sample transactions post on today's business date. Its account-led interface uses public historical ICICI layout references: horizontal navigation, service shortcuts, savings portfolio, orange action strip and recent transactions. It retains OpenFinacle identity and does not claim parity with the unavailable current authenticated portal. See the [reference evidence and implementation plan](specs/002-customer-experience/plan.md).
-
-## Architecture and ownership
-
-The project owner confirmed Fineract as the core on 2026-10-16. The [accepted decision](specs/decisions/001-banking-core.md) records custom TypeScript, TigerBeetle and ERP/accounting alternatives, tradeoffs and production-effort assumptions. The [customer experience specification](specs/002-customer-experience/spec.md) covers both new applicants and existing customers. Public references replaced the unavailable authenticated review at the owner's request.
-
-- **Next.js / React:** customer and staff experiences, built to static assets.
-- **Effect-TS on Cloudflare Workers:** session/ownership checks, application workflows, approval rules and integration adapters. No Java rewrite and no CMS dependency.
-- **Apache Fineract 1.15.0 on Cloudflare Containers:** customer accounts, savings products, internal transfers, cash transactions and configured cash accounting.
-- **Railway PostgreSQL:** Fineract tenant registry and banking database. Cloudflare D1 speaks SQLite rather than PostgreSQL, and container disks are ephemeral; this is the persistence reason for the Railway component.
-- **D1:** demo sessions, onboarding, beneficiaries, workflow command records, requests and application audit.
-- **Permanent demo scenarios:** operator-seeded new/existing journeys and saved Fineract account views for fast entry. No per-visit financial provisioning, workspace pool or Cron. The two scenarios are shared synthetic data; ending a session does not reset them.
-- **R2:** private synthetic document objects. Downloads require the same demo session.
-
-Financial balances and transactions have one owner: Fineract. Local workflow state refers to core IDs. Approval claims use conditional SQL updates; duplicate command keys are unique per workspace. Ambiguous core responses remain `uncertain`, and executing/uncertain commands are never automatically replayed. These exceptions require inspection and reconciliation; they do not claim an atomic transaction across D1 and Fineract.
-
-The core uses one private technical principal. Application audit records the originating demo role. Maker/checker separation for these composed workflows is enforced in OpenFinacle; it is not represented as separate Fineract principals.
-
-## Upstream and source analysis
-
-Source: https://github.com/apache/fineract, release `1.15.0`, commit `d5636847ac556c30b437254c353f05526d172b97`. The unchanged reference clone is at `~/Projects/Finacle`; OpenFinacle source is a separate repository.
-
-Fineract is a Java/Spring server with JAX-RS APIs, command handlers, application services, financial domain models, persistence, scheduled work and accounting. Read APIs use read services; state-changing APIs enter command processing. Its API and banking logic ship together, while the Mifos web application and customer self-service plugin are separate repositories. See upstream `SECURITY.md`, `SavingsAccountsApiResource.java`, `SavingsAccountTransactionsApiResource.java`, `ClientsApiResource.java` and `AccountTransfersApiResource.java`.
-
-Application features are written in TypeScript over the API. Java customization is needed only when changing behavior that must occur within the core's own transaction, such as accounting or calculation rules. Plugin extension points are version-dependent; we do not assume arbitrary core services can be replaced.
-
-The release has no matching `apache/fineract:1.15.0` Docker Hub image tag. The repository builds a Java 21 image from the official binary distribution and verifies its published SHA-512 checksum. Apache license/notice obligations remain applicable. See `infrastructure/fineract/Dockerfile`.
-
-CodeCompass discovered 6,825 candidate files and 80,408 symbols but had only embedded about 1,050 symbols after four minutes, without usable search results. The partial job was cancelled. Source inspection proceeded through rg/direct reads with explicit user authorization. This is not a completed semantic index.
-
-## Deployment
-
-The repository owns deployment through its Effect CLI:
-
-```sh
-bun run cli provision --database-file /protected/railway-export.json --database-host <verified-proxy-host> --database-port <verified-proxy-port>
-bun run deploy
-bun run cli initialize --url https://openfinacle.plts.in
-bunx wrangler d1 migrations apply openfinacle-workflows --remote
-bun run cli demo --backfill
-```
-
-Provisioning creates the two Fineract databases and stores Cloudflare secrets through stdin. It refuses to replace an existing local secrets file. Initialization checks core health, rotates the original bootstrap credential, configures INR, creates accounting mappings and establishes the savings product. Credentials never belong in Git or command arguments.
-
-`demo` prepares missing scenarios once and refreshes their saved views; repeating it never refunds/recreates existing accounts. `demo --journey new --restart` explicitly prepares a replacement onboarding scenario and retains the former financial records. `--backfill` also saves views for legacy ready workspaces. `DEMO_MODE=true` permits these shared scenarios and demo role switching. Outside demo mode the channel fails closed until production identities are integrated. The read model is derived from Fineract, never an alternative ledger. Balances show their last sync instant; financial mutations and the Refresh control synchronize them with the core.
-
-The first Fineract schema initialization can take considerably longer than a normal cold start because it runs thousands of migrations against the persistent database. Do not interrupt it. `bun run cli database-status` writes a protected report with migration counts and connection metadata. The guarded `release-abandoned-migration` command refuses to run while the core has database connections; its `--empty-baseline` recovery preserves empty migration metadata and refuses databases containing application tables or applied changes. It is for an interrupted, empty first initialization, not a financial-data reset.
-
-For a slow initial schema build, `prepare-migration-runner` configures a private Railway initializer beside PostgreSQL. It uses a separate initialization tenant registry with private database addressing and the same `fineract_default` banking database. The channel engine's registry is unchanged. Stop other core instances before `start-migration-runner`; that command verifies no banking-core database connections remain and uploads only the committed Fineract Dockerfile. Scheduled jobs are disabled, and no public domain is created. Fineract requires internal write mode for migrations. After verified migration completion, `stop-migration-runner` removes its deployment while preserving PostgreSQL. Then initialize the Cloudflare engine normally. A confirmed stopped owner's stale lock can be released with `release-abandoned-migration --confirmed-stopped`; this still refuses active core connections.
-
-Switch an existing initialization run only after the initial-switch schema and seed changesets have completed. Applied later migration history is preserved when the remaining work moves to the private runner.
-
-For local UI development: `bun run dev` (port 3048). Financial integration is verified on the deployed sandbox; the local Next.js development server alone does not provide the banking API.
-
-Rollback: use Cloudflare's previous Worker deployment/version. Container changes need the corresponding previous image digest; database and workflow migrations must remain backward-compatible. Do not delete or reset financial state as an application rollback.
-
-For releases against the existing workflow database, use the [protected backup and migration commands](docs/workflow-release.md) before deploying schema-dependent code. These verify the existing account/resource, a recent exact-revision backup, restore integrity and private artifact permissions.
-
-Specifications: [everyday banking](specs/001-everyday-banking/spec.md). Execution: Beads issue `of-mtw` (local coordination). Quality gates: strict TypeScript, Biome, Oxlint, Knip, dependency-cruiser, type-coverage, Bun behavioral tests, production build, Wrangler dry-run and live Playwright verification.
-
-Capability interpretation and extension boundaries: [Finacle capability map](docs/capabilities.md).
-
-Verified workflows, runtime evidence and screenshots: [live verification](docs/verification.md).
+Source access is currently private. The website is available for public demonstration; a GitHub link does not change repository access or licensing.
