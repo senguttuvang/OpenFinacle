@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 import { BankingError } from "../domain/banking";
 import type { CoreLoanSnapshot } from "../domain/loan-engine";
+import { LoanRepaymentMarker } from "../domain/loan-repayment-identity";
 import { LoanStatement } from "../domain/loan-statements";
 import { LoanQuote } from "../domain/loans";
 import {
@@ -49,6 +50,18 @@ const StatementResponse = Schema.Struct({
       unrecognizedIncomePortion: amount,
       manuallyReversed: Schema.Boolean,
       reversedOnDate: Schema.optional(Schema.NullOr(loanCoreDateParts)),
+      transfer: Schema.optional(
+        Schema.NullOr(
+          Schema.Struct({
+            id,
+            currency,
+            transferAmount: amount,
+            transferDate: loanCoreDateParts,
+            reversed: Schema.Boolean,
+            transferDescription: Schema.optional(Schema.NullOr(Schema.String)),
+          }),
+        ),
+      ),
     }),
   ).pipe(Schema.maxItems(1000)),
 });
@@ -100,6 +113,19 @@ export const normalizeLoanStatement = (
             row.unrecognizedIncomePortion,
           ),
           manually_reversed: row.manuallyReversed,
+          transfer: row.transfer
+            ? {
+                id: row.transfer.id,
+                amount_minor: yield* loanCoreMinor(row.transfer.transferAmount),
+                date: yield* date(row.transfer.transferDate),
+                reversed: row.transfer.reversed,
+                repayment_marker: Schema.is(LoanRepaymentMarker)(
+                  row.transfer.transferDescription,
+                )
+                  ? row.transfer.transferDescription
+                  : null,
+              }
+            : null,
           reversed_on_date: row.reversedOnDate
             ? yield* date(row.reversedOnDate)
             : null,
