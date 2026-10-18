@@ -59,9 +59,9 @@ request after timeout. The report records
 advanced stages, completed customers, progress request count and completion.
 
 The complete fresh seed sends 495 Core writes. The current positive-proof
-adapter performs approximately 2,475 Core requests across those customers,
+adapter performs approximately 2,574 Core requests across those customers,
 plus legacy registration reads. At 0.1–1 second per Core request this is
-roughly 4–42 minutes before overhead; this is an estimate, not measured live
+roughly 4–43 minutes before overhead; this is an estimate, not measured live
 performance. Start with two customers and inspect observed latency. Completed
 reruns send no Core writes and preserve changed balances and all existing data.
 
@@ -79,5 +79,11 @@ Browser fixtures cover explicit keyboard selection, review before posting,
 one confirmation, recipient credit/sender debit after switching and reload,
 390/720px layouts with 200% text, and standalone shared-planning scope binding.
 The full existing workspace browser suite remains a regression gate.
+Transfer originals are saved and read back in scope-keyed browser storage
+before dispatch. Reload restores inspection-only state even if history is
+unavailable or empty; only a verified terminal original clears that reference.
+The adapter accepts validated ISO/calendar embedded transfer dates. Seed
+proof uses `savingsProductId` and the owned transaction detail's unique receipt
+and payment type, since the Core association list omits payment details.
 Finacle5 owns the eventual integrated real-Core/browser proof, including
 teller-approved cash on customer A, retail transfer A to B and both statements.

@@ -5,6 +5,7 @@ import {
   runCustomerAdmin,
 } from "../src/application/customer-admin";
 import { runCustomerSeed } from "../src/cli/customer-seed-run";
+import { syntheticCustomers } from "../src/domain/customer-provisioning";
 import { customerHarness } from "./fixtures/customer-banking";
 
 const fixtures: ReturnType<typeof customerHarness>[] = [];
@@ -100,4 +101,32 @@ test("native runner enforces its overall time budget without retrying a hung req
   );
   expect(error.message).toContain("overall seed time budget expired");
   expect(calls).toBe(1);
+});
+test("native runner completes an interrupted partial manifest before claiming the100customer target", async () => {
+  const { h, call, commands } = setup();
+  for (const row of syntheticCustomers("branch").slice(0, 2))
+    h.db.run(
+      "INSERT INTO customer_seed_manifest(id,branch_id,ordinal,reference,firstname,lastname,funding_minor) VALUES(?,?,?,?,?,?,?)",
+      [
+        row.id,
+        row.branch_id,
+        row.ordinal,
+        row.reference,
+        row.firstname,
+        row.lastname,
+        row.funding_minor,
+      ],
+    );
+  const report = await Effect.runPromise(
+    runCustomerSeed(call, "branch", 5, 1, 1),
+  );
+  expect(commands.some((command) => command.action === "prepare")).toBe(true);
+  expect(report).toMatchObject({
+    target_customers: 100,
+    registered_customers: 1,
+    complete: false,
+  });
+  expect(
+    h.db.query("SELECT COUNT(*) AS n FROM customer_seed_manifest").get(),
+  ).toEqual({ n: 99 });
 });
