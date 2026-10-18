@@ -26,11 +26,26 @@ export function RetailNavigation({
   const nav = useRef<HTMLElement>(null);
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Layout and scroll changes can generate pointer-enter events without intent.
+  // Only changed viewport coordinates may replace a keyboard-opened family.
+  const pointerPosition = useRef<{ x: number; y: number } | null>(null);
+  const pointerMoved = useRef(false);
+  const keyboardFirst = useRef(false);
   const [open, setOpen] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const cancelClose = () => clearTimeout(timer.current);
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const previous = pointerPosition.current;
+      pointerMoved.current = previous
+        ? previous.x !== event.clientX || previous.y !== event.clientY
+        : !keyboardFirst.current ||
+          event.movementX !== 0 ||
+          event.movementY !== 0;
+      pointerPosition.current = { x: event.clientX, y: event.clientY };
+    };
     const outside = (event: PointerEvent) => {
       if (
         event.target instanceof Node &&
@@ -41,7 +56,11 @@ export function RetailNavigation({
       }
     };
     document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    document.addEventListener("pointermove", move, true);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("pointermove", move, true);
+    };
   }, []);
   const focusItem = (index: number, last = false) => {
     setOpen(index);
@@ -75,9 +94,7 @@ export function RetailNavigation({
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse")
           timer.current = setTimeout(() => {
-            const focused = nav.current
-              ?.querySelector(".retail-menu-panel:not([hidden])")
-              ?.contains(document.activeElement);
+            const focused = nav.current?.contains(document.activeElement);
             if (!focused) setOpen(null);
           }, 180);
       }}
@@ -85,6 +102,8 @@ export function RetailNavigation({
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null);
       }}
       onKeyDown={(event) => {
+        if (!pointerPosition.current) keyboardFirst.current = true;
+        cancelClose();
         if (event.key === "Escape") {
           event.preventDefault();
           if (open !== null) triggers.current[open]?.focus();
@@ -121,9 +140,10 @@ export function RetailNavigation({
                 ? "retail-menu-family is-current"
                 : "retail-menu-family"
             }
-            onPointerEnter={(event) => {
+            onPointerMove={(event) => {
               if (
                 !busy &&
+                pointerMoved.current &&
                 event.pointerType === "mouse" &&
                 window.matchMedia("(min-width: 901px)").matches
               ) {
