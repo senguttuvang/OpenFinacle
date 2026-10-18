@@ -45,7 +45,7 @@ const sampleCase = (): CaseDetail => ({
 });
 
 async function openServices(page: Page) {
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "services");
   await expect(
     page.getByRole("heading", { name: "Customer service", exact: true }),
@@ -124,7 +124,7 @@ test("completed maintenance distinguishes applied effects from imported history"
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "services");
   for (const [reference, effect] of [
     ["SR-111111111111", "no recorded profile effect"],
@@ -385,7 +385,7 @@ test("staff reviews versioned actions and refreshes a conflicting case before an
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: /Open service requests/ }).click();
   await page.getByRole("button", { name: /View request SR-/ }).click();
   await expect(

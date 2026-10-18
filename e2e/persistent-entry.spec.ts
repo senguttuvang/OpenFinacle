@@ -5,7 +5,7 @@ for (const journey of ["new", "existing"] as const) {
   test(`${journey}: entry, reload and scenario return preserve data within three seconds`, async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/demo");
     const button = page.getByRole("button", {
       name:
         journey === "new"

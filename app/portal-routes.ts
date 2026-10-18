@@ -60,6 +60,7 @@ export interface PortalRoute {
 }
 /** Finite public screen inventory. Paths contain no customer IDs, commands or credentials. */
 export const portalRoutes: readonly PortalRoute[] = [
+  { path: "/demo", title: "Banking demo", view: "overview" },
   ...Object.entries(viewPaths).map(([view, path]) => ({
     path,
     title: viewLabels[view as View],
@@ -120,8 +121,6 @@ export const exportedPortalPaths = [
 ];
 export function resolvePortalRoute(path: string): PortalRoute | undefined {
   const normalized = path.replace(/\/$/, "") || "/";
-  if (normalized === "/")
-    return { path: "/", title: "Overview", view: "overview" };
   return portalRoutes.findLast((route) => route.path === normalized);
 }
 export function routeAllowed(

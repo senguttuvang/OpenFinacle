@@ -19,7 +19,7 @@ test("existing customer opens within three seconds without consulting core readi
       }),
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   const button = page.getByRole("button", {
     name: "Explore existing customer",
   });
@@ -47,7 +47,7 @@ test("browser exceptions reach the Sentry-compatible ingestion endpoint without 
   const configured = page.waitForResponse((response) =>
     response.url().includes("/api/telemetry-config"),
   );
-  await page.goto("/");
+  await page.goto("/demo");
   await configured;
   // Error value deliberately resembles sensitive data; only a static label should leave the browser.
   await page.evaluate(() => {

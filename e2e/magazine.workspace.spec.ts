@@ -29,8 +29,8 @@ test("magazine leads with capabilities, one bounded comparison, real inner stori
     /342 tests|verification|validation|proof ledger|evidence checkpoint/i,
   );
   await expect(
-    page.getByRole("button", {
-      name: "Explore existing customer",
+    page.getByRole("link", {
+      name: "Open the banking workspace",
       exact: true,
     }),
   ).not.toBeInViewport();

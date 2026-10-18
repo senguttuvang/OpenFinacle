@@ -21,7 +21,7 @@ test("customer to payday: documents, approvals, deposit, beneficiary, transfer, 
 }) => {
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByRole("heading", {
       name: "Banking, seen from both sides.",

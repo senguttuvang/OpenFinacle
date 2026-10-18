@@ -34,6 +34,7 @@ describe("public screen routing contract", () => {
     for (const family of retailMenu)
       expect(resolvePortalRoute(`/${family.id}`)).toBeDefined();
     for (const path of [
+      "/",
       "/planning",
       "/open-account",
       "/discover",

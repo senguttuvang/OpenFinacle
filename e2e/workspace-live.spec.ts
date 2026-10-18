@@ -17,7 +17,7 @@ test("deployed customer and branch screens use real saved data without financial
     )
       financialRequests.push(path);
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Explore existing customer" }).click();
   await expect(
     page.getByRole("heading", { name: /Welcome back/ }),

@@ -2,7 +2,7 @@
 
 **Banking, seen from both sides.** OpenFinacle is a working retail-banking prototype that connects a customer's everyday money journey with the branch team behind it. This repository contains the customer portal, staff workflows and integration with Apache Fineract, using persistent synthetic customers and demonstration money.
 
-[Explore the product](https://openfinacle.plts.in/discover) · [Try the demo](https://openfinacle.plts.in/#demo-entry) · [Capabilities](https://openfinacle.plts.in/capabilities) · [Roadmap](https://openfinacle.plts.in/roadmap) · [Finacle, the inspiration](https://www.finacle.com/solution/core-banking-solution/)
+[Explore the product](https://openfinacle.plts.in/discover) · [Try the demo](https://openfinacle.plts.in/demo) · [Capabilities](https://openfinacle.plts.in/capabilities) · [Roadmap](https://openfinacle.plts.in/roadmap) · [Finacle, the inspiration](https://www.finacle.com/solution/core-banking-solution/)
 
 <a href="https://openfinacle.plts.in/discover"><img src="public/product/accounts.webp" alt="OpenFinacle customer account screen showing a synthetic savings relationship, account details and banking navigation" width="800"></a>
 
@@ -57,7 +57,7 @@ These are the same synthetic acceptance-fixture images used on the product websi
 
 ## Try a Connected Journey
 
-Start at the [demo chooser](https://openfinacle.plts.in/#demo-entry). Use invented details only; customers and demonstration records persist between visits.
+Start at the [demo chooser](https://openfinacle.plts.in/demo). Use invented details only; customers and demonstration records persist between visits.
 
 1. **Meet an existing customer.** Choose a customer explicitly, inspect their [accounts](https://openfinacle.plts.in/accounts) and [statements](https://openfinacle.plts.in/statements), and explore their saved payees.
 2. **Follow a payment.** Review an internal [transfer](https://openfinacle.plts.in/payments/transfer), inspect its receipt, then switch to the recipient to see the other side. Confirming a transfer changes persistent demonstration balances.

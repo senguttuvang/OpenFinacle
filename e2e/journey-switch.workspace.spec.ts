@@ -24,7 +24,7 @@ for (const extraLarge of [false, true]) {
         financialWrites++;
       return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
     });
-    await page.goto("/");
+    await page.goto("/demo");
     if (extraLarge) await enlargeText(page);
     const switcher = page.getByRole("button", {
       name: "Choose another journey",

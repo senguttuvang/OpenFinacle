@@ -29,7 +29,7 @@ test("replacement retires its source, needs delivery, reconciles activation afte
     await button("Review replacement instruction").click();
     await button(`Confirm ${action.toLowerCase()}`).click();
   };
-  await page.goto("/");
+  await page.goto("/demo");
   await open();
   await button("Request a demo replacement").click();
   await page

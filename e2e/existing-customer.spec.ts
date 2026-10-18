@@ -12,7 +12,7 @@ test("existing customer: populated core account, transfer, service request and j
     expect(response.status()).toBe(200);
     return response.json() as Promise<Dashboard>;
   };
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByRole("button", { name: "Explore existing customer" }),
   ).toBeVisible();

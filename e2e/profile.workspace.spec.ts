@@ -61,7 +61,7 @@ test("profile enquiry shows approved effects, source cases and shared staff stat
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "profile");
   await expect(page.locator(".detail-grid").first()).toContainText(
     "14 Synthetic Avenue",
@@ -145,7 +145,7 @@ test("unverified and missing profile responses show truthful errors and onboardi
       });
     return route.fulfill({ json: path === "/api/dashboard" ? data : {} });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "profile");
   await expect(page.locator(".panel").getByRole("alert")).toContainText(
     "could not be verified",

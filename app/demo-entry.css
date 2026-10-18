@@ -1,0 +1,39 @@
+.demo-entry-page {
+  min-height: 100dvh;
+  background: var(--canvas, #f2f5fc);
+  padding: clamp(20px, 5vw, 64px);
+}
+.demo-entry-page > .brand {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--ink, #172b4d);
+  text-decoration: none;
+}
+.demo-entry-panel {
+  max-width: 70rem;
+  margin: clamp(24px, 6vw, 72px) auto;
+  background: white;
+  border: 1px solid var(--line, #dae2ef);
+  border-radius: 16px;
+  padding: clamp(20px, 4vw, 48px);
+}
+.demo-entry-panel > p {
+  max-width: 65ch;
+  color: var(--muted, #52627a);
+}
+.demo-entry-panel .journey-options {
+  margin-block: 32px;
+}
+.demo-entry-panel .journey-options > div {
+  min-width: 0;
+}
+.demo-entry-panel .journey-options button {
+  white-space: normal;
+}
+.demo-website-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}

@@ -113,7 +113,7 @@ test("fixed deposit preserves review/edit, reconciles lost submission and activa
     });
   });
   const open = () => openWorkspace(page, "deposits");
-  await page.goto("/");
+  await page.goto("/demo");
   await open();
   await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
   await page.getByLabel("Demo allocation (₹)").fill("500");
@@ -276,7 +276,7 @@ test("unverified deposit response stays locked; only confirmed missing key enabl
             : {},
     });
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openWorkspace(page, "deposits");
   await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
   await page
