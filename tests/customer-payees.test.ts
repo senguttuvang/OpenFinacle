@@ -292,6 +292,7 @@ test("lost execution-claim acknowledgement cannot invent a terminal failed outco
     }),
   );
   expect(result._tag).toBe("Left");
+  if (result._tag === "Left") expect(result.left.uncertain).toBe(true);
   expect(h.calls.filter((c) => c.path === "accounttransfers")).toHaveLength(0);
   const original = h.db
     .query<{ id: string; status: string }, []>(

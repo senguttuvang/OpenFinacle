@@ -312,8 +312,13 @@ export const confirmCustomerTransfer = (
                   ...observedOutcome(original, "failed", null),
                   message,
                 })
-              : fail(
-                  "The original command outcome could not be retired safely. Inspect the original before a new instruction.",
+              : Effect.fail(
+                  new BankingError({
+                    message:
+                      "The original command outcome could not be retired safely. Inspect the original before a new instruction.",
+                    status: 409,
+                    uncertain: true,
+                  }),
                 ),
           ),
         );

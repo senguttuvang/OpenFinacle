@@ -601,6 +601,13 @@ test("empty future customer adds a known account by holder name, reviews it and 
   await page
     .getByRole("button", { name: "Confirm saved payee", exact: true })
     .click();
+  await openWorkspace(page, "overview");
+  await expect(
+    page.getByRole("region", { name: "Saved payee summary" }),
+  ).toContainText("Aadhya Iyer");
+  expect(fixture.financialRefreshes()).toBe(0);
+  await openWorkspace(page, "transfer");
+  await page.getByText("Manage saved payees (1)", { exact: true }).click();
   await expect(
     page.getByRole("combobox", { name: "Recipient", exact: true }),
   ).toBeEnabled();
