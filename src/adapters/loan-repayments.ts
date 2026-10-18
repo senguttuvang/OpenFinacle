@@ -31,7 +31,10 @@ const BasicTransfer = Schema.Struct({
   id,
   currency,
   transferAmount: amount,
-  transferDate: loanCoreDateParts,
+  transferDate: Schema.Union(
+    loanCoreDateParts,
+    LoanQuote.fields.expected_disbursement_date,
+  ),
   reversed: Schema.Boolean,
   transferDescription: Schema.optional(Schema.NullOr(Schema.String)),
 });
@@ -93,8 +96,11 @@ const uncertain = () =>
   });
 const decode = <A, I>(schema: Schema.Schema<A, I>, input: unknown) =>
   Schema.decodeUnknown(schema)(input).pipe(Effect.mapError(unavailable));
-const date = (parts: readonly number[]) =>
-  decode(LoanQuote.fields.expected_disbursement_date, loanCoreCalendar(parts));
+const date = (value: readonly number[] | string) =>
+  decode(
+    LoanQuote.fields.expected_disbursement_date,
+    typeof value === "string" ? value : loanCoreCalendar(value),
+  );
 
 export const loanRepayerLayer = Layer.effect(
   LoanRepayer,
