@@ -148,20 +148,28 @@ const preflight = Effect.gen(function* () {
 
 // Restore only a protected export into a disposable in-memory database. This never opens project storage.
 export const verifyWorkflowDump = (sql: string) =>
-  verifySqliteScript(sql, [
-    "settings",
-    "banks",
-    "sessions",
-    "applications",
-    "beneficiaries",
-    "commands",
-    "audit",
-    "documents",
-    "service_requests",
-    "usage_limits",
-    "financial_snapshots",
-    "demo_seed_lease",
-  ]).pipe(
+  verifySqliteScript(
+    `${sql}\n;
+PRAGMA ignore_check_constraints=OFF;
+CREATE TEMP TABLE workflow_repayment_schema_guard (complete INTEGER NOT NULL CHECK(complete=1));
+INSERT INTO workflow_repayment_schema_guard SELECT count(*) IN (0,4) FROM sqlite_schema
+  WHERE type='table' AND name IN ('loan_repayment_offers','loan_repayment_requests','loan_repayment_operations','loan_repayment_events');
+DROP TABLE workflow_repayment_schema_guard;`,
+    [
+      "settings",
+      "banks",
+      "sessions",
+      "applications",
+      "beneficiaries",
+      "commands",
+      "audit",
+      "documents",
+      "service_requests",
+      "usage_limits",
+      "financial_snapshots",
+      "demo_seed_lease",
+    ],
+  ).pipe(
     Effect.mapError(() =>
       failure(
         "The workflow export did not restore with the required schema and a clean integrity check. Require sqlite3 3.38+ and inspect the protected export. It cannot authorize a migration; SQL details are suppressed.",

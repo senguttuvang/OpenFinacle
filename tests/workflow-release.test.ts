@@ -45,6 +45,28 @@ const manifest = () => ({
 const denied = <A, E>(effect: Effect.Effect<A, E>) =>
   Effect.runPromise(Effect.flip(effect));
 
+test("backup verification permits a pre-repayment schema and a complete repayment group, but rejects partial repayment exports", async () => {
+  const tables = [
+    "loan_repayment_offers",
+    "loan_repayment_requests",
+    "loan_repayment_operations",
+    "loan_repayment_events",
+  ];
+  await Effect.runPromise(verifyWorkflowDump(sql));
+  for (let count = 1; count <= tables.length; count++) {
+    const dump = `${sql}\n${tables
+      .slice(0, count)
+      .map((table) => `CREATE TABLE ${table}(id TEXT PRIMARY KEY);`)
+      .join("\n")}`;
+    if (count === tables.length)
+      await Effect.runPromise(verifyWorkflowDump(dump));
+    else
+      expect((await denied(verifyWorkflowDump(dump))).message).toContain(
+        "did not restore",
+      );
+  }
+});
+
 test("workflow release target requires configured binding, authenticated account and live database identity", async () => {
   const config = {
     name: "openfinacle",
