@@ -275,18 +275,16 @@ test("lost execution-claim acknowledgement cannot invent a terminal failed outco
           ...store,
           run: (sql, ...values) =>
             sql.startsWith("UPDATE commands SET status='executing'")
-              ? store
-                  .run(sql, ...values)
-                  .pipe(
-                    Effect.zipRight(
-                      Effect.fail(
-                        new BankingError({
-                          message: "Lost claim acknowledgement",
-                          status: 503,
-                        }),
-                      ),
+              ? store.run(sql, ...values).pipe(
+                  Effect.zipRight(
+                    Effect.fail(
+                      new BankingError({
+                        message: "Lost claim acknowledgement",
+                        status: 503,
+                      }),
                     ),
-                  )
+                  ),
+                )
               : store.run(sql, ...values),
         }),
         Effect.either,
