@@ -7,7 +7,9 @@ import {
   transferMarker,
 } from "../domain/customer-registry";
 import { CustomerTransfers } from "../domain/customer-transfers";
+import { LoanQuote } from "../domain/loans";
 import { Core } from "../domain/ports";
+import { loanCoreCalendar, loanCoreDateParts } from "./loan-engine";
 
 const id = Schema.Number.pipe(Schema.int(), Schema.positive());
 const currency = Schema.Struct({
@@ -15,15 +17,16 @@ const currency = Schema.Struct({
   decimalPlaces: Schema.Literal(2),
 });
 const money = Schema.Number.pipe(Schema.nonNegative());
-const dateParts = Schema.Array(Schema.Number.pipe(Schema.int())).pipe(
-  Schema.itemsCount(3),
+const calendarDate = LoanQuote.fields.expected_disbursement_date;
+const dateParts = loanCoreDateParts.pipe(
+  Schema.filter((value) => Schema.is(calendarDate)(loanCoreCalendar(value))),
 );
 const transfer = Schema.Struct({
   id,
   reversed: Schema.Boolean,
   transferDescription: Schema.optional(Schema.NullOr(Schema.String)),
   transferAmount: money,
-  transferDate: dateParts,
+  transferDate: Schema.Union(dateParts, calendarDate),
 });
 const savings = Schema.Struct({
   id,
@@ -59,7 +62,7 @@ const fullTransfer = Schema.Struct({
   currency,
   reversed: Schema.Literal(false),
   transferAmount: money,
-  transferDate: Schema.String,
+  transferDate: calendarDate,
   transferDescription: Schema.String,
   fromOffice: Schema.Struct({ id }),
   toOffice: Schema.Struct({ id }),
@@ -103,8 +106,8 @@ const minor = (value: number) =>
     },
     catch: unavailable,
   });
-const calendar = (parts: readonly number[]) =>
-  `${parts[0]}-${String(parts[1]).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+const calendar = (value: readonly number[] | string) =>
+  typeof value === "string" ? value : loanCoreCalendar(value);
 const decode = <A, I>(schema: Schema.Schema<A, I>, input: unknown) =>
   Schema.decodeUnknown(schema)(input).pipe(Effect.mapError(unavailable));
 

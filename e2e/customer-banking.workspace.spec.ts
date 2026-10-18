@@ -1,10 +1,18 @@
 import { expect, type Page, test } from "@playwright/test";
+import { bankingDate } from "../src/domain/banking";
 import { planningHouseholds } from "../src/domain/planning-fixtures";
 import { initialPlanningState } from "../src/domain/planning-state";
 import type { Dashboard } from "../src/domain/view";
 import { savedWorkspace } from "./fixtures/workspace";
 
-const installCustomers = async (page: Page) => {
+const installCustomers = async (
+  page: Page,
+  options: {
+    lostResponse?: boolean;
+    malformedResponse?: boolean;
+    historyFailure?: boolean;
+  } = {},
+) => {
   const first = savedWorkspace(),
     second = savedWorkspace();
   first.customer = {
@@ -35,6 +43,8 @@ const installCustomers = async (page: Page) => {
   const rows: Dashboard[] = [first, second];
   let selected: Dashboard | undefined;
   let posts = 0;
+  let lostResponse = options.lostResponse ?? false;
+  let lastOutcome: Record<string, unknown> | null = null;
   let offer: {
     id: string;
     bank_id: string;
@@ -81,8 +91,15 @@ const installCustomers = async (page: Page) => {
             .map((row) => row.customer),
         },
       });
+    if (path === "/api/customer-transfers/history" && options.historyFailure)
+      return route.fulfill({
+        status: 503,
+        json: { error: "Original history unavailable" },
+      });
     if (path === "/api/customer-transfers/history")
       return route.fulfill({ json: { transfers: [] } });
+    if (path === "/api/customer-transfers/inspect" && lastOutcome)
+      return route.fulfill({ json: lastOutcome });
     if (path === "/api/customer-transfers/review") {
       offer = {
         id: "offer-registered-123",
@@ -90,7 +107,7 @@ const installCustomers = async (page: Page) => {
         sender_id: selected.customer?.id ?? "",
         recipient_id: input.recipientId,
         amount_minor: Math.round(Number(input.amount) * 100),
-        payment_date: "2026-10-18",
+        payment_date: bankingDate(Date.now()),
         expires_at: Date.now() + 600000,
       };
       const recipient = rows.find(
@@ -142,24 +159,34 @@ const installCustomers = async (page: Page) => {
         runningBalance: recipient.account.summary.accountBalance,
         transactionType: { value: "Deposit", deposit: true },
       });
-      return route.fulfill({
-        json: {
-          id: "saved-original",
-          status: "posted",
-          receipt: {
-            transfer_id: 701,
-            debit_id: 501,
-            credit_id: 502,
-            amount_minor: offer.amount_minor,
-            date: offer.payment_date,
-            source_balance_minor: Math.round(
-              selected.account.summary.accountBalance * 100,
-            ),
-            recipient_balance_minor: Math.round(
-              recipient.account.summary.accountBalance * 100,
-            ),
-          },
+      lastOutcome = {
+        id: "saved-original",
+        bank_id: selected.bank.id,
+        offer_id: offer.id,
+        key: input.key,
+        status: "posted",
+        receipt: {
+          transfer_id: 701,
+          debit_id: 501,
+          credit_id: 502,
+          amount_minor: offer.amount_minor,
+          date: offer.payment_date,
+          source_balance_minor: Math.round(
+            selected.account.summary.accountBalance * 100,
+          ),
+          recipient_balance_minor: Math.round(
+            recipient.account.summary.accountBalance * 100,
+          ),
         },
+      };
+      if (lostResponse) {
+        lostResponse = false;
+        return route.abort("failed");
+      }
+      return route.fulfill({
+        json: options.malformedResponse
+          ? { ...lastOutcome, key: "different-original-key" }
+          : lastOutcome,
       });
     }
     return route.fulfill({ json: {} });
@@ -324,4 +351,100 @@ test("standalone shared planning binds its verified registered customer before s
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
   await page.getByLabel("Category", { exact: true }).selectOption("Dining");
   await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("123");
+});
+
+const prepareTransfer = async (page: Page) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await page
+    .getByLabel("Recipient", { exact: true })
+    .selectOption("sample-aadhya");
+  await page.getByLabel("Amount in INR").fill("12.34");
+  await page
+    .getByRole("button", { name: "Review transfer", exact: true })
+    .click();
+};
+for (const mode of ["lost", "malformed"] as const)
+  test(`${mode} transfer acknowledgement retains original across reload even with empty history`, async ({
+    page,
+  }) => {
+    const fixture = await installCustomers(page, {
+      lostResponse: mode === "lost",
+      malformedResponse: mode === "malformed",
+    });
+    await prepareTransfer(page);
+    await page.getByRole("button", { name: "Confirm transfer once" }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    expect(fixture.posts()).toBe(1);
+    const stored = await page.evaluate(() =>
+      sessionStorage.getItem(
+        "openfinacle:customer-transfer:synthetic-workspace",
+      ),
+    );
+    expect(stored).not.toBeNull();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Pay & transfer", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Review your transfer" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Confirm transfer once" }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Inspect original transfer" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Transfer completed" }),
+    ).toBeVisible();
+    expect(fixture.posts()).toBe(1);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem(
+          "openfinacle:customer-transfer:synthetic-workspace",
+        ),
+      ),
+    ).toBeNull();
+  });
+test("transfer storage failure or unavailable original history prevents dispatch", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page);
+  await page.addInitScript(() => {
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("openfinacle:customer-transfer:"))
+        throw new DOMException("Storage unavailable", "SecurityError");
+      return write.call(this, key, value);
+    };
+  });
+  await prepareTransfer(page);
+  await page.getByRole("button", { name: "Confirm transfer once" }).click();
+  await expect(
+    page.locator(".customer-transfer").getByRole("alert"),
+  ).toContainText("storage is unavailable");
+  expect(fixture.posts()).toBe(0);
+});
+test("history read failure blocks a fresh transfer rather than hiding an unresolved original", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page, { historyFailure: true });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await expect(
+    page.locator(".customer-transfer").getByRole("alert"),
+  ).toContainText("original transfer");
+  await expect(
+    page.getByRole("button", { name: "Review transfer", exact: true }),
+  ).toHaveCount(0);
+  expect(fixture.posts()).toBe(0);
 });

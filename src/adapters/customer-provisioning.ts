@@ -6,7 +6,9 @@ import {
   type SeedOperation,
   type SeedProof,
 } from "../domain/customer-provisioning";
+import { LoanQuote } from "../domain/loans";
 import { Core, Store } from "../domain/ports";
+import { loanCoreCalendar, loanCoreDateParts } from "./loan-engine";
 
 const id = Schema.Number.pipe(Schema.int(), Schema.positive());
 const clientSchema = Schema.Struct({
@@ -20,7 +22,7 @@ const clientSchema = Schema.Struct({
 const accountSchema = Schema.Struct({
   id,
   clientId: id,
-  productId: id,
+  savingsProductId: id,
   externalId: Schema.String,
   accountNo: Schema.NonEmptyString,
   currency: Schema.Struct({
@@ -118,7 +120,7 @@ export const customerProvisionerLayer = Layer.effect(
         if (
           value.externalId !== row.id ||
           value.clientId !== owner.id ||
-          value.productId !== configured.product ||
+          value.savingsProductId !== configured.product ||
           value.allowOverdraft ||
           value.withdrawalFeeForTransfers ||
           (row.account_id !== null && row.account_id !== value.id) ||
@@ -159,27 +161,71 @@ export const customerProvisionerLayer = Layer.effect(
         )
           return yield* Effect.fail(uncertain());
         if (operation.stage === "fund") {
-          const matches =
+          const configured = yield* settings;
+          const candidates =
             value.transactions?.filter(
               (transaction) =>
-                transaction.paymentDetailData?.receiptNumber ===
-                operation.command_key,
+                !transaction.reversed &&
+                transaction.transactionType.id === 1 &&
+                Math.abs(transaction.amount * 100 - row.funding_minor) <
+                  0.000001 &&
+                loanCoreCalendar(transaction.date) === operation.payment_date,
             ) ?? [];
-          const transaction = matches[0];
-          if (
-            matches.length !== 1 ||
-            !transaction ||
-            transaction.reversed ||
-            transaction.transactionType.id !== 1 ||
-            Math.abs(transaction.amount * 100 - row.funding_minor) > 0.000001 ||
-            transaction.date
-              .map((part, index) =>
-                index === 0 ? String(part) : String(part).padStart(2, "0"),
-              )
-              .join("-") !== operation.payment_date
-          )
+          if (!candidates.length || candidates.length > 32)
             return yield* Effect.fail(uncertain());
-          return { resource_id: transaction.id };
+          const matches: number[] = [];
+          for (const candidate of candidates) {
+            // Fineract omits payment details from association lists; read the
+            // original owned transaction endpoint before accepting a funding receipt.
+            const detail = yield* decode(
+              Schema.Struct({
+                id,
+                accountId: Schema.optional(id),
+                amount: Schema.Number,
+                currency: Schema.Struct({
+                  code: Schema.Literal("INR"),
+                  decimalPlaces: Schema.Literal(2),
+                }),
+                date: loanCoreDateParts.pipe(
+                  Schema.filter((parts) =>
+                    Schema.is(LoanQuote.fields.expected_disbursement_date)(
+                      loanCoreCalendar(parts),
+                    ),
+                  ),
+                ),
+                reversed: Schema.Boolean,
+                transactionType: Schema.Struct({ id }),
+                paymentDetailData: Schema.optional(
+                  Schema.Struct({
+                    receiptNumber: Schema.optional(Schema.String),
+                    paymentType: Schema.optional(Schema.Struct({ id })),
+                  }),
+                ),
+              }),
+              yield* core.request(
+                "GET",
+                `savingsaccounts/${value.id}/transactions/${candidate.id}`,
+              ),
+            );
+            if (
+              detail.id !== candidate.id ||
+              (detail.accountId !== undefined &&
+                detail.accountId !== value.id) ||
+              detail.reversed ||
+              detail.transactionType.id !== 1 ||
+              Math.abs(detail.amount * 100 - row.funding_minor) > 0.000001 ||
+              loanCoreCalendar(detail.date) !== operation.payment_date
+            )
+              return yield* Effect.fail(uncertain());
+            if (
+              detail.paymentDetailData?.receiptNumber ===
+                operation.command_key &&
+              detail.paymentDetailData.paymentType?.id === configured.cash
+            )
+              matches.push(detail.id);
+          }
+          if (matches.length !== 1) return yield* Effect.fail(uncertain());
+          return { resource_id: matches[0] };
         }
         return { resource_id: value.id };
       }).pipe(Effect.mapError(uncertain));

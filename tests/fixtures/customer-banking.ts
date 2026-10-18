@@ -21,20 +21,20 @@ interface Transaction {
   amount: number;
   reversed: boolean;
   transactionType: { id: number; value: string };
-  paymentDetailData?: { receiptNumber: string };
+  paymentDetailData?: { receiptNumber: string; paymentType: { id: number } };
   transfer?: {
     id: number;
     reversed: boolean;
     transferDescription: string;
     transferAmount: number;
-    transferDate: number[];
+    transferDate: number[] | string;
   };
 }
 export interface Savings {
   id: number;
   clientId: number;
   clientName: string;
-  productId: number;
+  savingsProductId: number;
   externalId: string;
   accountNo: string;
   currency: { code: string; decimalPlaces: number };
@@ -57,7 +57,7 @@ const createAccount = (
   clientName: name,
   externalId,
   accountNo: `SYN${String(id).padStart(8, "0")}`,
-  productId: 1,
+  savingsProductId: 1,
   currency,
   status: { id: 300, active: true },
   allowOverdraft: false,
@@ -126,6 +126,7 @@ export const customerHarness = (filename = ":memory:") => {
   let failAfter: string | null = null;
   let hideCredit = false;
   let rejectWrite = false;
+  let isoTransferDates = false;
   const core = Layer.succeed(Core, {
     request: <T>(method: string, path: string, body?: unknown, key?: string) =>
       Effect.try({
@@ -142,6 +143,17 @@ export const customerHarness = (filename = ":memory:") => {
                   )
                 : clients.get(Number(parts[1]));
           } else if (method === "GET" && parts[0] === "savingsaccounts") {
+            if (parts[2] === "transactions" && parts[3]) {
+              const transaction = accounts
+                .get(Number(parts[1]))
+                ?.transactions.find((row) => row.id === Number(parts[3]));
+              if (!transaction)
+                throw new BankingError({
+                  message: "Owned transaction not found",
+                  status: 404,
+                });
+              return structuredClone(transaction) as T;
+            }
             const saved =
               parts[1] === "external-id"
                 ? [...accounts.values()].find(
@@ -149,6 +161,22 @@ export const customerHarness = (filename = ":memory:") => {
                   )
                 : accounts.get(Number(parts[1]));
             result = saved ? structuredClone(saved) : undefined;
+            if (result)
+              for (const transaction of (result as Savings).transactions)
+                delete transaction.paymentDetailData;
+            if (isoTransferDates && result)
+              for (const transaction of (result as Savings).transactions) {
+                if (
+                  transaction.transfer &&
+                  Array.isArray(transaction.transfer.transferDate)
+                )
+                  transaction.transfer.transferDate =
+                    transaction.transfer.transferDate
+                      .map((part, index) =>
+                        String(part).padStart(index === 0 ? 4 : 2, "0"),
+                      )
+                      .join("-");
+              }
             if (hideCredit && result)
               (result as Savings).transactions = (
                 result as Savings
@@ -296,6 +324,7 @@ export const customerHarness = (filename = ":memory:") => {
                   },
                   paymentDetailData: {
                     receiptNumber: String(input.receiptNumber),
+                    paymentType: { id: Number(input.paymentTypeId) },
                   },
                 });
                 result = { resourceId: id };
@@ -379,6 +408,9 @@ export const customerHarness = (filename = ":memory:") => {
     },
     rejectWrites: () => {
       rejectWrite = true;
+    },
+    useISOTransferDates: () => {
+      isoTransferDates = true;
     },
   };
 };

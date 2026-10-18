@@ -97,6 +97,18 @@ interface TransferRow {
   bank_id: string;
   receipt_json: string | null;
 }
+const observedOutcome = (
+  original: Effect.Effect.Success<ReturnType<typeof loadOriginal>>,
+  status: "pending" | "executing" | "uncertain" | "posted" | "failed",
+  receipt: TransferReceipt | null,
+) => ({
+  id: original.command.id,
+  offer_id: original.offer.id,
+  bank_id: original.command.bank_id,
+  key: original.command.key,
+  status,
+  receipt,
+});
 const loadOriginal = (session: Session, id: string) =>
   Effect.gen(function* () {
     const store = yield* Store;
@@ -167,18 +179,20 @@ const saveProof = (
       original.command.id,
     );
     yield* invalidate(original.instruction);
-    return { id: original.command.id, status: "posted" as const, receipt };
+    return observedOutcome(original, "posted", receipt);
   });
 
 export const inspectCustomerTransfer = (session: Session, id: string) =>
   Effect.gen(function* () {
     const original = yield* loadOriginal(session, id);
     const store = yield* Store;
+    if (original.command.status === "rejected")
+      return observedOutcome(original, "failed", null);
     if (
       original.command.status === "failed" ||
       original.command.status === "pending"
     )
-      return { id, status: original.command.status, receipt: null };
+      return observedOutcome(original, original.command.status, null);
     const transfer = yield* CustomerTransfers;
     const proof = yield* transfer
       .confirm(original.instruction)
@@ -190,7 +204,7 @@ export const inspectCustomerTransfer = (session: Session, id: string) =>
         proof.left.message,
         id,
       );
-    return { id, status: "uncertain" as const, receipt: null };
+    return observedOutcome(original, "uncertain", null);
   });
 
 export const confirmCustomerTransfer = (
@@ -283,7 +297,7 @@ export const confirmCustomerTransfer = (
         result.left.message,
         id,
       );
-      return { id, status, receipt: null };
+      return observedOutcome(original, status, null);
     }
     return yield* saveProof(original, result.right);
   });

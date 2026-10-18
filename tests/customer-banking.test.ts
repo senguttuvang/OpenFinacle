@@ -32,6 +32,7 @@ import {
 } from "../src/application/customer-transfers";
 import type { Session } from "../src/domain/banking";
 import type { CustomerProvisionerService } from "../src/domain/customer-provisioning";
+import { Core } from "../src/domain/ports";
 import { customerHarness } from "./fixtures/customer-banking";
 
 const harnesses: ReturnType<typeof customerHarness>[] = [];
@@ -645,4 +646,100 @@ test("disk reopen retains original seed keys and ambiguous creation for read-onl
     h.db.close();
     await rm(directory, { recursive: true, force: true });
   }
+});
+test("Core embedded ISO transfer dates support eligibility and both-leg proof, while malformed calendars fail closed", async () => {
+  const { h, source, recipientId } = await twoCustomers();
+  h.useISOTransferDates();
+  for (const [index, amount] of ["1.23", "2.34"].entries()) {
+    const { offer } = await run(
+      h,
+      reviewCustomerTransfer(source, recipientId, amount),
+    );
+    expect(
+      (
+        await run(
+          h,
+          confirmCustomerTransfer(
+            source,
+            offer.id,
+            `iso-original-transfer-${index}`,
+          ),
+        )
+      ).status,
+    ).toBe("posted");
+  }
+  const original = h.db
+    .query<{ id: string }, []>(
+      "SELECT id FROM commands WHERE kind='transfer' ORDER BY rowid LIMIT 1",
+    )
+    .get();
+  const embedded = h.accounts.get(11)?.transactions[0]?.transfer;
+  if (!original || !embedded)
+    throw new Error("Missing original transfer fixture");
+  embedded.transferDate = "2026-02-30";
+  expect(
+    (await run(h, inspectCustomerTransfer(source, original.id))).status,
+  ).toBe("uncertain");
+  expect(
+    h.calls.filter(
+      (call) => call.method === "POST" && call.path === "accounttransfers",
+    ),
+  ).toHaveLength(2);
+});
+test("funding proof requires owned transaction detail receipt and cash type when association rows omit payment details", async () => {
+  const h = setup();
+  await run(h, prepareCustomerManifest("branch"));
+  h.loseResponse("savingsaccounts/200/transactions?command=deposit");
+  await run(h, resumeCustomerSeed("branch", 1, 1).pipe(Effect.flip));
+  const transaction = h.accounts.get(200)?.transactions[0];
+  const operation = h.db
+    .query<{ command_key: string }, []>(
+      "SELECT command_key FROM customer_seed_operations WHERE seed_id='sample-branch-001' AND stage='fund'",
+    )
+    .get();
+  if (!transaction?.paymentDetailData || !operation)
+    throw new Error("Original funding receipt missing");
+  const listed = await run(
+    h,
+    Effect.gen(function* () {
+      const core = yield* Core;
+      return yield* core.request<{
+        transactions: { paymentDetailData?: unknown }[];
+      }>("GET", "savingsaccounts/200?associations=transactions");
+    }),
+  );
+  expect(listed.transactions[0].paymentDetailData).toBeUndefined();
+  expect(h.accounts.get(200)?.savingsProductId).toBe(1);
+  expect(Object.hasOwn(h.accounts.get(200) ?? {}, "productId")).toBe(false);
+  transaction.paymentDetailData.receiptNumber = "different-original";
+  await run(h, inspectCustomerSeed("sample-branch-001"));
+  expect(
+    h.db
+      .query(
+        "SELECT status FROM customer_seed_operations WHERE seed_id='sample-branch-001' AND stage='fund'",
+      )
+      .get(),
+  ).toEqual({ status: "uncertain" });
+  transaction.paymentDetailData.receiptNumber = operation.command_key;
+  transaction.paymentDetailData.paymentType.id = 999;
+  await run(h, inspectCustomerSeed("sample-branch-001"));
+  expect(
+    h.db
+      .query(
+        "SELECT status FROM customer_seed_operations WHERE seed_id='sample-branch-001' AND stage='fund'",
+      )
+      .get(),
+  ).toEqual({ status: "uncertain" });
+  transaction.paymentDetailData.paymentType.id = 1;
+  await run(h, inspectCustomerSeed("sample-branch-001"));
+  await run(h, resumeCustomerSeed("branch", 1, 1));
+  expect(
+    h.calls.some((call) =>
+      /^savingsaccounts\/200\/transactions\/\d+$/.test(call.path),
+    ),
+  ).toBe(true);
+  expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(5);
+  expect((await run(h, customerSeedStatus("branch"))).registered?.count).toBe(
+    1,
+  );
 });

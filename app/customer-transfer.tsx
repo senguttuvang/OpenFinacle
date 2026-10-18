@@ -2,21 +2,22 @@
 
 import { Effect } from "effect";
 import { useEffect, useRef, useState } from "react";
-import { formatMoney } from "../src/domain/banking";
+import { BankingError, bankingDate, formatMoney } from "../src/domain/banking";
 import type {
   CustomerChoice,
-  TransferOffer,
   TransferReceipt,
 } from "../src/domain/customer-registry";
 import { api } from "./api";
+import {
+  type CustomerTransferPending,
+  type CustomerTransferReview,
+  customerTransferHistoryApi,
+  customerTransferOutcome,
+  customerTransferReviewApi,
+  loadCustomerTransferPending,
+  saveCustomerTransferPending,
+} from "./customer-transfer-api";
 
-interface Review {
-  offer: TransferOffer;
-  sender_name: string;
-  sender_suffix: string;
-  recipient_name: string;
-  recipient_suffix: string;
-}
 interface Outcome {
   id: string;
   status: string;
@@ -32,11 +33,13 @@ export function CustomerTransfer({
   const [recipients, setRecipients] = useState<CustomerChoice[]>([]);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
-  const [review, setReview] = useState<Review | null>(null);
+  const [review, setReview] = useState<CustomerTransferReview | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [locked, setLocked] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
+  const original = useRef<CustomerTransferPending | null>(null);
   const key = useRef("");
   const active = useRef(true);
   useEffect(() => {
@@ -56,18 +59,27 @@ export function CustomerTransfer({
       ),
     );
     void Effect.runPromise(
-      api<{ transfers: { id: string; status: string }[] }>(
-        "/customer-transfers/history",
-      ).pipe(
+      Effect.gen(function* () {
+        const retained = yield* loadCustomerTransferPending(bankId);
+        if (!active.current) return yield* Effect.interrupt;
+        if (retained) {
+          original.current = retained;
+          key.current = retained.key;
+          setReview(retained.review);
+          setLocked(true);
+        }
+        return yield* customerTransferHistoryApi();
+      }).pipe(
         Effect.tap((value) =>
           Effect.sync(() => {
             const unresolved = value.transfers.find((row) =>
               ["executing", "uncertain", "pending"].includes(row.status),
             );
-            if (active.current && unresolved) {
+            if (active.current && unresolved && !original.current) {
               setLocked(true);
               setOutcome({ ...unresolved, receipt: null });
             }
+            if (active.current) setHistoryReady(true);
           }),
         ),
         Effect.catchAll((failure) =>
@@ -80,7 +92,7 @@ export function CustomerTransfer({
     return () => {
       active.current = false;
     };
-  }, []);
+  }, [bankId]);
   const perform = <T,>(
     task: Effect.Effect<T, { message: string }>,
     receive: (result: T) => void,
@@ -110,6 +122,10 @@ export function CustomerTransfer({
   };
   const receive = (value: Outcome) => {
     setOutcome(value);
+    if (["posted", "failed"].includes(value.status)) {
+      original.current = null;
+      setHistoryReady(true);
+    }
     if (value.status === "posted") onPosted();
   };
   return (
@@ -123,15 +139,18 @@ export function CustomerTransfer({
         Send synthetic INR funds between registered accounts. Both customers can
         verify the entries in their statements.
       </p>
-      {!review && !locked && (
+      {!historyReady && (
+        <p role="status">
+          Checking saved original transfer references. Reload if this check
+          cannot complete.
+        </p>
+      )}
+      {!review && !locked && historyReady && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
             perform(
-              api<Review>("/customer-transfers/review", {
-                recipientId: recipient,
-                amount,
-              }),
+              customerTransferReviewApi(bankId, recipient, amount),
               (value) => {
                 setReview(value);
                 key.current = crypto.randomUUID();
@@ -204,11 +223,39 @@ export function CustomerTransfer({
                 disabled={busy}
                 onClick={() => {
                   // Lock before starting transport. A timeout permits inspection only.
-                  setLocked(true);
                   perform(
-                    api<Outcome>("/customer-transfers/confirm", {
-                      offerId: review.offer.id,
-                      key: key.current,
+                    Effect.gen(function* () {
+                      if (
+                        Date.now() > review.offer.expires_at ||
+                        bankingDate(Date.now()) !== review.offer.payment_date
+                      )
+                        return yield* Effect.fail(
+                          new BankingError({
+                            message:
+                              "This transfer review expired. Change the transfer and review current funds again.",
+                            status: 409,
+                          }),
+                        );
+                      const pending: CustomerTransferPending = {
+                        schema: 1,
+                        bank_id: bankId,
+                        key: key.current,
+                        review,
+                      };
+                      yield* saveCustomerTransferPending(pending);
+                      yield* Effect.sync(() => {
+                        original.current = pending;
+                        setLocked(true);
+                      });
+                      const value = yield* api<unknown>(
+                        "/customer-transfers/confirm",
+                        { offerId: review.offer.id, key: pending.key },
+                      );
+                      return yield* customerTransferOutcome(
+                        value,
+                        bankId,
+                        pending,
+                      );
                     }),
                     receive,
                   );
@@ -237,7 +284,7 @@ export function CustomerTransfer({
       {locked && outcome?.status !== "posted" && (
         <p role="status">
           {outcome?.status === "failed"
-            ? "Core declined this original instruction. Its saved outcome is retained."
+            ? "This original instruction was declined. Its saved outcome is retained."
             : "The original outcome needs inspection. No second transfer will be sent."}
         </p>
       )}
@@ -265,11 +312,20 @@ export function CustomerTransfer({
           disabled={busy}
           onClick={() =>
             perform(
-              api<Outcome>(
+              api<unknown>(
                 "/customer-transfers/inspect",
                 outcome
                   ? { commandId: outcome.id }
                   : { offerId: review?.offer.id, key: key.current },
+              ).pipe(
+                Effect.flatMap((value) =>
+                  customerTransferOutcome(
+                    value,
+                    bankId,
+                    original.current,
+                    outcome?.id,
+                  ),
+                ),
               ),
               receive,
             )
