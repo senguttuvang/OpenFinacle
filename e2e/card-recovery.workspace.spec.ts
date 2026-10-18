@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { Card } from "../src/domain/cards";
+import { chooseOption } from "./fixtures/form-select";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -304,9 +305,11 @@ test("lost source guidance opens its controls without submitting or automaticall
   await page
     .getByRole("button", { name: "Request a demo replacement", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Replacement reason", exact: true })
-    .selectOption("lost");
+  await chooseOption(
+    page,
+    page.getByRole("combobox", { name: "Replacement reason", exact: true }),
+    "lost",
+  );
   await page
     .getByRole("textbox", {
       name: "Confirmed demo delivery address",

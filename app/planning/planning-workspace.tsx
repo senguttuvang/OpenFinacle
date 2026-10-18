@@ -17,6 +17,7 @@ import {
 } from "../../src/domain/planning";
 import { planningHouseholds } from "../../src/domain/planning-fixtures";
 import type { PlanningScenario } from "../../src/domain/planning-state";
+import { FormSelect } from "../form-select";
 import { ReadingSize } from "../reading-size";
 import { PlanningBudgetControls } from "./planning-budget-controls";
 import { PlanningFilters } from "./planning-filters";
@@ -286,21 +287,19 @@ export function PlanningWorkspace({
         </div>
         <label>
           Household
-          <select
+          <FormSelect
             value={householdId}
-            onChange={(e) => {
-              setHouseholdId(e.target.value);
+            onValueChange={(value) => {
+              setHouseholdId(value);
               setFilter(emptyFilter);
             }}
             aria-label="Household"
             disabled={busy}
-          >
-            {households.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name} · {h.city}
-              </option>
-            ))}
-          </select>
+            options={households.map((h) => ({
+              value: h.id,
+              label: `${h.name} · ${h.city}`,
+            }))}
+          />
         </label>
       </div>
       <div className="wp-context">

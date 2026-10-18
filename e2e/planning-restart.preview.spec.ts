@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseOption } from "./fixtures/form-select";
 
 test("server planning snapshots survive an actual Worker restart without reseeding", async ({
   page,
@@ -53,6 +54,10 @@ test("server planning snapshots survive an actual Worker restart without reseedi
     page.getByRole("button", { name: "Set up this synthetic household" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
   await expect(page.getByLabel("Dining monthly budget INR")).toHaveValue("123");
 });

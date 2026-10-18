@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BankingError, formatMoney, type Role } from "../src/domain/banking";
 import { Card, CardCommand, CardDetail } from "../src/domain/cards";
 import { api } from "./api";
+import { FormSelect } from "./form-select";
 import type { ServicePerform } from "./service-request-form";
 
 const labels = {
@@ -395,22 +396,16 @@ export function Cards({
           {cards && cards.length > 1 && (
             <label className="card-instrument-picker">
               Selected demo card
-              <select
+              <FormSelect
+                aria-label="Selected demo card"
                 value={detail.card.id}
                 disabled={disabled}
-                onChange={(event) => select(event.target.value)}
-              >
-                {cards.map((card) => (
-                  <option key={card.id} value={card.id}>
-                    Demo {card.suffix} ·{" "}
-                    {card.status === "blocked"
-                      ? "Permanently blocked"
-                      : card.activation_required
-                        ? "Awaiting activation"
-                        : card.status}
-                  </option>
-                ))}
-              </select>
+                onValueChange={select}
+                options={cards.map((card) => ({
+                  value: card.id,
+                  label: `Demo ${card.suffix} · ${card.status === "blocked" ? "Permanently blocked" : card.activation_required ? "Awaiting activation" : card.status}`,
+                }))}
+              />
             </label>
           )}
           <div className="card-summary">

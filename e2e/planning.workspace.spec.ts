@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseOption } from "./fixtures/form-select";
 
 test.use({ actionTimeout: 10000 });
 test.setTimeout(60000);
@@ -11,8 +12,16 @@ test("planning filters reconcile source transactions and preserve saved househol
     page.getByRole("heading", { name: "Household net worth" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Date range", { exact: true }).selectOption("month");
-  await page.getByLabel("Category", { exact: true }).selectOption("Shopping");
+  await chooseOption(
+    page,
+    page.getByLabel("Date range", { exact: true }),
+    "month",
+  );
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Shopping",
+  );
   await page.getByLabel("Merchant search").fill("Loom");
   await expect(
     page.getByRole("heading", { name: "Source transactions" }),
@@ -38,21 +47,35 @@ test("planning filters reconcile source transactions and preserve saved househol
   );
   await page.reload();
   await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
-  await expect(page.getByLabel("Saved scenario")).toContainText(
-    "Browser saved education alternative",
+  await page.getByLabel("Saved scenario").click();
+  await expect(
+    page.getByRole("option", {
+      name: "Browser saved education alternative · v1",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await chooseOption(
+    page,
+    page.getByLabel("Household", { exact: true }),
+    "synthetic-kaveri",
   );
-  await page
-    .getByLabel("Household", { exact: true })
-    .selectOption("synthetic-kaveri");
-  await expect(page.getByLabel("Saved scenario")).not.toContainText(
-    "Browser saved education alternative",
+  await page.getByLabel("Saved scenario").click();
+  await expect(
+    page.getByRole("option", {
+      name: "Browser saved education alternative · v1",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await chooseOption(
+    page,
+    page.getByLabel("Household", { exact: true }),
+    "synthetic-nila",
   );
-  await page
-    .getByLabel("Household", { exact: true })
-    .selectOption("synthetic-nila");
-  await page
-    .getByLabel("Saved scenario")
-    .selectOption({ label: "Browser saved education alternative · v1" });
+  await chooseOption(page, page.getByLabel("Saved scenario"), {
+    label: "Browser saved education alternative · v1",
+  });
   await page
     .getByRole("button", { name: "Edit assumptions", exact: true })
     .click();
@@ -61,9 +84,14 @@ test("planning filters reconcile source transactions and preserve saved househol
   ).toHaveValue("1800000");
   await page.getByRole("button", { name: "Cancel edits" }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByLabel("Saved scenario")).not.toContainText(
-    "Browser saved education alternative",
-  );
+  await page.getByLabel("Saved scenario").click();
+  await expect(
+    page.getByRole("option", {
+      name: "Browser saved education alternative · v1",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
 });
 
 test("budgets and acknowledgments survive reload, desktop and large-text mobile remain contained", async ({
@@ -73,8 +101,16 @@ test("budgets and acknowledgments survive reload, desktop and large-text mobile 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/planning");
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Date range", { exact: true }).selectOption("month");
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Date range", { exact: true }),
+    "month",
+  );
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
   await page.getByLabel("Dining monthly budget INR").fill("100");
   await page.getByRole("button", { name: "Save budget", exact: true }).click();
   await expect(
@@ -124,11 +160,17 @@ test("partial-month drilldown preserves source totals and restores filters and k
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
   await page.getByLabel("From", { exact: true }).fill("2026-07-20");
   await page.getByLabel("Through", { exact: true }).fill("2026-08-05");
-  await page
-    .getByLabel("Account", { exact: true })
-    .selectOption("synthetic-nila-card");
-  await page.getByLabel("Member", { exact: true }).selectOption("Nila");
-  await page.getByLabel("Category", { exact: true }).selectOption("Groceries");
+  await chooseOption(
+    page,
+    page.getByLabel("Account", { exact: true }),
+    "synthetic-nila-card",
+  );
+  await chooseOption(page, page.getByLabel("Member", { exact: true }), "Nila");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Groceries",
+  );
   await page.getByLabel("Merchant search").fill("Fresh Basket");
   await page
     .getByText("Monthly values and drill-down", { exact: true })
@@ -158,9 +200,10 @@ test("partial-month drilldown preserves source totals and restores filters and k
   await expect(page.getByLabel("Through", { exact: true })).toHaveValue(
     "2026-08-05",
   );
-  await expect(page.getByLabel("Account", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Account", { exact: true })).toHaveAttribute(
+    "data-value",
     "synthetic-nila-card",
   );
-  await expect(page.getByLabel("Member", { exact: true })).toHaveValue("Nila");
+  await expect(page.getByLabel("Member", { exact: true })).toHaveText("Nila");
   await expect(inspect).toBeFocused();
 });

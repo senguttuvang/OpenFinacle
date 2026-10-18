@@ -7,6 +7,7 @@ import { isProfileMaintenance } from "../src/domain/profile-effects";
 import type { CaseAction, CaseDetail } from "../src/domain/service-cases";
 import type { ServiceDefinition } from "../src/domain/services";
 import { validateServiceFields } from "../src/domain/services";
+import { FormSelect } from "./form-select";
 import { serviceCaseApi } from "./service-case-api";
 import { ServiceFields, type ServicePerform } from "./service-request-form";
 
@@ -289,21 +290,23 @@ export function ServiceCaseDetail({
               <>
                 <label>
                   Action
-                  <select
+                  <FormSelect
+                    aria-label="Action"
                     required
                     value={action}
-                    onChange={(event) => {
-                      setAction(event.target.value as CaseAction);
+                    onValueChange={(value) => {
+                      setAction(value as CaseAction);
                       setError("");
                     }}
-                  >
-                    <option value="">Select an action</option>
-                    {detail.actions.map((item) => (
-                      <option value={item} key={item}>
-                        {actionLabels[item]}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select an action"
+                    options={[
+                      { value: "", label: "Select an action" },
+                      ...detail.actions.map((item) => ({
+                        value: item,
+                        label: actionLabels[item],
+                      })),
+                    ]}
+                  />
                 </label>
                 {action === "provide_information" && definition && (
                   <ServiceFields
