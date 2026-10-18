@@ -52,6 +52,7 @@ const Outcome = Schema.Struct({
       recipient_balance_minor: minor,
     }),
   ),
+  message: Schema.optional(Schema.String),
 });
 const failure = () =>
   new BankingError({

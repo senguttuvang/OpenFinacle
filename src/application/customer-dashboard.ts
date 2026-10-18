@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import type { Session } from "../domain/banking";
 import { Store } from "../domain/ports";
 import { dashboard } from "./banking";
+import { savedPayees } from "./customer-payees";
 import { selectedCustomer } from "./customer-registry";
 
 export const customerDashboard = (session: Session, refresh = false) =>
@@ -12,9 +13,29 @@ export const customerDashboard = (session: Session, refresh = false) =>
       "SELECT bank_id FROM customer_applicant_scopes WHERE bank_id=?",
       session.bank_id,
     );
+    const customer = yield* selectedCustomer(session);
+    const payees =
+      customer && session.role === "customer"
+        ? yield* savedPayees(session)
+        : null;
+    const first = payees?.payees[0];
     return {
       ...value,
       bank: { ...value.bank, applicant: Boolean(applicant) },
-      customer: yield* selectedCustomer(session),
+      customer,
+      payeeSummary: payees
+        ? {
+            count: payees.count,
+            first: first
+              ? {
+                  id: first.id,
+                  recipient_id: first.recipient_id,
+                  display_name: first.display_name,
+                  account_suffix: first.account_suffix,
+                }
+              : null,
+            maximum: payees.maximum,
+          }
+        : null,
     };
   });

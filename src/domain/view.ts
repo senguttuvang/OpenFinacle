@@ -18,6 +18,16 @@ export interface Dashboard {
     applicant?: boolean;
   };
   customer?: CustomerChoice | null;
+  payeeSummary?: {
+    count: number;
+    first: {
+      id: string;
+      recipient_id: string;
+      display_name: string;
+      account_suffix: string;
+    } | null;
+    maximum: number;
+  } | null;
   role: Role;
   account: Account | null;
   recipient: {

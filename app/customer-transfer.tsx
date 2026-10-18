@@ -3,11 +3,10 @@
 import { Effect } from "effect";
 import { useEffect, useRef, useState } from "react";
 import { BankingError, bankingDate, formatMoney } from "../src/domain/banking";
-import type {
-  CustomerChoice,
-  TransferReceipt,
-} from "../src/domain/customer-registry";
+import type { TransferReceipt } from "../src/domain/customer-registry";
 import { api } from "./api";
+import { type PayeeList, payeeListApi } from "./customer-payee-api";
+import { CustomerPayees } from "./customer-payees";
 import {
   type CustomerTransferPending,
   type CustomerTransferReview,
@@ -17,20 +16,24 @@ import {
   loadCustomerTransferPending,
   saveCustomerTransferPending,
 } from "./customer-transfer-api";
+import { FormSelect } from "./form-select";
 
 interface Outcome {
   id: string;
   status: string;
   receipt: TransferReceipt | null;
+  message?: string;
 }
 export function CustomerTransfer({
   bankId,
   onPosted,
+  onPayeesChanged,
 }: {
   bankId: string;
   onPosted: () => void;
+  onPayeesChanged?: () => void;
 }) {
-  const [recipients, setRecipients] = useState<CustomerChoice[]>([]);
+  const [payees, setPayees] = useState<PayeeList | null>(null);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [review, setReview] = useState<CustomerTransferReview | null>(null);
@@ -45,10 +48,10 @@ export function CustomerTransfer({
   useEffect(() => {
     active.current = true;
     void Effect.runPromise(
-      api<{ customers: CustomerChoice[] }>("/customers/recipients").pipe(
+      payeeListApi().pipe(
         Effect.tap((value) =>
           Effect.sync(() => {
-            if (active.current) setRecipients(value.customers);
+            if (active.current) setPayees(value);
           }),
         ),
         Effect.catchAll((failure) =>
@@ -134,7 +137,7 @@ export function CustomerTransfer({
       aria-labelledby="registered-transfer-title"
       data-customer-scope={bankId}
     >
-      <h2 id="registered-transfer-title">Transfer to a branch customer</h2>
+      <h2 id="registered-transfer-title">Transfer to a saved payee</h2>
       <p>
         Send synthetic INR funds between registered accounts. Both customers can
         verify the entries in their statements.
@@ -145,7 +148,17 @@ export function CustomerTransfer({
           cannot complete.
         </p>
       )}
-      {!review && !locked && historyReady && (
+      {!review && !locked && payees && (
+        <CustomerPayees
+          payees={payees}
+          onChanged={(value) => {
+            setPayees(value);
+            setRecipient("");
+            onPayeesChanged?.();
+          }}
+        />
+      )}
+      {!review && !locked && historyReady && payees && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -159,21 +172,24 @@ export function CustomerTransfer({
           }}
         >
           <label htmlFor="registered-recipient">Recipient</label>
-          <select
+          <FormSelect
             id="registered-recipient"
             required
             value={recipient}
-            disabled={busy}
-            onChange={(event) => setRecipient(event.target.value)}
-          >
-            <option value="">Choose a registered recipient</option>
-            {recipients.map((choice) => (
-              <option key={choice.id} value={choice.id}>
-                {choice.display_name} · {choice.reference} · ending{" "}
-                {choice.account_suffix}
-              </option>
-            ))}
-          </select>
+            disabled={busy || payees.count === 0}
+            onValueChange={setRecipient}
+            placeholder="Choose a saved payee"
+            options={payees.payees.map((choice) => ({
+              value: choice.recipient_id,
+              label: `${choice.display_name} · ending ${choice.account_suffix}`,
+            }))}
+          />
+          {payees.count === 0 && (
+            <p>
+              Add a known account in Manage saved payees before reviewing a
+              transfer.
+            </p>
+          )}
           <label htmlFor="registered-amount">Amount in INR</label>
           <input
             id="registered-amount"
@@ -284,7 +300,8 @@ export function CustomerTransfer({
       {locked && outcome?.status !== "posted" && (
         <p role="status">
           {outcome?.status === "failed"
-            ? "This original instruction was declined. Its saved outcome is retained."
+            ? (outcome.message ??
+              "This original instruction was declined. Its saved outcome is retained.")
             : "The original outcome needs inspection. No second transfer will be sent."}
         </p>
       )}
@@ -340,10 +357,15 @@ export function CustomerTransfer({
           type="button"
           disabled={busy}
           onClick={() => {
-            setReview(null);
-            setOutcome(null);
-            setLocked(false);
-            setAmount("");
+            perform(payeeListApi(), (value) => {
+              setPayees(value);
+              setReview(null);
+              setOutcome(null);
+              setLocked(false);
+              setRecipient("");
+              onPayeesChanged?.();
+              setAmount("");
+            });
           }}
         >
           Start another transfer

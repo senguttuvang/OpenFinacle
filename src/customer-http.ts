@@ -2,6 +2,12 @@ import { Effect, Schema } from "effect";
 import { parseJsonRequest } from "./adapters/request-json";
 import { customerDashboard } from "./application/customer-dashboard";
 import {
+  confirmPayee,
+  removePayee,
+  reviewPayee,
+  savedPayees,
+} from "./application/customer-payees";
+import {
   customerDirectory,
   selectCustomerScope,
   selectedCustomer,
@@ -13,6 +19,11 @@ import {
   reviewCustomerTransfer,
 } from "./application/customer-transfers";
 import { BankingError, type Session } from "./domain/banking";
+import {
+  PayeeConfirmation,
+  PayeeLookup,
+  PayeeRemoval,
+} from "./domain/customer-payees";
 import {
   CustomerId,
   CustomerSelection,
@@ -87,8 +98,32 @@ export const customerRoute = (
       );
     if (path === "/api/customers/recipients" && request.method === "GET")
       return Response.json({
-        customers: yield* customerDirectory("", session),
+        customers: (yield* savedPayees(session)).payees.map((payee) => ({
+          ...payee,
+          id: payee.recipient_id,
+        })),
       });
+    if (path === "/api/customers/payees" && request.method === "GET")
+      return Response.json(yield* savedPayees(session));
+    if (path === "/api/customers/payees/review" && request.method === "POST") {
+      const input = yield* parseJsonRequest(request, PayeeLookup, false, true);
+      return Response.json(
+        yield* reviewPayee(session, input.holderName, input.accountNumber),
+      );
+    }
+    if (path === "/api/customers/payees/confirm" && request.method === "POST") {
+      const input = yield* parseJsonRequest(
+        request,
+        PayeeConfirmation,
+        false,
+        true,
+      );
+      return Response.json(yield* confirmPayee(session, input.reviewId));
+    }
+    if (path === "/api/customers/payees/remove" && request.method === "POST") {
+      const input = yield* parseJsonRequest(request, PayeeRemoval, false, true);
+      return Response.json(yield* removePayee(session, input.payeeId));
+    }
     if (path === "/api/customers/current" && request.method === "GET")
       return Response.json({ customer: yield* selectedCustomer(session) });
     if (path === "/api/customer-transfers/history" && request.method === "GET")

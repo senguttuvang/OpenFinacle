@@ -40,6 +40,18 @@ export function RetailOverview({ data, navigate }: Props) {
   const pending = data.commands.filter((command) =>
     ["pending", "executing", "uncertain"].includes(command.status),
   );
+  const registered = data.role === "customer" && Boolean(data.customer);
+  const payee = registered ? data.payeeSummary?.first : null;
+  const payeeName = registered
+    ? payee?.display_name
+    : (data.beneficiaries[0]?.name ?? "Arjun Raman");
+  const payeeInitials =
+    payeeName
+      ?.trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join("") ?? "+";
   return (
     <div className="retail-dashboard">
       <div className="retail-primary-column">
@@ -222,17 +234,29 @@ export function RetailOverview({ data, navigate }: Props) {
             View my profile <ArrowRight size={14} />
           </button>
         </section>
-        <section className="panel retail-payee-card">
-          <h2>Your saved payee</h2>
-          <span className="avatar peach">AR</span>
-          <strong>{data.beneficiaries[0]?.name ?? "Arjun Raman"}</strong>
-          <p>Within OpenFinacle</p>
+        <section
+          className="panel retail-payee-card"
+          aria-label="Saved payee summary"
+        >
+          <h2>{registered ? "Your saved payees" : "Your saved payee"}</h2>
+          <span className="avatar peach" aria-hidden="true">
+            {registered ? payeeInitials : "AR"}
+          </span>
+          <strong>{payeeName ?? "No saved payees yet"}</strong>
+          <p>
+            {registered
+              ? payee
+                ? `Account ending ${payee.account_suffix} · ${data.payeeSummary?.count ?? 0} saved ${data.payeeSummary?.count === 1 ? "payee" : "payees"}`
+                : "Add a known branch account to send money."
+              : "Within OpenFinacle"}
+          </p>
           <button
             type="button"
             className="primary"
             onClick={() => navigate("transfer")}
           >
-            Transfer funds <ArrowRight size={15} />
+            {registered && !payee ? "Add a payee" : "Transfer funds"}{" "}
+            <ArrowRight size={15} />
           </button>
         </section>
         <section className="retail-help-card">

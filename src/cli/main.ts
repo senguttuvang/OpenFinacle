@@ -18,6 +18,7 @@ import { loanPilot } from "./commands/loan-pilot";
 import { loanRepayment } from "./commands/loan-repayment";
 import { loanSetup } from "./commands/loan-setup";
 import { observability } from "./commands/observability";
+import { payees } from "./commands/payees";
 import { workflows } from "./commands/workflows";
 
 const execute = (args: string[], stdin?: string) =>
@@ -314,6 +315,7 @@ const diagnosticEnvironment = Command.make("diagnostic-environment", {}, () =>
 const cli = Command.make("openfinacle").pipe(
   Command.withSubcommands([
     customers,
+    payees,
     loanPilot,
     loanRepayment,
     loanSetup,

@@ -181,7 +181,16 @@ FROM (
  (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name='onboarding_drafts') AS tables,
  (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND tbl_name='onboarding_drafts' AND name IN ('onboarding_original_identity','onboarding_no_reset')) AS triggers
 );
-DROP TABLE workflow_onboarding_schema_guard;`,
+DROP TABLE workflow_onboarding_schema_guard;
+CREATE TEMP TABLE workflow_payee_schema_guard (complete INTEGER NOT NULL CHECK(complete=1));
+INSERT INTO workflow_payee_schema_guard
+SELECT (tables=0 AND triggers=0 AND columns=0) OR (tables=4 AND triggers=14 AND columns=2)
+FROM (SELECT
+ (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('customer_payees','customer_payee_reviews','customer_payee_seed_rosters','customer_payee_seed_owners')) AS tables,
+ (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND name IN ('customer_payee_insert','customer_payee_update','customer_payee_no_delete','customer_payee_review_update','customer_payee_review_confirm','customer_payee_review_no_delete','customer_offer_payee','customer_transfer_payee_execution','customer_legacy_transfer_insert','customer_legacy_transfer_execution','customer_payee_roster_no_update','customer_payee_roster_no_delete','customer_payee_seed_guard','customer_payee_seed_no_delete')) AS triggers,
+ (SELECT count(*) FROM pragma_table_info('customer_transfer_offers') WHERE name IN ('payee_id','payee_version')) AS columns
+);
+DROP TABLE workflow_payee_schema_guard;`,
     [
       "settings",
       "banks",

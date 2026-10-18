@@ -45,6 +45,8 @@ export interface TransferOffer {
   amount_minor: number;
   payment_date: string;
   expires_at: number;
+  payee_id?: string | null;
+  payee_version?: number | null;
 }
 export interface TransferReceipt {
   transfer_id: number;
