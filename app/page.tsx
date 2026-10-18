@@ -42,9 +42,11 @@ import {
   type Role,
 } from "../src/domain/banking";
 import type { Dashboard } from "../src/domain/view";
-import { api } from "./api";
+import { api, setApiCustomerScope } from "./api";
 import { BranchOverview } from "./branch-overview";
 import { CommandMenu } from "./command-menu";
+import { CustomerPicker } from "./customer-picker";
+import { CustomerTransfer } from "./customer-transfer";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
 import { ReadingSize } from "./reading-size";
@@ -150,11 +152,41 @@ const PendingButton = ({
 );
 
 export default function Page() {
+  const [entry, setEntry] = useState({
+    version: 0,
+    picker: false,
+    fresh: false,
+  });
+  return (
+    <BankingPage
+      key={entry.version}
+      initialPicker={entry.picker}
+      initialFresh={entry.fresh}
+      resetWorkspace={(picker = false) =>
+        setEntry((current) => ({
+          version: current.version + 1,
+          picker,
+          fresh: true,
+        }))
+      }
+    />
+  );
+}
+function BankingPage({
+  initialPicker,
+  initialFresh,
+  resetWorkspace,
+}: {
+  initialPicker: boolean;
+  initialFresh: boolean;
+  resetWorkspace: (picker?: boolean) => void;
+}) {
+  const [chooseCustomer, setChooseCustomer] = useState(initialPicker);
   const [data, setData] = useState<Dashboard | null>(null);
   const [view, setView] = useState<View>("overview");
   const [busy, setBusy] = useState(false);
   const [startupStage, setStartupStage] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialPicker && !initialFresh);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [search, setSearch] = useState("");
@@ -181,12 +213,18 @@ export default function Page() {
   const load = useCallback(
     (refresh = false) =>
       api<Dashboard>(`/dashboard${refresh ? "?refresh=true" : ""}`).pipe(
-        Effect.tap((next) => Effect.sync(() => setData(next))),
+        Effect.tap((next) =>
+          Effect.sync(() => {
+            setApiCustomerScope(next.bank.id);
+            setData(next);
+          }),
+        ),
       ),
     [],
   );
   useEffect(() => {
     void Effect.runPromise(initializeTelemetry());
+    if (initialPicker || initialFresh) return;
     void Effect.runPromise(
       load().pipe(
         Effect.catchAll((e) =>
@@ -197,7 +235,7 @@ export default function Page() {
         Effect.ensuring(Effect.sync(() => setLoading(false))),
       ),
     );
-  }, [load]);
+  }, [load, initialPicker, initialFresh]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 6000);
@@ -228,11 +266,27 @@ export default function Page() {
           journey,
         });
         yield* Effect.sync(() => {
+          setApiCustomerScope(result.dashboard.bank.id);
           setData(result.dashboard);
           setView("overview");
         });
       }),
       "Your saved demo is ready.",
+      false,
+    );
+  const selectCustomer = (customerId: string) =>
+    perform(
+      api<{ dashboard: Dashboard }>("/customer-selection", { customerId }).pipe(
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            setApiCustomerScope(result.dashboard.bank.id);
+            setData(result.dashboard);
+            setChooseCustomer(false);
+            setView("overview");
+          }),
+        ),
+      ),
+      "Your selected customer's saved account is ready.",
       false,
     );
   const changeRole = (role: Role, destination: View = "overview") => {
@@ -313,24 +367,32 @@ export default function Page() {
             Open an account. Make your first deposit. Send money to someone you
             know. See the same story from both sides of the counter.
           </p>
-          <div className="journey-options">
-            <PendingButton
+          {chooseCustomer ? (
+            <CustomerPicker
               busy={busy}
-              className="primary large"
-              onClick={() => startJourney("new")}
-            >
-              Start your banking story <ArrowRight size={18} />
-            </PendingButton>
-            <span>New customer · Open your first account</span>
-            <PendingButton
-              busy={busy}
-              className="secondary large"
-              onClick={() => startJourney("existing")}
-            >
-              Explore existing customer <ArrowRight size={18} />
-            </PendingButton>
-            <span>Active account · Salary, payments & statements</span>
-          </div>
+              onSelect={selectCustomer}
+              onCancel={() => setChooseCustomer(false)}
+            />
+          ) : (
+            <div className="journey-options">
+              <PendingButton
+                busy={busy}
+                className="primary large"
+                onClick={() => startJourney("new")}
+              >
+                Start your banking story <ArrowRight size={18} />
+              </PendingButton>
+              <span>New customer · Open your first account</span>
+              <PendingButton
+                busy={busy}
+                className="secondary large"
+                onClick={() => setChooseCustomer(true)}
+              >
+                Explore existing customer <ArrowRight size={18} />
+              </PendingButton>
+              <span>Active account · Salary, payments & statements</span>
+            </div>
+          )}
           {busy && <p role="status">{startupStage}</p>}
           <span className="welcome-note">
             <LockKeyhole size={14} /> Permanent shared demo · Synthetic data
@@ -503,6 +565,7 @@ export default function Page() {
 
   return (
     <div
+      key={data.bank.id}
       className={`app-shell${retail ? " customer-retail" : ""}${staff ? " branch-workspace" : ""}`}
     >
       <aside className="sidebar">
@@ -516,38 +579,37 @@ export default function Page() {
           {staff ? "BRANCH WORKSPACE" : "PERSONAL BANKING"}
           <span>DEMO</span>
         </div>
-        <nav
-          aria-label="Main navigation"
-          style={retail ? { display: "none" } : undefined}
-        >
-          {navigation.map(({ view: item, label, alias }) => {
-            const Icon = navIcons[item];
-            return (
-              <button
-                type="button"
-                className={view === item ? "nav-item active" : "nav-item"}
-                aria-current={view === item ? "page" : undefined}
-                aria-label={label}
-                key={item}
-                onClick={() => {
-                  setView(item);
-                  setSearch("");
-                }}
-              >
-                <Icon size={19} />
-                <span>{label}</span>
-                {alias && <kbd className="nav-code">{alias}</kbd>}
-                {item === "approvals" && pending.length > 0 && (
-                  <b>{pending.length}</b>
-                )}
-                {item === "application" &&
-                  data.application?.status === "awaiting_approval" && (
-                    <span className="nav-dot" />
+        {!retail && (
+          <nav aria-label="Main navigation">
+            {navigation.map(({ view: item, label, alias }) => {
+              const Icon = navIcons[item];
+              return (
+                <button
+                  type="button"
+                  className={view === item ? "nav-item active" : "nav-item"}
+                  aria-current={view === item ? "page" : undefined}
+                  aria-label={label}
+                  key={item}
+                  onClick={() => {
+                    setView(item);
+                    setSearch("");
+                  }}
+                >
+                  <Icon size={19} />
+                  <span>{label}</span>
+                  {alias && <kbd className="nav-code">{alias}</kbd>}
+                  {item === "approvals" && pending.length > 0 && (
+                    <b>{pending.length}</b>
                   )}
-              </button>
-            );
-          })}
-        </nav>
+                  {item === "application" &&
+                    data.application?.status === "awaiting_approval" && (
+                      <span className="nav-dot" />
+                    )}
+                </button>
+              );
+            })}
+          </nav>
+        )}
         {retail && (
           <div className="retail-shortcuts">
             <h2>Quick services</h2>
@@ -633,6 +695,8 @@ export default function Page() {
                     Effect.sync(() => {
                       setData(null);
                       setView("overview");
+                      setApiCustomerScope(null);
+                      resetWorkspace();
                     }),
                   ),
                 ),
@@ -690,15 +754,46 @@ export default function Page() {
             >
               <RefreshCw size={18} />
             </button>
+            <button
+              className="secondary customer-switch"
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                perform(
+                  api("/session/end", {}).pipe(
+                    Effect.tap(() =>
+                      Effect.sync(() => {
+                        setApiCustomerScope(null);
+                        resetWorkspace(true);
+                      }),
+                    ),
+                  ),
+                  "Choose a customer.",
+                  false,
+                )
+              }
+            >
+              Switch customer
+            </button>
             <div className="person">
-              <span className="avatar">{roles[role].initials}</span>
+              <span className="avatar">
+                {staff
+                  ? roles[role].initials
+                  : (account?.clientName ?? "Customer")
+                      .split(/\s+/)
+                      .map((part) => part[0])
+                      .slice(0, 2)
+                      .join("")}
+              </span>
               <div>
                 <strong>
                   {staff
                     ? role === "officer"
                       ? "Priya Rao"
                       : "Dev Sharma"
-                    : (data.application?.name ?? "Mira Krishnan")}
+                    : (account?.clientName ??
+                      data.application?.name ??
+                      "Demonstration customer")}
                 </strong>
                 <small>{roles[role].name}</small>
               </div>
@@ -1399,205 +1494,226 @@ export default function Page() {
           )}
 
           {view === "transfer" && (
-            <div className="form-grid">
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Make a payment</h2>
-                    <p>To another customer in your demo bank.</p>
-                  </div>
-                  <span className="circle-icon">
-                    <Send size={20} />
-                  </span>
-                </div>
-                {!account ? (
-                  <div className="empty-state">
-                    <LockKeyhole />
-                    <h3>Your account comes first</h3>
-                    <p>Complete account opening before sending money.</p>
-                    <button
-                      className="primary"
-                      type="button"
-                      onClick={() => setView("application")}
-                    >
-                      Open your account
-                    </button>
-                  </div>
-                ) : (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      instruction("transfer", Number(amount), note, {
-                        beneficiaryId: activeBeneficiary?.id ?? "",
-                      });
-                    }}
-                  >
-                    <label>
-                      From account
-                      <input
-                        className="sr-only"
-                        aria-label="From account number"
-                        value={account.accountNo}
-                        readOnly
-                        tabIndex={-1}
-                      />
-                      <div className="account-selector">
-                        <Landmark size={20} />
-                        <div>
-                          <strong>
-                            Everyday Savings · {account.accountNo}
-                          </strong>
-                          <small>{formatMoney(balance)} available</small>
-                        </div>
-                        <CheckCircle2 size={18} />
+            <>
+              {data.customer && !staff && (
+                <CustomerTransfer
+                  key={data.bank.id}
+                  bankId={data.bank.id}
+                  onPosted={() =>
+                    perform(
+                      load(true),
+                      "Balances and statement refreshed.",
+                      false,
+                    )
+                  }
+                />
+              )}
+              <details
+                open={!data.customer || staff}
+                className="customer-legacy-transfer"
+              >
+                <summary>Saved demo beneficiaries and payment controls</summary>
+                <div className="form-grid">
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Make a payment</h2>
+                        <p>To another customer in your demo bank.</p>
                       </div>
-                    </label>
-                    <label>
-                      To beneficiary
-                      <select
-                        disabled={!activeBeneficiary}
-                        aria-label="Select beneficiary"
+                      <span className="circle-icon">
+                        <Send size={20} />
+                      </span>
+                    </div>
+                    {!account ? (
+                      <div className="empty-state">
+                        <LockKeyhole />
+                        <h3>Your account comes first</h3>
+                        <p>Complete account opening before sending money.</p>
+                        <button
+                          className="primary"
+                          type="button"
+                          onClick={() => setView("application")}
+                        >
+                          Open your account
+                        </button>
+                      </div>
+                    ) : (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          instruction("transfer", Number(amount), note, {
+                            beneficiaryId: activeBeneficiary?.id ?? "",
+                          });
+                        }}
                       >
-                        <option>
-                          {activeBeneficiary
-                            ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
-                            : "Add and confirm a beneficiary first"}
-                        </option>
-                      </select>
-                    </label>
-                    <div className="fields-grid">
-                      <label>
-                        Amount (INR)
-                        <div className="money-input">
-                          <span>₹</span>
-                          <input
-                            type="number"
-                            min="0.01"
-                            max="10000000"
-                            step="0.01"
-                            required
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                          />
-                        </div>
-                      </label>
-                      <label>
-                        Payment note
-                        <input
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                          maxLength={160}
-                        />
-                      </label>
-                    </div>
-                    <div className="notice neutral">
-                      <ShieldCheck size={17} />
-                      Transfers up to ₹25,000 post immediately. Larger transfers
-                      go to the approver.
-                    </div>
-                    <PendingButton
-                      busy={busy}
-                      className="primary"
-                      type="submit"
-                      disabled={!activeBeneficiary}
-                    >
-                      Review & send money <ArrowRight size={16} />
-                    </PendingButton>
-                  </form>
-                )}
-              </section>
-              <section className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Your beneficiaries</h2>
-                    <p>Know where your money is going.</p>
-                  </div>
-                  <Users size={20} />
-                </div>
-                {data.beneficiaries.map((b) => (
-                  <div key={b.id} className="beneficiary">
-                    <span className="avatar peach">AR</span>
-                    <div>
-                      <strong>{b.name}</strong>
-                      <small>{b.account_no}</small>
-                      <Pill status={b.status} />
-                    </div>
-                    {b.status === "pending" && (
-                      <div className="otp-form">
                         <label>
-                          Demo code
+                          From account
                           <input
-                            aria-label="Beneficiary verification code"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
+                            className="sr-only"
+                            aria-label="From account number"
+                            value={account.accountNo}
+                            readOnly
+                            tabIndex={-1}
                           />
+                          <div className="account-selector">
+                            <Landmark size={20} />
+                            <div>
+                              <strong>
+                                Everyday Savings · {account.accountNo}
+                              </strong>
+                              <small>{formatMoney(balance)} available</small>
+                            </div>
+                            <CheckCircle2 size={18} />
+                          </div>
                         </label>
+                        <label>
+                          To beneficiary
+                          <select
+                            disabled={!activeBeneficiary}
+                            aria-label="Select beneficiary"
+                          >
+                            <option>
+                              {activeBeneficiary
+                                ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
+                                : "Add and confirm a beneficiary first"}
+                            </option>
+                          </select>
+                        </label>
+                        <div className="fields-grid">
+                          <label>
+                            Amount (INR)
+                            <div className="money-input">
+                              <span>₹</span>
+                              <input
+                                type="number"
+                                min="0.01"
+                                max="10000000"
+                                step="0.01"
+                                required
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                              />
+                            </div>
+                          </label>
+                          <label>
+                            Payment note
+                            <input
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                              maxLength={160}
+                            />
+                          </label>
+                        </div>
+                        <div className="notice neutral">
+                          <ShieldCheck size={17} />
+                          Transfers up to ₹25,000 post immediately. Larger
+                          transfers go to the approver.
+                        </div>
                         <PendingButton
                           busy={busy}
                           className="primary"
-                          onClick={() =>
-                            perform(
-                              api("/beneficiaries/confirm", {
-                                id: b.id,
-                                code: otp,
-                              }),
-                              "Beneficiary verified and active.",
-                            )
-                          }
+                          type="submit"
+                          disabled={!activeBeneficiary}
                         >
-                          Confirm
+                          Review & send money <ArrowRight size={16} />
                         </PendingButton>
-                      </div>
+                      </form>
                     )}
-                  </div>
-                ))}
-                {!data.beneficiaries.length && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      perform(
-                        api("/beneficiaries", { name: beneficiaryName }),
-                        "Beneficiary added. Confirm with the demo code.",
-                      );
-                    }}
-                  >
-                    <div className="recipient-preview">
-                      <span className="avatar peach">AR</span>
+                  </section>
+                  <section className="panel">
+                    <div className="panel-heading">
                       <div>
-                        <strong>Arjun Raman</strong>
-                        <small>A customer in your demo bank</small>
+                        <h2>Your beneficiaries</h2>
+                        <p>Know where your money is going.</p>
                       </div>
+                      <Users size={20} />
                     </div>
-                    <label>
-                      Beneficiary nickname
-                      <input
-                        value={beneficiaryName}
-                        onChange={(e) => setBeneficiaryName(e.target.value)}
-                        required
-                      />
-                    </label>
-                    <label>
-                      Account number
-                      <input value={data.recipient.accountNo} readOnly />
-                    </label>
-                    <PendingButton
-                      busy={busy}
-                      type="submit"
-                      className="secondary"
-                      disabled={!account}
-                    >
-                      <Plus size={16} />
-                      Add beneficiary
-                    </PendingButton>
-                  </form>
-                )}
-                <div className="small-note">
-                  <ShieldCheck size={16} />
-                  Verification is simulated. Use <strong>246810</strong>; no SMS
-                  is sent.
+                    {data.beneficiaries.map((b) => (
+                      <div key={b.id} className="beneficiary">
+                        <span className="avatar peach">AR</span>
+                        <div>
+                          <strong>{b.name}</strong>
+                          <small>{b.account_no}</small>
+                          <Pill status={b.status} />
+                        </div>
+                        {b.status === "pending" && (
+                          <div className="otp-form">
+                            <label>
+                              Demo code
+                              <input
+                                aria-label="Beneficiary verification code"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                              />
+                            </label>
+                            <PendingButton
+                              busy={busy}
+                              className="primary"
+                              onClick={() =>
+                                perform(
+                                  api("/beneficiaries/confirm", {
+                                    id: b.id,
+                                    code: otp,
+                                  }),
+                                  "Beneficiary verified and active.",
+                                )
+                              }
+                            >
+                              Confirm
+                            </PendingButton>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {!data.beneficiaries.length && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          perform(
+                            api("/beneficiaries", { name: beneficiaryName }),
+                            "Beneficiary added. Confirm with the demo code.",
+                          );
+                        }}
+                      >
+                        <div className="recipient-preview">
+                          <span className="avatar peach">AR</span>
+                          <div>
+                            <strong>Arjun Raman</strong>
+                            <small>A customer in your demo bank</small>
+                          </div>
+                        </div>
+                        <label>
+                          Beneficiary nickname
+                          <input
+                            value={beneficiaryName}
+                            onChange={(e) => setBeneficiaryName(e.target.value)}
+                            required
+                          />
+                        </label>
+                        <label>
+                          Account number
+                          <input value={data.recipient.accountNo} readOnly />
+                        </label>
+                        <PendingButton
+                          busy={busy}
+                          type="submit"
+                          className="secondary"
+                          disabled={!account}
+                        >
+                          <Plus size={16} />
+                          Add beneficiary
+                        </PendingButton>
+                      </form>
+                    )}
+                    <div className="small-note">
+                      <ShieldCheck size={16} />
+                      Verification is simulated. Use <strong>246810</strong>; no
+                      SMS is sent.
+                    </div>
+                  </section>
                 </div>
-              </section>
-            </div>
+              </details>
+            </>
           )}
 
           {view === "cash" && (

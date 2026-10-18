@@ -315,6 +315,7 @@ test("HTTP cards enforce session, strict fields, ownership and demo boundary wit
     APP_REVISION: "card-tests",
     DEMO_MODE: "true",
   } satisfies Environment;
+  let httpScope = customer.bank_id;
   const http = (path: string, body?: unknown, cookie = true) =>
     handleRequest(
       new Request(`https://demo.test/api${path}`, {
@@ -322,6 +323,7 @@ test("HTTP cards enforce session, strict fields, ownership and demo boundary wit
         headers: {
           ...(cookie ? { Cookie: `of_session=${token}` } : {}),
           Origin: "https://demo.test",
+          "X-Customer-Scope": httpScope,
           "Content-Type": "application/json",
           "Idempotency-Key": "http-card-command",
         },
@@ -344,6 +346,7 @@ test("HTTP cards enforce session, strict fields, ownership and demo boundary wit
   expect((await http("/cards/action", command())).status).toBe(200);
   expect((await http("/cards?key=http-card-command")).status).toBe(200);
   db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [tokenHash]);
+  httpScope = "other";
   expect((await http(`/cards?id=${encodeURIComponent(id)}`)).status).toBe(404);
   expect((await http("/cards?key=http-card-command")).status).toBe(404);
   const closed = await handleRequest(

@@ -114,7 +114,7 @@ export function CustomerTransfer({
   };
   return (
     <section
-      className="panel"
+      className="panel customer-transfer"
       aria-labelledby="registered-transfer-title"
       data-customer-scope={bankId}
     >

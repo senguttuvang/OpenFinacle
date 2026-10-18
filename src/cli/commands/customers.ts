@@ -2,6 +2,7 @@ import { Command, Options } from "@effect/cli";
 import { FetchHttpClient } from "@effect/platform";
 import { Console, Effect } from "effect";
 import { customerAdminClient } from "../customer-admin-client";
+import { runCustomerSeed } from "../customer-seed-run";
 
 export const customers = Command.make(
   "customers",
@@ -15,12 +16,20 @@ export const customers = Command.make(
       "prepare",
       "resume",
       "inspect",
+      "run",
     ]).pipe(Options.withDefault("status")),
     branchId: Options.text("branch-id"),
     customerId: Options.text("customer-id").pipe(Options.withDefault("")),
     start: Options.integer("start").pipe(Options.withDefault(1)),
     limit: Options.integer("limit").pipe(Options.withDefault(1)),
     maxStages: Options.integer("max-stages").pipe(Options.withDefault(1)),
+    stageBudget: Options.integer("stage-budget").pipe(Options.withDefault(5)),
+    customerBudget: Options.integer("customer-budget").pipe(
+      Options.withDefault(1),
+    ),
+    secondsBudget: Options.integer("seconds-budget").pipe(
+      Options.withDefault(300),
+    ),
   },
   (options) =>
     Effect.gen(function* () {
@@ -44,6 +53,18 @@ export const customers = Command.make(
       yield* Console.log(
         `Verified customer administration source ${client.revision}. Synthetic INR demonstration funds only.`,
       );
+      if (options.action === "run") {
+        const report = yield* runCustomerSeed(
+          client.call,
+          options.branchId,
+          options.stageBudget,
+          options.customerBudget,
+          options.maxStages,
+          options.secondsBudget,
+        );
+        yield* Console.log(JSON.stringify(report));
+        return;
+      }
       const value = yield* client.call({
         action: options.action,
         branchId: options.branchId,

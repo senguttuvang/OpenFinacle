@@ -163,7 +163,16 @@ FROM (
     (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('planning_households','planning_events')) AS tables,
     (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND tbl_name='planning_events' AND name IN ('planning_apply','planning_immutable_update','planning_immutable_delete')) AS triggers
 );
-DROP TABLE workflow_planning_schema_guard;`,
+DROP TABLE workflow_planning_schema_guard;
+CREATE TEMP TABLE workflow_customer_schema_guard (complete INTEGER NOT NULL CHECK(complete=1));
+INSERT INTO workflow_customer_schema_guard
+SELECT (tables=0 AND triggers=0) OR (tables=6 AND triggers=14 AND EXISTS(SELECT 1 FROM sqlite_schema WHERE type='trigger' AND name='profile_for_relationship'))
+FROM (
+ SELECT
+ (SELECT count(*) FROM sqlite_schema WHERE type='table' AND name IN ('customers','customer_transfer_offers','customer_transfers','customer_seed_manifest','customer_seed_operations','customer_applicant_scopes')) AS tables,
+ (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND name IN ('customer_owned_scope_insert','customer_identity_immutable','customer_no_delete','customer_bank_ownership_guard','customer_transfer_binding','customer_transfer_immutable','customer_transfer_command_binding','customer_seed_manifest_identity','customer_seed_operation_guard','customer_seed_operation_no_delete','customer_seed_manifest_no_delete','customer_offer_no_update','customer_offer_no_delete','customer_transfer_command_execution')) AS triggers
+);
+DROP TABLE workflow_customer_schema_guard;`,
     [
       "settings",
       "banks",

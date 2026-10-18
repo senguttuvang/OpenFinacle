@@ -9,7 +9,7 @@ import {
   transitionPlanningState,
   validatePlanningState,
 } from "../../src/domain/planning-state";
-import { api } from "../api";
+import { api, setApiCustomerScope } from "../api";
 import { loadPlanningDevice, savePlanningDevice } from "./planning-device";
 
 const sourceKey = "openfinacle-planning-source";
@@ -184,6 +184,8 @@ export function usePlanningRepository(
           )
         : Effect.gen(function* () {
             const context = yield* remote(ContextReply, "/planning/context");
+            if (!active) return yield* Effect.interrupt;
+            setApiCustomerScope(context.relationship);
             if (active) {
               setRelationship(context.relationship);
               setReadOnly(context.readOnly);

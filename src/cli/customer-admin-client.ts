@@ -44,6 +44,13 @@ export const customerAdminClient = (url: string, secrets: string) =>
             "Customer administration requires the deployed revision to equal this clean reviewed checkout.",
           ),
       ),
+      Effect.timeoutFail({
+        duration: "10 seconds",
+        onTimeout: () =>
+          new Error(
+            "Source verification timed out before reading credentials; no customer command was sent.",
+          ),
+      }),
     );
     const token = yield* loanAdminToken(secrets);
     return {
@@ -70,6 +77,13 @@ export const customerAdminClient = (url: string, secrets: string) =>
                 ),
             ),
             Effect.flatMap(read),
+            Effect.timeoutFail({
+              duration: "120 seconds",
+              onTimeout: () =>
+                new Error(
+                  "The original customer administration request timed out. Inspect its saved stage before resuming; no request was retried.",
+                ),
+            }),
           );
         }),
     };

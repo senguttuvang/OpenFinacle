@@ -1,10 +1,10 @@
 import { Effect, Schema } from "effect";
 import { parseJsonRequest } from "./adapters/request-json";
-import { dashboard } from "./application/banking";
+import { customerDashboard } from "./application/customer-dashboard";
 import {
   customerDirectory,
-  selectedCustomer,
   selectCustomerScope,
+  selectedCustomer,
 } from "./application/customer-registry";
 import {
   confirmCustomerTransfer,
@@ -47,8 +47,21 @@ export const customerRoute = (
         yield* hash(token),
         session,
       );
+      const store = yield* Store;
+      const saved = yield* store.one<{
+        synced_at: number;
+        invalidated_at: number;
+      }>(
+        "SELECT synced_at,invalidated_at FROM financial_snapshots WHERE bank_id=?",
+        next.bank_id,
+      );
       return Response.json(
-        { dashboard: yield* dashboard(next, true) },
+        {
+          dashboard: yield* customerDashboard(
+            next,
+            !saved || saved.invalidated_at > saved.synced_at,
+          ),
+        },
         {
           headers: {
             "Set-Cookie": `of_session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`,
@@ -76,7 +89,8 @@ export const customerRoute = (
       return Response.json({
         customers: yield* customerDirectory("", session),
       });
-    if (path === "/api/customers/current" && request.method === "GET") return Response.json({ customer: yield* selectedCustomer(session) });
+    if (path === "/api/customers/current" && request.method === "GET")
+      return Response.json({ customer: yield* selectedCustomer(session) });
     if (path === "/api/customer-transfers/history" && request.method === "GET")
       return Response.json({
         transfers: yield* customerTransferHistory(session),

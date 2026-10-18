@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import { useEffect, useState } from "react";
 import type { CustomerChoice } from "../src/domain/customer-registry";
 import { api } from "./api";
+import "./customer-banking.css";
 
 export function CustomerPicker({
   busy,
@@ -49,7 +50,10 @@ export function CustomerPicker({
       .includes(query.trim().toLowerCase()),
   );
   return (
-    <section aria-labelledby="customer-picker-title" className="panel">
+    <section
+      aria-labelledby="customer-picker-title"
+      className="panel customer-directory"
+    >
       <h2 id="customer-picker-title">Choose an existing customer</h2>
       <p>Each synthetic customer has their own saved account and statement.</p>
       <label htmlFor="customer-search">
@@ -63,13 +67,19 @@ export function CustomerPicker({
         autoComplete="off"
       />
       {loading && <p role="status">Loading registered customers…</p>}
+      {busy && (
+        <p role="status">Opening the selected customer's saved banking data…</p>
+      )}
       {error && (
         <p role="alert" className="notice error">
           {error}
         </p>
       )}
       {!loading && !error && (
-        <p role="status">{filtered.length} customers available</p>
+        <p role="status">
+          {filtered.length} {filtered.length === 1 ? "customer" : "customers"}{" "}
+          available
+        </p>
       )}
       <ul aria-label="Registered customers" className="customer-choices">
         {filtered.map((choice) => (

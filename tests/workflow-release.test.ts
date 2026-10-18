@@ -43,6 +43,49 @@ const manifest = () => ({
   file: "workflows.sql",
   restored: true,
 });
+test("customer backup schema requires all six tables and every original ownership/recovery trigger", async () => {
+  const paths: string[] = [];
+  for await (const path of new Bun.Glob("migrations/*.sql").scan("."))
+    paths.push(path);
+  const complete = (
+    await Promise.all(paths.sort().map((path) => Bun.file(path).text()))
+  ).join("\n");
+  await Effect.runPromise(verifyWorkflowDump(complete));
+  for (const table of [
+    "customers",
+    "customer_transfer_offers",
+    "customer_transfers",
+    "customer_seed_manifest",
+    "customer_seed_operations",
+    "customer_applicant_scopes",
+  ])
+    expect(
+      (
+        await Effect.runPromise(
+          verifyWorkflowDump(`${complete}\nDROP TABLE ${table};`).pipe(
+            Effect.flip,
+          ),
+        )
+      ).message,
+    ).toContain("did not restore");
+  const migration = await Bun.file(
+    "migrations/0016_customer_common_banking.sql",
+  ).text();
+  const triggers = [
+    ...migration.matchAll(/CREATE TRIGGER (customer_[a-z_]+)/g),
+  ].map((match) => match[1]);
+  expect(triggers).toHaveLength(14);
+  for (const trigger of triggers)
+    expect(
+      (
+        await Effect.runPromise(
+          verifyWorkflowDump(`${complete}\nDROP TRIGGER ${trigger};`).pipe(
+            Effect.flip,
+          ),
+        )
+      ).message,
+    ).toContain("did not restore");
+});
 const denied = <A, E>(effect: Effect.Effect<A, E>) =>
   Effect.runPromise(Effect.flip(effect));
 

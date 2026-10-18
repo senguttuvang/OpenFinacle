@@ -134,7 +134,7 @@ export const customerProvisionerLayer = Layer.effect(
       Effect.gen(function* () {
         if (
           operation.seed_id !== row.id ||
-          operation.command_key !== `${row.id}-${operation.stage}`
+          !/^seed-[a-f0-9-]{36}$/.test(operation.command_key)
         )
           return yield* Effect.fail(uncertain());
         if (operation.stage === "client") {
@@ -190,7 +190,7 @@ export const customerProvisionerLayer = Layer.effect(
           const configured = yield* settings;
           if (
             operation.seed_id !== row.id ||
-            operation.command_key !== `${row.id}-${operation.stage}` ||
+            !/^seed-[a-f0-9-]{36}$/.test(operation.command_key) ||
             operation.status !== "executing"
           )
             return yield* Effect.fail(invalid());

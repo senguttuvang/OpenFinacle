@@ -72,7 +72,7 @@ const migrations = (
   await Promise.all(paths.sort().map((path) => Bun.file(path).text()))
 ).join("\n");
 export const customerHarness = (filename = ":memory:") => {
-  const db = new Database(filename);
+  let db = new Database(filename);
   db.exec("PRAGMA foreign_keys=ON");
   db.exec(migrations);
   db.run(
@@ -356,7 +356,16 @@ export const customerHarness = (filename = ":memory:") => {
     ),
   );
   return {
-    db,
+    get db() {
+      return db;
+    },
+    reopen: () => {
+      if (filename === ":memory:")
+        throw new Error("Reopen requires a disk-backed disposable fixture");
+      db.close();
+      db = new Database(filename);
+      db.exec("PRAGMA foreign_keys=ON");
+    },
     accounts,
     clients,
     calls,

@@ -611,6 +611,7 @@ test("HTTP replacement routes enforce strict role/owned/versioned commands and n
     APP_REVISION: "replacement-tests",
     DEMO_MODE: "true",
   } satisfies Environment;
+  let httpScope = customer.bank_id;
   const http = (
     path: string,
     body?: unknown,
@@ -623,6 +624,7 @@ test("HTTP replacement routes enforce strict role/owned/versioned commands and n
         headers: {
           ...(cookie ? { Cookie: `of_session=${token}` } : {}),
           Origin: "https://demo.test",
+          "X-Customer-Scope": httpScope,
           "Content-Type": "application/json",
           "Idempotency-Key": key,
         },
@@ -692,6 +694,7 @@ test("HTTP replacement routes enforce strict role/owned/versioned commands and n
     200,
   );
   db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  httpScope = "other";
   expect((await http(`/card-replacements?id=${id}`)).status).toBe(404);
   expect((await http("/card-replacements?key=http-issue-key")).status).toBe(
     404,

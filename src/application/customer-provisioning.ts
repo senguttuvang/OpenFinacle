@@ -79,6 +79,10 @@ export const customerSeedStatus = (branchId: string) =>
         "SELECT COUNT(*) AS count FROM customers WHERE branch_id=? AND origin='seed'",
         branchId,
       ),
+      registered_customers: yield* store.all<{ id: string }>(
+        "SELECT id FROM customers WHERE branch_id=? AND origin='seed' ORDER BY id",
+        branchId,
+      ),
     };
   });
 export const prepareCustomerManifest = (branchId: string) =>
@@ -215,7 +219,7 @@ export const resumeCustomerSeed = (
         const operation: SeedOperation = {
           seed_id: row.id,
           stage,
-          command_key: `${row.id}-${stage}`,
+          command_key: `seed-${crypto.randomUUID()}`,
           payment_date: bankingDate(yield* Clock.currentTimeMillis),
           status: "executing",
           resource_id: null,

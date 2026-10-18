@@ -1,4 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Effect } from "effect";
 import {
   createCommand,
@@ -359,6 +362,17 @@ test("applicant allocation is local/idempotent and registerOpened shares one reg
   );
   const registered = await run(h, registerOpenedCustomer(applicant));
   expect(registered.origin).toBe("onboarding");
+  const reselected = await run(
+    h,
+    selectCustomerScope(registered.id, "rotated-opened-customer"),
+  );
+  expect(await run(h, assertApplicantScope(reselected))).toMatchObject({
+    bankId: first.bankId,
+    customerId: first.customerId,
+  });
+  expect(
+    h.db.query("SELECT journey FROM banks WHERE id=?").get(first.bankId),
+  ).toEqual({ journey: "existing" });
   expect((await run(h, registeredCustomer(registered.id))).account_id).toBe(14);
   expect(
     h.db.query("SELECT customer_account FROM banks WHERE id='branch'").get(),
@@ -588,4 +602,47 @@ test("absent seed proof is not permission to retry or replace the original stage
   expect(() =>
     h.db.run("UPDATE customer_seed_operations SET command_key='new-key'"),
   ).toThrow();
+});
+
+test("disk reopen retains original seed keys and ambiguous creation for read-only recovery", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "finacle7-seed-reopen-"));
+  const h = customerHarness(join(directory, "workflows.sqlite"));
+  try {
+    await run(h, prepareCustomerManifest("branch"));
+    h.loseResponse("clients");
+    await run(h, resumeCustomerSeed("branch", 1, 1).pipe(Effect.flip));
+    const original = h.db
+      .query(
+        "SELECT * FROM customer_seed_operations WHERE seed_id='sample-branch-001'",
+      )
+      .get();
+    h.reopen();
+    expect(
+      h.db
+        .query(
+          "SELECT * FROM customer_seed_operations WHERE seed_id='sample-branch-001'",
+        )
+        .get(),
+    ).toEqual(original);
+    expect(
+      await run(h, resumeCustomerSeed("branch", 1, 1).pipe(Effect.flip)),
+    ).toMatchObject({ status: 409 });
+    await run(h, inspectCustomerSeed("sample-branch-001"));
+    await run(h, resumeCustomerSeed("branch", 1, 1));
+    await run(h, resumeCustomerSeed("branch", 1, 1));
+    expect(
+      h.calls.filter(
+        (call) => call.method === "POST" && call.path === "clients",
+      ),
+    ).toHaveLength(1);
+    expect(
+      h.calls.filter((call) => call.path.endsWith("command=deposit")),
+    ).toHaveLength(1);
+    expect((await run(h, customerSeedStatus("branch"))).registered?.count).toBe(
+      1,
+    );
+  } finally {
+    h.db.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
