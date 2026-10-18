@@ -21,3 +21,7 @@ New modules only until serialized shared-file lease. Migration0017 is additive a
 ## Verification
 
 Domain validation; durable draft reload/conflict/scope isolation; submission concurrency and response-loss recovery; officer/approver Core provisioning and Core failure; browser stepper back/next/edit/resume/confirmation/receipt and mobile/keyboard/200% zoom. Full exact-branch gate: `DOCKER_HOST=unix:///Users/SenG/.colima/upwork-v2/docker.sock bun run check`. Fixture browser tests are distinct from real-Core evidence.
+
+## Evidence classification
+
+See [stage-by-stage source mapping](research.md). Current official ICICI savings FAQ and online account-opening terms were inspected on 18 October 2026. They support the process topics; the exact seven-screen order, draft/error behavior and staff gates are authored demo design. No authenticated account-opening UI or proprietary staff flow was observed, and no UI-parity claim is made. Spec006 E-03/E-07 source-depth rules apply.
