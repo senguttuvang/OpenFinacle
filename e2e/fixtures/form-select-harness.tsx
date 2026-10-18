@@ -12,6 +12,7 @@ function Harness() {
   const [submission, setSubmission] = useState("");
   const [additional, setAdditional] = useState(false);
   const [backup, setBackup] = useState("");
+  const [recipient, setRecipient] = useState("payee-0");
   return (
     <main className="app-shell" style={{ display: "block", padding: 24 }}>
       <h1>FormSelect contract fixture</h1>
@@ -93,6 +94,16 @@ function Harness() {
         ]}
       />
       <output aria-label="Submitted fields">{submission}</output>
+      <label htmlFor="fixture-recipient">Saved recipient</label>
+      <FormSelect
+        id="fixture-recipient"
+        value={recipient}
+        onValueChange={setRecipient}
+        options={Array.from({ length: 15 }, (_, index) => ({
+          value: `payee-${index}`,
+          label: `Demo Lakshmi Narayanan Synthetic ${index + 1} · Savings account ending ${4000 + index}`,
+        }))}
+      />
     </main>
   );
 }

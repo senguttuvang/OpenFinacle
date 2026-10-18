@@ -202,6 +202,83 @@ for (const variant of ["desktop", "mobile390", "large22", "zoom200"] as const) {
   });
 }
 
+for (const fontSize of [18, 22, 36]) {
+  test(`selected and unselected long recipient names and last4 fit at390/${fontSize}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate((size) => {
+      document.documentElement.style.fontSize = `${size}px`;
+    }, fontSize);
+    const trigger = page.getByRole("combobox", {
+      name: "Saved recipient",
+      exact: true,
+    });
+    for (const selected of ["payee-0", "payee-14"]) {
+      await chooseOption(page, trigger, selected);
+      await trigger.click();
+      const options = page.getByRole("option");
+      await expect(options).toHaveCount(15);
+      const geometry = await options.evaluateAll((rows) =>
+        rows.map((row) => {
+          const text = row.querySelector("span");
+          if (!text) throw new Error("Missing option text");
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const box = row.getBoundingClientRect();
+          return {
+            value: row.getAttribute("data-value"),
+            selected: row.getAttribute("data-state") === "checked",
+            childCount: row.children.length,
+            textShrink: getComputedStyle(text).flexShrink,
+            client: row.clientWidth,
+            scroll: row.scrollWidth,
+            textContained: Array.from(range.getClientRects()).every(
+              (rect) => rect.left >= box.left && rect.right <= box.right,
+            ),
+            label: row.textContent,
+          };
+        }),
+      );
+      console.log(
+        JSON.stringify({
+          recipientOptions: geometry.length,
+          fontSize,
+          selected,
+          overflow: geometry.filter(
+            (row) => row.scroll > row.client || !row.textContained,
+          ),
+        }),
+      );
+      expect(geometry.filter((row) => row.selected)).toHaveLength(1);
+      expect(geometry.filter((row) => !row.selected)).toHaveLength(14);
+      expect(
+        geometry.filter((row) => row.scroll > row.client || !row.textContained),
+      ).toEqual([]);
+      for (const [index, row] of geometry.entries())
+        expect(row.label).toContain(String(4000 + index));
+      await page
+        .getByRole("option")
+        .filter({
+          hasText: selected === "payee-0" ? "ending 4000" : "ending 4014",
+        })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: info.outputPath(`recipient390-${fontSize}-${selected}.png`),
+      });
+      await page.keyboard.press("Escape");
+      await expect(trigger).toBeFocused();
+      const triggerGeometry = await trigger.evaluate((node) => ({
+        client: node.clientWidth,
+        scroll: node.scrollWidth,
+      }));
+      expect(triggerGeometry.scroll).toBeLessThanOrEqual(
+        triggerGeometry.client,
+      );
+    }
+  });
+}
+
 test("actual banking and planning panels match Demo persona at desktop and mobile large text", async ({
   page,
 }, info) => {

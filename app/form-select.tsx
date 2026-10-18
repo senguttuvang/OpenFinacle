@@ -169,11 +169,17 @@ export function FormSelect({
                   value={option.value || emptyValue}
                   disabled={option.disabled}
                 >
-                  <Select.ItemText>{option.label}</Select.ItemText>
+                  <Select.ItemText className="form-select-option-text">
+                    {option.label}
+                  </Select.ItemText>
                   {!option.value && !value ? (
-                    <Check size={20} aria-hidden="true" />
+                    <Check
+                      className="form-select-indicator"
+                      size={20}
+                      aria-hidden="true"
+                    />
                   ) : (
-                    <Select.ItemIndicator>
+                    <Select.ItemIndicator className="form-select-indicator">
                       <Check size={20} aria-hidden="true" />
                     </Select.ItemIndicator>
                   )}
