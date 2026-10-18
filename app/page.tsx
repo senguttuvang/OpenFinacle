@@ -11,7 +11,6 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -41,6 +40,7 @@ import {
   formatMoney,
   type Role,
 } from "../src/domain/banking";
+import type { RetailMenuItem } from "../src/domain/retail-navigation";
 import type { Dashboard } from "../src/domain/view";
 import { api, setApiCustomerScope } from "./api";
 import { BranchOverview } from "./branch-overview";
@@ -48,9 +48,11 @@ import { CommandMenu } from "./command-menu";
 import { CustomerOnboarding } from "./customer-onboarding";
 import { CustomerPicker } from "./customer-picker";
 import { CustomerTransfer } from "./customer-transfer";
+import { FormSelect } from "./form-select";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
 import { ReadingSize } from "./reading-size";
+import { RetailNavigation, RetailUnavailable } from "./retail-navigation";
 import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
 import { initializeTelemetry } from "./telemetry";
@@ -184,7 +186,12 @@ function BankingPage({
 }) {
   const [chooseCustomer, setChooseCustomer] = useState(initialPicker);
   const [data, setData] = useState<Dashboard | null>(null);
-  const [view, setView] = useState<View>("overview");
+  const [view, updateView] = useState<View | "unavailable">("overview");
+  const [retailItem, setRetailItem] = useState<RetailMenuItem>();
+  const setView = useCallback((destination: View) => {
+    setRetailItem(undefined);
+    updateView(destination);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [startupStage, setStartupStage] = useState("");
   const [loading, setLoading] = useState(!initialPicker && !initialFresh);
@@ -465,8 +472,16 @@ function BankingPage({
   );
   const navigation = navigationFor(role, data.bank.journey);
   const viewTitle =
-    navigation.find((item) => item.view === view)?.label ?? labels[view];
-  const customerNav = navigation.map((item) => item.view);
+    navigation.find((item) => item.view === view)?.label ??
+    (view === "unavailable"
+      ? (retailItem?.label ?? "Service unavailable")
+      : labels[view]);
+  const customerNav: View[] = [
+    "statements",
+    "cards",
+    "planning",
+    "application",
+  ];
   const journeySteps = [
     Boolean(data.application),
     data.application?.status === "approved",
@@ -576,7 +591,7 @@ function BankingPage({
   return (
     <div
       key={data.bank.id}
-      className={`app-shell${retail ? " customer-retail" : ""}${staff ? " branch-workspace" : ""}`}
+      className={`app-shell${retail ? " customer-retail has-retail-menu" : ""}${staff ? " branch-workspace" : ""}`}
     >
       <aside className="sidebar">
         <a className="brand" href="/">
@@ -619,6 +634,22 @@ function BankingPage({
               );
             })}
           </nav>
+        )}
+        {retail && (
+          <RetailNavigation
+            label="Banking navigation"
+            view={view === "unavailable" ? "overview" : view}
+            activeItemId={retailItem?.id}
+            busy={busy}
+            onSelect={(item) => {
+              setSearch("");
+              setServiceSearch("");
+              if (item.destination.kind === "workspace")
+                setView(item.destination.view);
+              else updateView("unavailable");
+              setRetailItem(item);
+            }}
+          />
         )}
         {retail && (
           <div className="retail-shortcuts">
@@ -811,9 +842,20 @@ function BankingPage({
           </div>
         </header>
         {retail && (
-          <nav className="retail-navigation" aria-label="Main navigation">
+          <nav className="retail-navigation" aria-label="Workspace shortcuts">
             {customerNav.map((item) => {
               const Icon = navIcons[item];
+              if (item === "application")
+                return (
+                  <a
+                    key={item}
+                    className="retail-onboarding-link"
+                    href="/open-account"
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    {labels[item]}
+                  </a>
+                );
               return (
                 <button
                   type="button"
@@ -826,15 +868,22 @@ function BankingPage({
                   }}
                 >
                   <Icon size={18} />
-                  {labels[item]}
-                  <ChevronDown size={13} />
+                  {item === "cards" ? "Debit cards" : labels[item]}
                 </button>
               );
             })}
           </nav>
         )}
         <main className="content">
-          <div className="page-heading">
+          {view === "unavailable" && retailItem && (
+            <>
+              <div className="page-heading">
+                <h1>{retailItem.label}</h1>
+              </div>
+              <RetailUnavailable item={retailItem} navigate={setView} />
+            </>
+          )}
+          <div className="page-heading" hidden={view === "unavailable"}>
             <div>
               <span className="eyebrow">
                 {staff
@@ -877,7 +926,7 @@ function BankingPage({
               {data.businessDate}
             </span>
           </div>
-          <p className="sync-caption">
+          <p className="sync-caption" hidden={view === "unavailable"}>
             <Clock3 size={13} />
             {data.core.stale ? "Refresh needed" : "Saved banking view"} · Last
             synced{" "}
@@ -1587,18 +1636,23 @@ function BankingPage({
                             <CheckCircle2 size={18} />
                           </div>
                         </label>
-                        <label>
+                        <label htmlFor="legacy-beneficiary">
                           To beneficiary
-                          <select
+                          <FormSelect
+                            id="legacy-beneficiary"
                             disabled={!activeBeneficiary}
                             aria-label="Select beneficiary"
-                          >
-                            <option>
-                              {activeBeneficiary
-                                ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
-                                : "Add and confirm a beneficiary first"}
-                            </option>
-                          </select>
+                            value="confirmed-beneficiary"
+                            onValueChange={() => undefined}
+                            options={[
+                              {
+                                value: "confirmed-beneficiary",
+                                label: activeBeneficiary
+                                  ? `${activeBeneficiary.name} · ${activeBeneficiary.account_no}`
+                                  : "Add and confirm a beneficiary first",
+                              },
+                            ]}
+                          />
                         </label>
                         <div className="fields-grid">
                           <label>
@@ -2062,7 +2116,19 @@ function BankingPage({
           )}
           {view === "deposits" && (
             <Deposits
-              key={data.bank.id + data.role}
+              key={
+                data.bank.id +
+                data.role +
+                (retailItem?.destination.kind === "workspace"
+                  ? (retailItem.destination.section ?? "")
+                  : "")
+              }
+              initialProduct={
+                retailItem?.destination.kind === "workspace" &&
+                retailItem.destination.section === "recurring"
+                  ? "recurring"
+                  : "fixed"
+              }
               bankId={data.bank.id}
               role={data.role}
               busy={busy}

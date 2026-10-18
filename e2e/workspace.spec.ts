@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { CardCommand, CardDetail } from "../src/domain/cards";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -213,7 +214,7 @@ test("card controls review, recover a lost response after reload and share staff
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await expect(
     page.getByRole("heading", { name: "My debit card" }),
   ).toBeVisible();
@@ -245,7 +246,7 @@ test("card controls review, recover a lost response after reload and share staff
     page.locator(".card-workspace").getByRole("alert"),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await expect(
     page.getByRole("button", { name: "Check saved command" }),
   ).toBeVisible();
@@ -259,7 +260,7 @@ test("card controls review, recover a lost response after reload and share staff
     page.getByRole("heading", { name: "Temporarily held", exact: true }),
   ).toBeVisible();
   await choosePersona(page, "officer");
-  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await openWorkspace(page, "cards");
   await expect(
     page.getByRole("heading", { name: "Customer card enquiry" }),
   ).toBeVisible();
@@ -454,7 +455,7 @@ test("customer balances and navigation remain usable with local fonts on desktop
     path: "test-results/customer-workspace-mobile.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "My accounts", exact: true }).click();
+  await openWorkspace(page, "accounts");
   await expect(
     page.getByRole("heading", { name: "Everyday Savings", exact: true }),
   ).toBeVisible();

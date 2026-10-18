@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openWorkspace } from "./fixtures/navigation";
 import { savedWorkspace } from "./fixtures/workspace";
 
 test("storage write failure blocks deposit POST and preserves the reviewed form", async ({
@@ -29,7 +30,7 @@ test("storage write failure blocks deposit POST and preserves the reviewed form"
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await openWorkspace(page, "deposits");
   await page.getByRole("button", { name: "Open a demo fixed deposit" }).click();
   await page.getByLabel("Demo allocation (₹)").fill("25000");
   await page
@@ -87,7 +88,7 @@ test("pending reference remains inspectable when the product list fails", async 
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Deposits", exact: true }).click();
+  await openWorkspace(page, "deposits");
   await expect(
     page.getByRole("heading", { name: "Check your saved deposit instruction" }),
   ).toBeVisible();

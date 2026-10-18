@@ -14,6 +14,7 @@ import {
   workflowQuotedAt,
   workflowResult,
 } from "../tests/fixtures/loan-workflow";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 import { savedWorkspace } from "./fixtures/workspace";
 
@@ -432,10 +433,7 @@ const setup = async (
 };
 const open = async (page: Page) => {
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Loans", exact: true })
-    .click();
+  await openWorkspace(page, "loans");
   await expect(
     page.getByRole("heading", { name: /^(My loans|Customer lending)$/ }),
   ).toBeVisible();
