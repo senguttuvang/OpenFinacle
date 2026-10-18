@@ -109,7 +109,12 @@ test("service fields enforce formats and length without echoing rejected values"
 
 test("contact email keeps the existing accepted language without ambiguous regex quantifiers", async () => {
   for (const email of ["a@b.c", "a+b@b.c", "a@.b.c", "a@b.."]) {
-    expect(await validate("email_change", { email })).toMatchObject({
+    expect(
+      await validate("email_change", {
+        email,
+        explanation: "Please review this update",
+      }),
+    ).toMatchObject({
       _tag: "Right",
     });
   }
@@ -122,7 +127,12 @@ test("contact email keeps the existing accepted language without ambiguous regex
     "@b.c",
     "a@",
   ]) {
-    expect(await validate("email_change", { email })).toMatchObject({
+    expect(
+      await validate("email_change", {
+        email,
+        explanation: "Please review this update",
+      }),
+    ).toMatchObject({
       _tag: "Left",
     });
   }
