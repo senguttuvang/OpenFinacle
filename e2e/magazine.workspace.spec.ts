@@ -23,6 +23,18 @@ test("magazine leads with capabilities, one bounded comparison, real inner stori
     page.getByRole("heading", { name: "Banking, seen from both sides." }),
   ).toBeVisible();
   await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(
+    page.getByRole("article", { name: "Team A results" }),
+  ).toContainText("₹12,92,308");
+  await expect(
+    page.getByRole("article", { name: "Team B results" }),
+  ).toContainText("US$1,800");
+  await expect(
+    page.getByRole("link", {
+      name: "Advanced investment explorer",
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/build-story#explorer");
   await expect(page.getByRole("table")).toHaveCount(1);
   await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(8);
   await expect(page.locator(".magazine")).not.toContainText(
@@ -89,7 +101,7 @@ test("historical and six-team comparison updates costs, charts and optional impa
     requests++;
     return route.abort();
   });
-  await page.goto("/discover#imagine");
+  await page.goto("/build-story#explorer");
   const a = page.getByRole("region", {
     name: "Team A · Human-led",
     exact: true,
@@ -258,6 +270,7 @@ test("magazine and estimator reflow with enlarged text, keyboard table scrolling
     path: "test-results/magazine-desktop.png",
     fullPage: true,
   });
+  await page.goto("/build-story#explorer");
   await page
     .locator(".comparison-teams")
     .screenshot({ path: "/tmp/finacle-comparison-teams-desktop.png" });
@@ -289,6 +302,7 @@ test("magazine and estimator reflow with enlarged text, keyboard table scrolling
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "100%";
   });
+  await page.goto("/discover");
   const table = page.getByRole("region", {
     name: "Scrollable eight-area comparison",
   });
@@ -297,9 +311,9 @@ test("magazine and estimator reflow with enlarged text, keyboard table scrolling
   await expect
     .poll(() => table.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(0);
-  await page
-    .getByRole("button", { name: "People cost · INR", exact: true })
-    .click();
+  await expect(
+    page.getByRole("article", { name: "Team A results" }),
+  ).toBeVisible();
   await page
     .locator("#imagine")
     .screenshot({ path: "test-results/magazine-estimator-mobile.png" });

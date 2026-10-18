@@ -2,6 +2,7 @@
 
 import { ArrowRight, ChevronDown, Users } from "lucide-react";
 import { useState } from "react";
+import { BuildEstimator } from "../src/site/build-estimator/build-estimator";
 import {
   type ComparisonInput,
   calculateHistory,
@@ -167,7 +168,7 @@ function Bars({
       </div>
       <div className="comparison-axis" aria-hidden="true">
         {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
-          const value = log ? Math.pow(max + 1, fraction) - 1 : max * fraction;
+          const value = log ? (max + 1) ** fraction - 1 : max * fraction;
           return (
             <span key={fraction}>
               {value >= 1e9
@@ -326,7 +327,7 @@ function TeamEditor({
               ? `${number(team.dailyTokensM * 1000)}k`
               : `${number(team.dailyTokensM)}M`
           }
-          onChange={(n) => update("dailyTokensM", (Math.pow(10, n) - 1) / 1000)}
+          onChange={(n) => update("dailyTokensM", (10 ** n - 1) / 1000)}
         />
       ) : (
         <Numeric
@@ -451,6 +452,10 @@ function TeamEditor({
   );
 }
 export function BuildRecipe() {
+  return <BuildEstimator embedded />;
+}
+
+export function DetailedBuildRecipe() {
   const [input, setInput] = useState(defaultComparison);
   const [a, setA] = useState(() => defaultTeam("A")),
     [b, setB] = useState(() => defaultTeam("B"));

@@ -14,7 +14,9 @@ import { comparisonFor, estimatorScenarios } from "./scenarios";
 import { TeamControls } from "./team-controls";
 import "./estimator.css";
 
-export function BuildEstimator() {
+export function BuildEstimator({ embedded = false }: { embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
+  const Title = embedded ? "h3" : "h1";
   const [scenarioId, setScenarioId] = useState("prototype");
   const [weeks, setWeeks] = useState(10);
   const [a, setA] = useState(() => defaultTeam("A"));
@@ -45,17 +47,19 @@ export function BuildEstimator() {
   const resultA = calculateTeam(withUsage(a, tokensA), input);
   const resultB = calculateTeam(withUsage(b, tokensB), input);
   return (
-    <main className="build-estimator">
-      <header className="est-header">
-        <a href="/discover">
-          OpenFinacle <span>/ Build estimator</span>
-        </a>
-        <a href="/build-story#assumptions">Full model & evidence ↗</a>
-      </header>
+    <Container className={`build-estimator${embedded ? " est-embedded" : ""}`}>
+      {!embedded && (
+        <header className="est-header">
+          <a href="/discover">
+            OpenFinacle <span>/ Build estimator</span>
+          </a>
+          <a href="/build-story#assumptions">Full model & evidence ↗</a>
+        </header>
+      )}
       <div className="est-title">
         <div>
           <p className="est-kicker">Software-building investment</p>
-          <h1>Compare the plan, with the scope in view.</h1>
+          <Title>Compare the plan, with the scope in view.</Title>
         </div>
         <p>
           Illustrative engineering scenarios.
@@ -238,6 +242,6 @@ export function BuildEstimator() {
           </p>
         </div>
       </details>
-    </main>
+    </Container>
   );
 }

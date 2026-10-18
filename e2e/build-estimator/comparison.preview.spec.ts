@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const artifacts = process.env.ESTIMATOR_ARTIFACTS;
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (
@@ -15,7 +16,11 @@ test.beforeEach(async ({ page }) => {
     }
     await route.continue();
   });
-  await page.goto("/build-estimator-preview");
+  await page.goto(
+    testInfo.project.name === "integrated"
+      ? "/discover#imagine"
+      : "/build-estimator-preview",
+  );
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({ content: "nextjs-portal { display: none; }" });
 });
@@ -27,6 +32,7 @@ test("desktop comparison fits with common scope, both budgets and output", async
   await expect(
     page.getByRole("heading", { name: "Finacle", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("main")).toHaveCount(1);
   const a = page.getByRole("article", { name: "Team A results" });
   const b = page.getByRole("article", { name: "Team B results" });
   await expect(a).toContainText("₹12,92,308");
@@ -48,7 +54,10 @@ test("desktop comparison fits with common scope, both budgets and output", async
     ),
   ).toBe(true);
   if (artifacts)
-    await page.screenshot({ path: `${artifacts}/desktop.png`, fullPage: true });
+    await page.screenshot({
+      path: `${artifacts}/${test.info().project.name}-desktop.png`,
+      fullPage: false,
+    });
 });
 
 test("token allowance updates spend without inventing productivity", async ({
@@ -141,7 +150,7 @@ for (const viewport of [
     );
     if (artifacts)
       await page.screenshot({
-        path: `${artifacts}/${viewport.name}.png`,
+        path: `${artifacts}/${test.info().project.name}-${viewport.name}.png`,
         fullPage: true,
       });
   });
