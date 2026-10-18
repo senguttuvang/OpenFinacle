@@ -51,6 +51,7 @@ import { CustomerTransfer } from "./customer-transfer";
 import { FormSelect } from "./form-select";
 import { viewLabels as labels, navigationFor, type View } from "./navigation";
 import { PersonaSelect } from "./persona-select";
+import { ProductStory } from "./product-story";
 import { RetailNavigation, RetailUnavailable } from "./retail-navigation";
 import { RetailAccount, RetailOverview } from "./retail-overview";
 import { ServiceCentre } from "./service-centre";
@@ -356,7 +357,7 @@ function BankingPage({
     );
   if (!data)
     return (
-      <main className="welcome">
+      <main className="welcome" id="demo-entry">
         <div className="welcome-copy">
           <a className="brand" href="/">
             <span className="brand-symbol">
@@ -414,6 +415,10 @@ function BankingPage({
             <LockKeyhole size={14} /> Persistent banking demo · Synthetic data
             only
           </span>
+          <a className="story-entry-link" href="#project">
+            About the project, capabilities & bank readiness{" "}
+            <ArrowDownToLine size={16} aria-hidden="true" />
+          </a>
           {error && (
             <div role="alert" className="notice error">
               {error}
@@ -454,6 +459,7 @@ function BankingPage({
             REAL WORKFLOWS. REAL POSTINGS. DEMO MONEY.
           </div>
         </div>
+        <ProductStory />
       </main>
     );
 
