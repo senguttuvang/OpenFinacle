@@ -194,7 +194,7 @@ export const customerProvisionerLayer = Layer.effect(
                   ),
                 ),
                 reversed: Schema.Boolean,
-                transactionType: Schema.Struct({ id }),
+                transactionType: Schema.optional(Schema.Struct({ id })),
                 paymentDetailData: Schema.optional(
                   Schema.Struct({
                     receiptNumber: Schema.optional(Schema.String),
@@ -212,7 +212,8 @@ export const customerProvisionerLayer = Layer.effect(
               (detail.accountId !== undefined &&
                 detail.accountId !== value.id) ||
               detail.reversed ||
-              detail.transactionType.id !== 1 ||
+              (detail.transactionType !== undefined &&
+                detail.transactionType.id !== 1) ||
               Math.abs(detail.amount * 100 - row.funding_minor) > 0.000001 ||
               loanCoreCalendar(detail.date) !== operation.payment_date
             )
