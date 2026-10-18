@@ -44,11 +44,15 @@ ambiguous transport outcome stays locked and permits inspection only. Existing
 original-key inspection runs before new membership authorization, so removing a
 payee cannot cause a retry or destroy historical proof. Pre-0018 offers remain
 inspectable; an unconsumed old offer cannot execute without the new membership
-binding. All prior beneficiaries, commands, receipts and account histories stay.
+binding. New legacy transfer creation/dispatch is blocked for registered scopes
+so an old beneficiary endpoint cannot bypass saved-payee authorization. Historical
+instructions remain readable and reconcilable. All prior beneficiaries, commands,
+receipts and account histories stay; nonregistered legacy workflows and staff
+cash operations and officer/approver-origin legacy payments remain available.
 
 ## Administrative metadata setup
 
-Migration `0018_customer_payees.sql` adds four tables, twelve triggers and two
+Migration `0018_customer_payees.sql` adds four tables, fourteen triggers and two
 nullable offer columns. No Core schema, account, balance or document changes.
 `payees` is a source-bound native CLI using the existing exact remote/clean
 checkout, deployed revision, protected credential, target, no-redirect and
@@ -81,3 +85,6 @@ statements after switching/reload, and mobile/200% reflow.
 
 Finacle5 alone merges, migrates, deploys, seeds native metadata, and verifies the
 live application. Finacle7 performs no live financial or production actions.
+After 0018, an older Worker cannot create new customer transfer offers without
+the saved-payee binding. Release rollback requires a compatible Worker; it must
+not reset this additive schema or restore production data to bypass the guards.

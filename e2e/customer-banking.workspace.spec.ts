@@ -677,9 +677,15 @@ for (const width of [390, 720])
         .getByRole("listbox")
         .getByRole("option")
         .evaluateAll((items) =>
-          items.every((item) => item.scrollWidth <= item.clientWidth + 1),
+          items
+            .filter((item) => item.scrollWidth > item.clientWidth + 1)
+            .map((item) => ({
+              name: item.textContent,
+              width: item.clientWidth,
+              scrollWidth: item.scrollWidth,
+            })),
         ),
-    ).toBe(true);
+    ).toEqual([]);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,

@@ -40,6 +40,14 @@ END;
 CREATE TRIGGER customer_transfer_payee_execution BEFORE UPDATE OF status ON commands WHEN NEW.status='executing' AND json_extract(NEW.payload,'$.customerOfferId') IS NOT NULL BEGIN
   SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM customer_transfer_offers o JOIN customer_payees p ON p.id=o.payee_id JOIN customers s ON s.id=p.owner_id JOIN customers r ON r.id=p.recipient_id WHERE o.id=json_extract(NEW.payload,'$.customerOfferId') AND o.bank_id=NEW.bank_id AND p.owner_id=o.sender_id AND p.recipient_id=o.recipient_id AND p.version=o.payee_version AND p.status='active' AND s.status='active' AND r.status='active' AND s.branch_id=r.branch_id) THEN RAISE(ABORT,'New transfer execution requires its original active saved payee') END;
 END;
+-- Registered customers use the reviewed saved-payee path. Old receipts and
+-- executing/uncertain originals remain available for read-only inspection.
+CREATE TRIGGER customer_legacy_transfer_insert BEFORE INSERT ON commands WHEN NEW.kind='transfer' AND NEW.maker='customer' AND json_extract(NEW.payload,'$.customerOfferId') IS NULL AND EXISTS(SELECT 1 FROM customers WHERE bank_id=NEW.bank_id) BEGIN
+  SELECT RAISE(ABORT,'Registered customers review a saved payee before a new transfer');
+END;
+CREATE TRIGGER customer_legacy_transfer_execution BEFORE UPDATE OF status ON commands WHEN NEW.kind='transfer' AND NEW.maker='customer' AND NEW.status='executing' AND OLD.status='pending' AND json_extract(NEW.payload,'$.customerOfferId') IS NULL AND EXISTS(SELECT 1 FROM customers WHERE bank_id=NEW.bank_id) BEGIN
+  SELECT RAISE(ABORT,'New dispatch requires the reviewed saved-payee path; inspect historical instructions');
+END;
 CREATE TABLE customer_payee_seed_rosters (
   branch_id TEXT PRIMARY KEY REFERENCES banks(id),
   customer_ids TEXT NOT NULL CHECK(json_valid(customer_ids))

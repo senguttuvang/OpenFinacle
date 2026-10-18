@@ -1,5 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
 import { Clock, Effect } from "effect";
+import {
+  createCommand,
+  dashboard,
+  executeCommand,
+} from "../src/application/banking";
 import { runPayeeAdmin } from "../src/application/customer-payee-admin";
 import {
   confirmPayee,
@@ -250,6 +255,58 @@ test("atomic claim rejects removal after application authorization but before ex
   ).toEqual({ n: 0 });
 });
 
+test("lost execution-claim acknowledgement cannot invent a terminal failed outcome or dispatch Core", async () => {
+  const { h, run } = await setup();
+  const r = await run(registeredCustomer("sample-branch-001"));
+  const reviewed = await run(
+    reviewPayee(session(), r.display_name, r.account_no),
+  );
+  await run(confirmPayee(session(), reviewed.review_id));
+  const { offer } = await run(reviewCustomerTransfer(session(), r.id, "1"));
+  const result = await run(
+    Effect.gen(function* () {
+      const store = yield* Store;
+      return yield* confirmCustomerTransfer(
+        session(),
+        offer.id,
+        "claim-acknowledgement-key",
+      ).pipe(
+        Effect.provideService(Store, {
+          ...store,
+          run: (sql, ...values) =>
+            sql.startsWith("UPDATE commands SET status='executing'")
+              ? store
+                  .run(sql, ...values)
+                  .pipe(
+                    Effect.zipRight(
+                      Effect.fail(
+                        new BankingError({
+                          message: "Lost claim acknowledgement",
+                          status: 503,
+                        }),
+                      ),
+                    ),
+                  )
+              : store.run(sql, ...values),
+        }),
+        Effect.either,
+      );
+    }),
+  );
+  expect(result._tag).toBe("Left");
+  expect(h.calls.filter((c) => c.path === "accounttransfers")).toHaveLength(0);
+  const original = h.db
+    .query<{ id: string; status: string }, []>(
+      "SELECT id,status FROM commands WHERE key='claim-acknowledgement-key'",
+    )
+    .get();
+  if (!original) throw new Error("Missing original claim");
+  expect(original.status).toBe("executing");
+  expect(
+    (await run(inspectCustomerTransfer(session(), original.id))).status,
+  ).toBe("uncertain");
+});
+
 test("frozen 101-customer bounded setup gives 5-15 each; repeat preserves removals, balances and histories", async () => {
   const { h, run } = await setup(99);
   await run(
@@ -375,6 +432,8 @@ test("backup guard requires every payee table, trigger and offer binding column"
     "customer_transfer_payee_execution",
     "customer_payee_review_confirm",
     "customer_payee_seed_guard",
+    "customer_legacy_transfer_insert",
+    "customer_legacy_transfer_execution",
   ])
     expect(
       await Effect.runPromise(
@@ -383,6 +442,76 @@ test("backup guard requires every payee table, trigger and offer binding column"
         ),
       ),
     ).toMatchObject({ message: expect.stringContaining("did not restore") });
+});
+
+test("registered customer cannot bypass saved payees through legacy transfer creation or pending execution; staff policy and historical rows survive", async () => {
+  const h = customerHarness();
+  fixtures.push(h);
+  h.db.run(
+    "INSERT INTO beneficiaries(id,bank_id,name,account_id,account_no,status) VALUES('legacy-payee','branch','Arjun Raman',12,'SYN00000012','active')",
+  );
+  for (const [id, status, maker] of [
+    ["old-customer-pending", "pending", "customer"],
+    ["old-customer-posted", "posted", "customer"],
+    ["staff-payment", "pending", "officer"],
+  ])
+    h.db.run(
+      'INSERT INTO commands(id,bank_id,key,kind,status,amount_minor,description,maker,account_id,payload) VALUES(?,\'branch\',?,\'transfer\',?,100,\'Original legacy transfer\',?,11,\'{"kind":"transfer","amount":1,"beneficiaryId":"legacy-payee"}\')',
+      [id, id, status, maker],
+    );
+  const run = <A, E>(
+    effect: Effect.Effect<
+      A,
+      E,
+      Effect.Effect.Context<ReturnType<typeof createCommand>>
+    >,
+  ) => Effect.runPromise(effect.pipe(Effect.provide(h.layer)));
+  await run(prepareCustomerManifest("branch"));
+  const before = h.calls.filter((c) => c.method === "POST").length;
+  expect(
+    (
+      await run(
+        createCommand(
+          session(),
+          { kind: "transfer", amount: 1, beneficiaryId: "legacy-payee" },
+          "legacy-customer-bypass",
+        ).pipe(Effect.either),
+      )
+    )._tag,
+  ).toBe("Left");
+  expect(
+    (
+      await run(
+        executeCommand(
+          { ...session(), role: "approver" },
+          "old-customer-pending",
+        ).pipe(Effect.either),
+      )
+    )._tag,
+  ).toBe("Left");
+  expect(
+    (await run(executeCommand(session(), "old-customer-posted"))).status,
+  ).toBe("posted");
+  expect(h.calls.filter((c) => c.method === "POST")).toHaveLength(before);
+  expect(
+    (
+      await run(
+        executeCommand({ ...session(), role: "approver" }, "staff-payment"),
+      )
+    ).status,
+  ).toBe("posted");
+  expect(h.calls.filter((c) => c.method === "POST")).toHaveLength(before + 1);
+  const view = await run(dashboard(session()));
+  expect(view.commands.map((c) => c.id)).toEqual(
+    expect.arrayContaining([
+      "old-customer-pending",
+      "old-customer-posted",
+      "staff-payment",
+    ]),
+  );
+  expect(view.beneficiaries).toMatchObject([
+    { id: "legacy-payee", status: "active" },
+  ]);
 });
 
 test("interrupted preparation cannot report complete; original frozen roster resumes without replacement, invalid recipient remains blocked", async () => {
