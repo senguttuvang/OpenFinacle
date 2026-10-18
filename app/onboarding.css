@@ -1,0 +1,293 @@
+.onboarding-page {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+.onboarding-page > a {
+  color: #2458d3;
+  text-underline-offset: 0.2em;
+}
+.onboarding-page .reading-toggle {
+  max-width: 100%;
+  white-space: normal;
+}
+.onboarding-page .reading-toggle span:not(.sr-only) {
+  white-space: normal;
+}
+.onboarding-page {
+  overflow-wrap: anywhere;
+}
+.customer-onboarding {
+  color: #172b4d;
+  font-size: 1rem;
+  line-height: 1.6;
+  min-width: 0;
+}
+.customer-onboarding h1 {
+  font-size: 2rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.customer-onboarding h2 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+}
+.customer-onboarding h3 {
+  font-size: 1.25rem;
+}
+.customer-onboarding p {
+  max-width: 72ch;
+}
+.onboarding-demo {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: #e6f6f0;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  color: #174f40;
+}
+.onboarding-demo svg {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+.onboarding-start,
+.onboarding-receipt,
+.customer-onboarding form {
+  background: #fff;
+  border: 1px solid #dae2ef;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.onboarding-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  gap: 0.75rem 1.5rem;
+  margin: 1.75rem 0 1rem;
+}
+.onboarding-stepper li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #52627a;
+  font-size: 1rem;
+}
+.onboarding-stepper li > span {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #e9eef8;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.onboarding-stepper li[aria-current="step"] {
+  color: #173d86;
+  font-weight: 600;
+}
+.onboarding-stepper li[aria-current="step"] > span {
+  background: #2458d3;
+  color: white;
+}
+.onboarding-progress {
+  color: #173d86;
+  font-weight: 600;
+}
+.customer-onboarding fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.customer-onboarding legend {
+  padding: 0;
+  max-width: 100%;
+}
+.onboarding-field {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0 0 1.25rem;
+  max-width: 38rem;
+}
+.onboarding-field > label {
+  font-weight: 500;
+}
+.customer-onboarding input:not([type="checkbox"]):not([type="radio"]),
+.customer-onboarding select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font: inherit;
+  color: #172b4d;
+  border: 1px solid #9cacbf;
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  min-height: 3.125rem;
+  background: #fff;
+}
+.customer-onboarding input::placeholder {
+  color: #52627a;
+}
+.customer-onboarding .onboarding-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-weight: 400;
+  min-height: 3.125rem;
+  cursor: pointer;
+}
+.customer-onboarding input[type="checkbox"],
+.customer-onboarding input[type="radio"] {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+  accent-color: #2458d3;
+}
+.customer-onboarding button {
+  font: inherit;
+  min-height: 3.125rem;
+  padding: 0.65rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #9cacbf;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #173d86;
+  cursor: pointer;
+  white-space: normal;
+}
+.customer-onboarding button.primary,
+.customer-onboarding .onboarding-link {
+  background: #2458d3;
+  color: white;
+  border-color: #2458d3;
+}
+.customer-onboarding button:hover {
+  background: #edf2fd;
+}
+.customer-onboarding button.primary:hover,
+.customer-onboarding .onboarding-link:hover {
+  background: #173d86;
+}
+.customer-onboarding button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.customer-onboarding :focus-visible {
+  outline: 3px solid #2458d3;
+  outline-offset: 3px;
+}
+.customer-onboarding [aria-invalid="true"] {
+  border-color: #a12b36;
+}
+.onboarding-field-error,
+.onboarding-error {
+  color: #972936;
+}
+.onboarding-error {
+  background: #fff0f1;
+  border: 1px solid #ecc3c7;
+  padding: 1rem;
+  border-radius: 0.6rem;
+}
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.onboarding-actions a {
+  color: #2458d3;
+  text-underline-offset: 0.2em;
+}
+.onboarding-review {
+  margin: 1rem 0;
+}
+.onboarding-review > div {
+  padding: 1rem 0;
+  border-bottom: 1px solid #dae2ef;
+}
+.onboarding-review dt,
+.onboarding-receipt dt {
+  font-weight: 600;
+}
+.onboarding-review dd,
+.onboarding-receipt dd {
+  margin: 0.25rem 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+.onboarding-confirm,
+.onboarding-recovery {
+  background: #fff7e6;
+  color: #62420b;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+}
+.onboarding-confirm button {
+  margin: 0.4rem 0.75rem 0.4rem 0;
+}
+.onboarding-save {
+  color: #52627a;
+}
+.customer-onboarding details {
+  margin-bottom: 1.5rem;
+}
+.customer-onboarding summary {
+  cursor: pointer;
+  color: #173d86;
+  min-height: 3.125rem;
+}
+.customer-onboarding ::selection {
+  background: #d8e6ff;
+  color: #172b4d;
+}
+.customer-onboarding .onboarding-link {
+  padding: 0.8rem 1rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+}
+@media (max-width: 600px) {
+  .onboarding-page {
+    padding: 1rem 0.75rem;
+  }
+  .onboarding-start,
+  .onboarding-receipt,
+  .customer-onboarding form {
+    padding: 1rem;
+  }
+  .onboarding-stepper {
+    gap: 0.6rem;
+  }
+  .onboarding-stepper li {
+    font-size: 0;
+    gap: 0;
+  }
+  .onboarding-stepper li > span {
+    font-size: 1rem;
+  }
+  .onboarding-actions > * {
+    flex: 1 1 12rem;
+    text-align: center;
+  }
+}
+@media (max-width: 360px) {
+  .customer-onboarding h1 {
+    font-size: 1.5rem;
+  }
+  .onboarding-demo {
+    display: block;
+    padding: 0.5rem;
+  }
+  .onboarding-start,
+  .onboarding-receipt,
+  .customer-onboarding form {
+    padding: 0.5rem;
+  }
+}
