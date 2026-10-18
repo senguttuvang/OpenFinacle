@@ -1,6 +1,8 @@
 import { getContainer } from "@cloudflare/containers";
 import { Effect, Layer, Schema } from "effect";
 import { coreLayer } from "./adapters/core";
+import { customerProvisionerLayer } from "./adapters/customer-provisioning";
+import { customerTransferLayer } from "./adapters/customer-transfers";
 import type { Environment } from "./adapters/environment";
 import { loanCatalogueLayer } from "./adapters/loan-catalogue";
 import { loanEngineLayer } from "./adapters/loan-engine";
@@ -15,7 +17,6 @@ import {
   bootstrap,
   confirmBeneficiary,
   createCommand,
-  dashboard,
   executeCommand,
   rejectCommand,
   requiredBank,
@@ -35,6 +36,12 @@ import {
   changeCard,
   listCards,
 } from "./application/cards";
+import {
+  CustomerAdminCommand,
+  runCustomerAdmin,
+} from "./application/customer-admin";
+import { customerDashboard } from "./application/customer-dashboard";
+import { registerOpenedCustomer } from "./application/customer-registry";
 import { previewDemoLoan } from "./application/demo-loan-quote";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
 import { depositAdvice } from "./application/deposit-advice";
@@ -81,6 +88,7 @@ import {
   serviceCaseForKey,
   submitServiceCase,
 } from "./application/service-cases";
+import { customerRoute } from "./customer-http";
 import type { Bank } from "./domain/banking";
 import {
   type Account,
@@ -106,6 +114,7 @@ import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
+import { planningRequest } from "./planning-http";
 
 const failure = (message: string, status = 400) =>
   new BankingError({ message, status });
@@ -155,6 +164,33 @@ const getSession = (request: Request) =>
       return yield* Effect.fail(
         failure("Your demo session expired. Start a new workspace.", 401),
       );
+    const expectedScope = request.headers.get("X-Customer-Scope");
+    if (expectedScope && expectedScope !== session.bank_id)
+      return yield* Effect.fail(
+        failure(
+          "Customer selection changed. Reload before continuing this operation.",
+          409,
+        ),
+      );
+    if (
+      request.method !== "GET" &&
+      !expectedScope &&
+      !["/api/customer-selection", "/api/session"].includes(
+        new URL(request.url).pathname,
+      )
+    ) {
+      const registered = yield* store.one(
+        "SELECT id FROM customers WHERE bank_id=? AND status='active'",
+        session.bank_id,
+      );
+      if (registered)
+        return yield* Effect.fail(
+          failure(
+            "Confirm the selected customer scope before changing this relationship.",
+            409,
+          ),
+        );
+    }
     return session;
   });
 const commandSchema = Schema.Struct({
@@ -243,6 +279,12 @@ const handle = (request: Request, env: Environment) =>
       }
       if (path === "/api/admin/demo/loans/setup" && request.method === "GET")
         return Response.json(yield* loanSetupStatus());
+      if (path === "/api/admin/demo/customers" && request.method === "POST")
+        return Response.json(
+          yield* runCustomerAdmin(
+            yield* parse(request, CustomerAdminCommand, false, true),
+          ),
+        );
       if (
         path === "/api/admin/demo/loans/inspect" &&
         request.method === "POST"
@@ -358,6 +400,18 @@ const handle = (request: Request, env: Environment) =>
           503,
         ),
       );
+    if (
+      path.startsWith("/api/customers") ||
+      path.startsWith("/api/customer-transfers/") ||
+      path === "/api/customer-selection"
+    ) {
+      const current = yield* getSession(request).pipe(
+        Effect.catchAll((error) =>
+          error.status === 401 ? Effect.succeed(null) : Effect.fail(error),
+        ),
+      );
+      return yield* customerRoute(request, current, hash);
+    }
     if (path === "/api/session" && request.method === "POST") {
       const input = yield* parse(
         request,
@@ -366,6 +420,13 @@ const handle = (request: Request, env: Environment) =>
         }),
         true,
       );
+      if (input.journey === "existing")
+        return yield* Effect.fail(
+          failure(
+            "Choose a specific registered customer from the directory before entering the existing journey.",
+            400,
+          ),
+        );
       const current = yield* getSession(request).pipe(
         Effect.catchAll((error) =>
           error.status === 401 ? Effect.succeed(null) : Effect.fail(error),
@@ -378,7 +439,7 @@ const handle = (request: Request, env: Environment) =>
             bankId: bank.id,
             journey: bank.journey,
             resumed: true,
-            dashboard: yield* dashboard(current, false),
+            dashboard: yield* customerDashboard(current, false),
           });
       }
       const limitKey = `${Math.floor(Date.now() / 3600000)}:${yield* hash(request.headers.get("CF-Connecting-IP") ?? "local")}`;
@@ -412,7 +473,7 @@ const handle = (request: Request, env: Environment) =>
         {
           bankId: id,
           journey: bank.journey,
-          dashboard: yield* dashboard(session, false),
+          dashboard: yield* customerDashboard(session, false),
         },
         {
           headers: {
@@ -422,6 +483,8 @@ const handle = (request: Request, env: Environment) =>
       );
     }
     const session = yield* getSession(request);
+    if (path === "/api/planning" || path.startsWith("/api/planning/"))
+      return yield* planningRequest(request, session, env.DEMO_MODE);
     if (path === "/api/session/end" && request.method === "POST") {
       yield* store.run(
         "DELETE FROM sessions WHERE token_hash=?",
@@ -451,7 +514,10 @@ const handle = (request: Request, env: Environment) =>
     }
     if (path === "/api/dashboard" && request.method === "GET")
       return Response.json(
-        yield* dashboard(session, url.searchParams.get("refresh") === "true"),
+        yield* customerDashboard(
+          session,
+          url.searchParams.get("refresh") === "true",
+        ),
       );
     if (financialMutation(request))
       yield* store.run(
@@ -471,9 +537,20 @@ const handle = (request: Request, env: Environment) =>
           note: Schema.String,
         }),
       );
-      return Response.json(
-        yield* reviewApplication(session, input.decision, input.note),
+      const result = yield* reviewApplication(
+        session,
+        input.decision,
+        input.note,
       );
+      if (
+        input.decision === "approve" &&
+        (yield* store.one(
+          "SELECT bank_id FROM customer_applicant_scopes WHERE bank_id=?",
+          session.bank_id,
+        ))
+      )
+        yield* registerOpenedCustomer(session);
+      return Response.json(result);
     }
     if (path === "/api/beneficiaries" && request.method === "POST")
       return Response.json(
@@ -959,6 +1036,8 @@ export const handleRequest = (
           : Effect.void,
       ),
       Effect.provide(loanWriterLayer),
+      Effect.provide(customerTransferLayer),
+      Effect.provide(customerProvisionerLayer),
       Effect.provide(loanRepayerLayer),
       Effect.provide(loanEnquiryLayer),
       Effect.provide(Layer.merge(loanCatalogueLayer, loanEngineLayer)),

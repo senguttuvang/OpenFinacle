@@ -611,6 +611,7 @@ test("HTTP case actions are authenticated and the old resolve route cannot bypas
     APP_REVISION: "case-test",
     DEMO_MODE: "true",
   };
+  let httpScope = customer.bank_id;
   const http = (path: string, body?: unknown) =>
     handleRequest(
       new Request(`https://demo.test/api${path}`, {
@@ -618,6 +619,7 @@ test("HTTP case actions are authenticated and the old resolve route cannot bypas
         headers: {
           Cookie: `of_session=${token}`,
           Origin: "https://demo.test",
+          "X-Customer-Scope": httpScope,
           "Content-Type": "application/json",
           "Idempotency-Key": "http-case-key-one",
         },
@@ -695,6 +697,7 @@ test("HTTP case actions are authenticated and the old resolve route cannot bypas
   db.run("UPDATE sessions SET bank_id='other-bank' WHERE token_hash=?", [
     tokenHash,
   ]);
+  httpScope = "other-bank";
   expect((await http(`/service-cases?id=${request.id}`)).status).toBe(404);
   expect(coreCalls).toBe(0);
 });

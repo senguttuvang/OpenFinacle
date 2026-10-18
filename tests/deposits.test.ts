@@ -478,6 +478,7 @@ test("HTTP deposits enforce strict inputs, authentication/demo/ownership and nev
     APP_REVISION: "deposit-tests",
     DEMO_MODE: "true",
   } satisfies Environment;
+  let httpScope = customer.bank_id;
   const http = (path: string, body?: unknown, cookie = true) =>
     handleRequest(
       new Request(`https://demo.test/api${path}`, {
@@ -485,6 +486,7 @@ test("HTTP deposits enforce strict inputs, authentication/demo/ownership and nev
         headers: {
           ...(cookie ? { Cookie: `of_session=${token}` } : {}),
           Origin: "https://demo.test",
+          "X-Customer-Scope": httpScope,
           "Content-Type": "application/json",
           "Idempotency-Key": path.endsWith("/action")
             ? "http-deposit-action"
@@ -540,6 +542,7 @@ test("HTTP deposits enforce strict inputs, authentication/demo/ownership and nev
       .status,
   ).toBe(403);
   db.run("UPDATE sessions SET bank_id='other' WHERE token_hash=?", [hash]);
+  httpScope = "other";
   expect((await http(advicePath)).status).toBe(404);
   expect((await http(`/deposits?id=${saved.deposit.id}`)).status).toBe(404);
   expect((await http("/deposits?key=http-deposit-command")).status).toBe(404);

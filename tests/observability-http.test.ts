@@ -166,15 +166,12 @@ test("service catalogue requires identity and returns only static contracts with
 test("journey entry only reads permanent saved data and never provisions or calls the core", async () => {
   const { Database } = await import("bun:sqlite");
   const db = new Database(":memory:");
-  for (const file of [
-    "0001_workflows.sql",
-    "0002_reversal_guard.sql",
-    "0003_customer_journey.sql",
-    "0004_persistent_demo.sql",
-  ])
-    db.exec(await Bun.file(`migrations/${file}`).text());
+  const migrations: string[] = [];
+  for await (const path of new Bun.Glob("migrations/*.sql").scan("."))
+    migrations.push(path);
+  for (const path of migrations.sort()) db.exec(await Bun.file(path).text());
   db.run(
-    "INSERT INTO banks(id,status,journey,customer_account,recipient_account,employer_account) VALUES('permanent','ready','existing',11,22,33)",
+    "INSERT INTO banks(id,status,journey,customer_client,customer_account,recipient_account,employer_account) VALUES('permanent','ready','existing',1,11,22,33)",
   );
   db.run(
     "INSERT INTO settings(key,value) VALUES('demo_existing_bank','permanent')",
@@ -212,6 +209,9 @@ test("journey entry only reads permanent saved data and never provisions or call
     },
   } as unknown as D1Database;
   const environment = env(database);
+  db.run(
+    "INSERT INTO customers(id,branch_id,bank_id,reference,display_name,client_id,account_id,account_no,origin,status) VALUES('legacy-permanent','permanent','permanent','SYN-ORIGINAL','Mira',1,11,'00011','legacy','active')",
+  );
   environment.DEMO_MODE = "true";
   let coreCalls = 0;
   environment.CORE = {
@@ -221,21 +221,21 @@ test("journey entry only reads permanent saved data and never provisions or call
     },
   } as unknown as Environment["CORE"];
   const response = await handleRequest(
-    new Request("https://demo.test/api/session", {
+    new Request("https://demo.test/api/customer-selection", {
       method: "POST",
-      body: JSON.stringify({ journey: "existing" }),
+      body: JSON.stringify({ customerId: "legacy-permanent" }),
     }),
     environment,
   );
   expect(response.status).toBe(200);
   const result = (await response.json()) as {
-    bankId: string;
     dashboard: {
+      bank: { id: string };
       account: { summary: { accountBalance: number } };
       core: { cached: boolean };
     };
   };
-  expect(result.bankId).toBe("permanent");
+  expect(result.dashboard.bank.id).toBe("permanent");
   expect(result.dashboard.account.summary.accountBalance).toBe(121300);
   expect(result.dashboard.core.cached).toBe(true);
   expect(response.headers.get("Set-Cookie")).toContain("HttpOnly; Secure");

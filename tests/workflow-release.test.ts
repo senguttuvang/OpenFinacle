@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -42,8 +43,88 @@ const manifest = () => ({
   file: "workflows.sql",
   restored: true,
 });
+test("customer backup schema requires all six tables and every original ownership/recovery trigger", async () => {
+  const paths: string[] = [];
+  for await (const path of new Bun.Glob("migrations/*.sql").scan("."))
+    paths.push(path);
+  const complete = (
+    await Promise.all(paths.sort().map((path) => Bun.file(path).text()))
+  ).join("\n");
+  await Effect.runPromise(verifyWorkflowDump(complete));
+  for (const table of [
+    "customers",
+    "customer_transfer_offers",
+    "customer_transfers",
+    "customer_seed_manifest",
+    "customer_seed_operations",
+    "customer_applicant_scopes",
+  ])
+    expect(
+      (
+        await Effect.runPromise(
+          verifyWorkflowDump(`${complete}\nDROP TABLE ${table};`).pipe(
+            Effect.flip,
+          ),
+        )
+      ).message,
+    ).toContain("did not restore");
+  const migration = await Bun.file(
+    "migrations/0016_customer_common_banking.sql",
+  ).text();
+  const triggers = [
+    ...migration.matchAll(/CREATE TRIGGER (customer_[a-z_]+)/g),
+  ].map((match) => match[1]);
+  expect(triggers).toHaveLength(14);
+  for (const trigger of triggers)
+    expect(
+      (
+        await Effect.runPromise(
+          verifyWorkflowDump(`${complete}\nDROP TRIGGER ${trigger};`).pipe(
+            Effect.flip,
+          ),
+        )
+      ).message,
+    ).toContain("did not restore");
+});
 const denied = <A, E>(effect: Effect.Effect<A, E>) =>
   Effect.runPromise(Effect.flip(effect));
+
+test("backup verification permits absent planning schema or its complete pair and trigger group, rejects every partial group", async () => {
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE banks(id TEXT PRIMARY KEY)");
+  db.exec(await Bun.file("migrations/0015_planning.sql").text());
+  const names = [
+    "planning_households",
+    "planning_events",
+    "planning_apply",
+    "planning_immutable_update",
+    "planning_immutable_delete",
+  ];
+  const definitions = names.map(
+    (name) =>
+      (
+        db.query("SELECT sql FROM sqlite_schema WHERE name=?").get(name) as {
+          sql: string;
+        }
+      ).sql,
+  );
+  await Effect.runPromise(verifyWorkflowDump(sql));
+  for (let mask = 1; mask < 32; mask++) {
+    const dump =
+      sql +
+      "\n" +
+      definitions
+        .filter((_, i) => mask & (1 << i))
+        .map((ddl) => `${ddl};`)
+        .join("\n");
+    if (mask === 31) await Effect.runPromise(verifyWorkflowDump(dump));
+    else
+      expect((await denied(verifyWorkflowDump(dump))).message).toContain(
+        "did not restore",
+      );
+  }
+  db.close();
+});
 
 test("backup verification permits a pre-repayment schema and a complete repayment group, but rejects partial repayment exports", async () => {
   const tables = [

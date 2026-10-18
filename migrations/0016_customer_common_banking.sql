@@ -51,6 +51,9 @@ END;
 CREATE TRIGGER customer_transfer_immutable BEFORE UPDATE ON customer_transfers BEGIN
   SELECT CASE WHEN NEW.command_id<>OLD.command_id OR NEW.offer_id<>OLD.offer_id OR NEW.bank_id<>OLD.bank_id OR OLD.receipt_json IS NOT NULL THEN RAISE(ABORT,'Original transfer identity and receipt are immutable') END;
 END;
+CREATE TRIGGER customer_transfer_command_binding AFTER INSERT ON commands WHEN json_extract(NEW.payload,'$.customerOfferId') IS NOT NULL BEGIN
+  INSERT INTO customer_transfers(command_id,offer_id,bank_id) VALUES(NEW.id,json_extract(NEW.payload,'$.customerOfferId'),NEW.bank_id);
+END;
 CREATE TABLE customer_seed_manifest (
   id TEXT PRIMARY KEY,
   branch_id TEXT NOT NULL REFERENCES banks(id),

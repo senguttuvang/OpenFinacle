@@ -11,6 +11,7 @@ export type View =
   | "cards"
   | "deposits"
   | "loans"
+  | "planning"
   | "cash"
   | "approvals"
   | "operations"
@@ -27,6 +28,7 @@ export const viewLabels: Record<View, string> = {
   cards: "Cards",
   deposits: "Deposits",
   loans: "Loans",
+  planning: "Wealth & Planning",
   cash: "Cash & salary",
   approvals: "Approval inbox",
   operations: "Bank operations",
@@ -57,6 +59,7 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
         "cards",
         "deposits",
         "loans",
+        ...(role === "officer" ? ["planning" as const] : []),
         "profile",
         "statements",
         "audit",
@@ -71,6 +74,7 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
           "cards",
           "deposits",
           "loans",
+          "planning",
           "profile",
         ]
       : [
@@ -79,6 +83,7 @@ export function navigationFor(role: Role, journey: CustomerJourney) {
           "cards",
           "deposits",
           "loans",
+          "planning",
           "profile",
           "transfer",
           "statements",

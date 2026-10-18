@@ -205,6 +205,53 @@ test("partial offer is read only and one dispatch correlates the exact savings w
   ).toBe(true);
   expect(loanTransactionLabel(10)).toBe("Accrual");
 });
+test("Core ISO savings-transfer dates permit quotes and preserve exact one-time repayment proof", async () => {
+  const row = repaymentSavingsAfter.transactions[0];
+  const savingsAfter = {
+    ...repaymentSavingsAfter,
+    transactions: [
+      { ...row, transfer: { ...row.transfer, transferDate: "2026-10-17" } },
+    ],
+  };
+  const savings = {
+    ...repaymentSavings,
+    transactions: [
+      {
+        ...row,
+        transfer: {
+          ...row.transfer,
+          transferDate: "2026-10-16",
+          transferDescription: "invented unrelated transfer",
+        },
+      },
+    ],
+  };
+  const quoted = harness({ savings });
+  expect((await quoted.quote()).offer.available_minor).toBe(2000000);
+  expect(quoted.calls.every((call) => call.method === "GET")).toBe(true);
+  const h = harness({ savings, savingsAfter });
+  expect((await h.dispatch()).savings_transaction_id).toBe(102);
+  expect(h.calls.filter((call) => call.method === "POST")).toHaveLength(1);
+  const readOnly = harness({ posted: true, savingsAfter });
+  expect((await readOnly.confirm()).transfer_id).toBe(92);
+  expect(readOnly.calls.every((call) => call.method === "GET")).toBe(true);
+  for (const transferDate of [
+    "2026-02-30",
+    "2026-10-17T00:00:00Z",
+    "17/10/2026",
+    "2026-10-18",
+  ]) {
+    const invalid = harness({
+      posted: true,
+      savingsAfter: {
+        ...savingsAfter,
+        transactions: [{ ...row, transfer: { ...row.transfer, transferDate } }],
+      },
+    });
+    expect((await invalid.confirmDenied()).uncertain).toBe(true);
+    expect(invalid.calls.every((call) => call.method === "GET")).toBe(true);
+  }
+});
 test("invalid amount, changed ownership/product/fees/budget or expired authorization sends no transfer", async () => {
   for (const amount of [9999, 10000.1, 50000001]) {
     const h = harness();

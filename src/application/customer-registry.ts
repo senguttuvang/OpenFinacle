@@ -308,7 +308,16 @@ export const assertApplicantScope = (session: Session) =>
       "SELECT * FROM customer_applicant_scopes WHERE bank_id=?",
       session.bank_id,
     );
-    if (!row || row.owner_session_hash !== session.token_hash)
+    const registered = row
+      ? yield* store.one<{ id: string }>(
+          "SELECT id FROM customers WHERE id=? AND bank_id=? AND status='active'",
+          row.customer_id,
+          session.bank_id,
+        )
+      : null;
+    // Drafts remain bound to their original session. An opened customer's own
+    // registered server session can read its retained onboarding receipt after switching.
+    if (!row || (row.owner_session_hash !== session.token_hash && !registered))
       return yield* fail(
         "Start an individual application before changing an applicant's records.",
         403,
@@ -336,7 +345,7 @@ export const registerOpenedCustomer = (session: Session) =>
       "GET",
       `savingsaccounts/${bank.customer_account}`,
     );
-    return yield* registerCustomer({
+    const registered = yield* registerCustomer({
       id: scope.customerId,
       bank_id: scope.bankId,
       branch_id: scope.branchId,
@@ -347,4 +356,9 @@ export const registerOpenedCustomer = (session: Session) =>
       account_no: account.accountNo,
       origin: "onboarding",
     });
+    yield* store.run(
+      "UPDATE banks SET journey='existing' WHERE id=? AND journey='new'",
+      scope.bankId,
+    );
+    return registered;
   });
