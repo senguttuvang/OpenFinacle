@@ -6,6 +6,7 @@ import type {
   ReplacementTerms,
 } from "../src/domain/card-replacements";
 import type { Card } from "../src/domain/cards";
+import { FormSelect } from "./form-select";
 
 export const replacementLabels = {
   recommend: "Recommend replacement",
@@ -96,21 +97,19 @@ export function ReplacementApplicationForm({
           <legend>Replacement details</legend>
           <label>
             Replacement reason
-            <select
+            <FormSelect
+              aria-label="Replacement reason"
               value={terms.reason}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setTerms({
                   ...terms,
-                  reason: event.target.value as ReplacementTerms["reason"],
+                  reason: value as ReplacementTerms["reason"],
                 })
               }
-            >
-              {Object.entries(replacementReasons).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              options={Object.entries(replacementReasons).map(
+                ([value, label]) => ({ value, label }),
+              )}
+            />
           </label>
           <label>
             Confirmed demo delivery address

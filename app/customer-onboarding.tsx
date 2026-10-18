@@ -15,6 +15,7 @@ import {
   onboardingSteps,
   validateOnboarding,
 } from "../src/domain/onboarding";
+import { FormSelect } from "./form-select";
 import {
   attachSampleIdentityPack,
   beginOnboarding,
@@ -197,20 +198,18 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
     <div className="onboarding-field">
       <label htmlFor={`opening-${key}`}>{label}</label>
       {options ? (
-        <select
+        <FormSelect
           id={`opening-${key}`}
           value={String(fields?.[key] ?? "")}
-          onChange={(event) => update(key, event.target.value)}
+          onValueChange={(value) => update(key, value)}
+          placeholder="Choose an option"
+          options={[
+            { value: "", label: "Choose an option" },
+            ...options.map((option) => ({ value: option, label: option })),
+          ]}
           aria-invalid={Boolean(errors[key])}
           aria-describedby={errors[key] ? `opening-${key}-error` : undefined}
-        >
-          <option value="">Choose an option</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        />
       ) : (
         <input
           type={key === "email" ? "email" : "text"}
@@ -530,14 +529,11 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                   {field("pincode", "Postal code", undefined, "600020")}
                   <div className="onboarding-field">
                     <label htmlFor="opening-taxResidency">Tax residency</label>
-                    <select
+                    <FormSelect
                       id="opening-taxResidency"
                       value={fields.taxResidency}
-                      onChange={(event) =>
-                        update(
-                          "taxResidency",
-                          event.target.value as "india" | "other",
-                        )
+                      onValueChange={(value) =>
+                        update("taxResidency", value as "india" | "other")
                       }
                       aria-invalid={Boolean(errors.taxResidency)}
                       aria-describedby={
@@ -545,12 +541,14 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                           ? "tax-help opening-tax-error"
                           : "tax-help"
                       }
-                    >
-                      <option value="india">India only</option>
-                      <option value="other">
-                        Another country or multiple countries
-                      </option>
-                    </select>
+                      options={[
+                        { value: "india", label: "India only" },
+                        {
+                          value: "other",
+                          label: "Another country or multiple countries",
+                        },
+                      ]}
+                    />
                     <p id="tax-help">
                       This sample journey supports India-only tax residency.
                     </p>

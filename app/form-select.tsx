@@ -39,11 +39,19 @@ export function FormSelect({
   const uniqueId = useId();
   const emptyValue = `${uniqueId}-empty`;
   const trigger = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef(false);
   const [fieldsetDisabled, setFieldsetDisabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [missing, setMissing] = useState(false);
   const blocked = disabled || fieldsetDisabled;
   const validationId = `${uniqueId}-validation`;
+
+  useEffect(() => {
+    if (!blocked && restoreFocus.current) {
+      restoreFocus.current = false;
+      if (document.activeElement === document.body) trigger.current?.focus();
+    }
+  }, [blocked]);
 
   useEffect(() => {
     const button = trigger.current;
@@ -84,7 +92,16 @@ export function FormSelect({
       onInvalidCapture={(event) => {
         event.preventDefault();
         setMissing(true);
-        trigger.current?.focus();
+        const control = event.target;
+        const firstInvalid =
+          control instanceof HTMLSelectElement
+            ? Array.from(control.form?.elements ?? []).find((element) =>
+                element.matches(
+                  "input:invalid, select:invalid, textarea:invalid",
+                ),
+              )
+            : undefined;
+        if (!firstInvalid || firstInvalid === control) trigger.current?.focus();
       }}
     >
       <Select.Root
@@ -98,6 +115,7 @@ export function FormSelect({
         onValueChange={(next) => {
           if (trigger.current?.matches(":disabled")) return;
           const selected = next === emptyValue ? "" : next;
+          restoreFocus.current = true;
           setMissing(Boolean(required && !selected));
           onValueChange(selected);
         }}
@@ -105,6 +123,7 @@ export function FormSelect({
         <Select.Trigger
           {...aria}
           id={id}
+          data-value={value}
           ref={trigger}
           className={`form-select-trigger ${className ?? ""}`}
           aria-invalid={
@@ -142,13 +161,28 @@ export function FormSelect({
                 <Select.Item
                   className="form-select-option"
                   key={option.value}
+                  data-value={option.value}
+                  data-current={option.value === value ? "" : undefined}
+                  {...(!option.value && !value
+                    ? { "aria-selected": true }
+                    : {})}
                   value={option.value || emptyValue}
                   disabled={option.disabled}
                 >
-                  <Select.ItemText>{option.label}</Select.ItemText>
-                  <Select.ItemIndicator>
-                    <Check size={20} aria-hidden="true" />
-                  </Select.ItemIndicator>
+                  <Select.ItemText className="form-select-option-text">
+                    {option.label}
+                  </Select.ItemText>
+                  {!option.value && !value ? (
+                    <Check
+                      className="form-select-indicator"
+                      size={20}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Select.ItemIndicator className="form-select-indicator">
+                      <Check size={20} aria-hidden="true" />
+                    </Select.ItemIndicator>
+                  )}
                 </Select.Item>
               ))}
             </Select.Viewport>

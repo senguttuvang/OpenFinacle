@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { chooseOption } from "./fixtures/form-select";
 
 const household = "synthetic-nila";
 const endpoint = (relationship: string) =>
@@ -26,7 +27,11 @@ const open = async (page: Page) => {
 };
 const dining = async (page: Page) => {
   await page.getByRole("button", { name: "Cash flow", exact: true }).click();
-  await page.getByLabel("Category", { exact: true }).selectOption("Dining");
+  await chooseOption(
+    page,
+    page.getByLabel("Category", { exact: true }),
+    "Dining",
+  );
 };
 test("real local D1 saves budgets and scenarios, permits only consented read-only review, and revokes access", async ({
   page,
@@ -61,9 +66,14 @@ test("real local D1 saves budgets and scenarios, permits only consented read-onl
   ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Scenario lab", exact: true }).click();
-  await expect(page.getByLabel("Saved scenario")).toContainText(
-    "Server saved education alternative",
-  );
+  await page.getByLabel("Saved scenario").click();
+  await expect(
+    page.getByRole("option", {
+      name: "Server saved education alternative · v1",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await session(page, relationship, "officer");
   await page.reload();
   await expect(
@@ -412,9 +422,11 @@ test("budget copies and deletion persist without restoring synthetic defaults", 
   ).json()) as { state: { budgets: Record<string, number> } };
   await dining(page);
   await page.getByText("Copy or delete this budget", { exact: true }).click();
-  await page
-    .getByLabel("Dining copy budget from", { exact: true })
-    .selectOption("Groceries");
+  await chooseOption(
+    page,
+    page.getByLabel("Dining copy budget from", { exact: true }),
+    "Groceries",
+  );
   await page
     .getByRole("button", { name: "Copy budget to Dining", exact: true })
     .click();

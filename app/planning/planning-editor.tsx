@@ -4,6 +4,7 @@ import {
   planningRetirementStart,
 } from "../../src/domain/planning";
 import type { PlanningScenario } from "../../src/domain/planning-state";
+import { FormSelect } from "../form-select";
 export const assumptionFields: {
   key: keyof PlanningAssumptions;
   title: string;
@@ -95,29 +96,29 @@ export function ScenarioEditor({
       <div className="wp-input-grid">
         <label>
           Retirement start (annual boundary)
-          <select
+          <FormSelect
+            aria-label="Retirement start (annual boundary)"
             disabled={disabled}
-            value={draft.assumptions.retireAge}
-            onChange={(event) =>
+            value={String(draft.assumptions.retireAge)}
+            onValueChange={(value) =>
               setDraft({
                 ...draft,
                 assumptions: {
                   ...draft.assumptions,
-                  retireAge: Number(event.target.value),
+                  retireAge: Number(value),
                 },
               })
             }
-          >
-            {Array.from({ length: 61 }, (_, index) => index + 25).map((age) => (
-              <option key={age} value={age}>
-                {planningRetirementStart({
+            options={Array.from({ length: 61 }, (_, index) => index + 25).map(
+              (age) => ({
+                value: String(age),
+                label: `${planningRetirementStart({
                   age: draft.assumptions.age,
                   retireAge: age,
-                })}{" "}
-                · age {age}
-              </option>
-            ))}
-          </select>
+                })} · age ${age}`,
+              }),
+            )}
+          />
           <small>
             Linked to retirement age. Annual model boundaries; past dates
             represent an already-retired household.

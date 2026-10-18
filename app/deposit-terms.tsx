@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatMoney } from "../src/domain/banking";
 import { type DepositTerms, maturityMinor } from "../src/domain/deposits";
+import { FormSelect } from "./form-select";
 
 export const depositStatus = {
   submitted: "Awaiting officer review",
@@ -208,10 +209,11 @@ export function DepositForm({
                 </label>
                 <label>
                   Relationship
-                  <select
+                  <FormSelect
+                    aria-label="Relationship"
                     value={terms.nominee.relationship}
-                    onChange={(event) => {
-                      const relationship = event.target.value as NonNullable<
+                    onValueChange={(value) => {
+                      const relationship = value as NonNullable<
                         DepositTerms["nominee"]
                       >["relationship"];
                       setTerms({
@@ -222,15 +224,14 @@ export function DepositForm({
                         },
                       });
                     }}
-                  >
-                    {["spouse", "parent", "child", "sibling", "other"].map(
-                      (value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ),
-                    )}
-                  </select>
+                    options={[
+                      "spouse",
+                      "parent",
+                      "child",
+                      "sibling",
+                      "other",
+                    ].map((value) => ({ value, label: value }))}
+                  />
                 </label>
               </>
             )}

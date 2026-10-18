@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { FormSelect } from "../form-select";
 
 export function PlanningPreviewSession({
   busy,
@@ -65,19 +66,23 @@ export function PlanningPreviewSession({
           </label>
           <label>
             Planning preview persona
-            <select
+            <FormSelect
+              aria-label="Planning preview persona"
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onValueChange={setRole}
               disabled={busy}
-            >
-              <option value="customer">Customer owner</option>
-              <option value="officer">
-                Officer · consented read-only review
-              </option>
-              <option value="approver">
-                Banking approver · no planning access
-              </option>
-            </select>
+              options={[
+                { value: "customer", label: "Customer owner" },
+                {
+                  value: "officer",
+                  label: "Officer · consented read-only review",
+                },
+                {
+                  value: "approver",
+                  label: "Banking approver · no planning access",
+                },
+              ]}
+            />
           </label>
           <button type="submit" disabled={busy}>
             Use local preview session

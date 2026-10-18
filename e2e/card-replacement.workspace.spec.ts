@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseOption } from "./fixtures/form-select";
 import { choosePersona } from "./fixtures/persona";
 import { replacementWorkspace } from "./fixtures/replacements";
 
@@ -96,9 +97,11 @@ test("replacement retires its source, needs delivery, reconciles activation afte
   ).toBeVisible();
   await expect(button("Resume card")).toHaveCount(0);
   await expect(button("Change controls")).toHaveCount(0);
-  await page
-    .getByRole("combobox", { name: "Selected demo card", exact: true })
-    .selectOption(saved.sourceId);
+  await chooseOption(
+    page,
+    page.getByRole("combobox", { name: "Selected demo card", exact: true }),
+    saved.sourceId,
+  );
   await expect(
     page.getByRole("heading", { name: "Permanently blocked", exact: true }),
   ).toBeVisible();
@@ -143,7 +146,7 @@ test("replacement retires its source, needs delivery, reconciles activation afte
   ).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Selected demo card", exact: true }),
-  ).toHaveValue(`replacement:${saved.requestId}`);
+  ).toHaveAttribute("data-value", `replacement:${saved.requestId}`);
   await button("Temporarily hold").click();
   await page
     .getByLabel("Reason", { exact: true })
@@ -153,17 +156,21 @@ test("replacement retires its source, needs delivery, reconciles activation afte
   await expect(
     page.getByRole("heading", { name: "Temporarily held", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("combobox", { name: "Selected demo card", exact: true })
-    .selectOption(saved.sourceId);
+  await chooseOption(
+    page,
+    page.getByRole("combobox", { name: "Selected demo card", exact: true }),
+    saved.sourceId,
+  );
   await expect(
     page.getByRole("heading", { name: "Permanently blocked", exact: true }),
   ).toBeVisible();
   await expect(button("Resume card")).toHaveCount(0);
   await expect(page.locator(".card-history li")).toHaveCount(2);
-  await page
-    .getByRole("combobox", { name: "Selected demo card", exact: true })
-    .selectOption(`replacement:${saved.requestId}`);
+  await chooseOption(
+    page,
+    page.getByRole("combobox", { name: "Selected demo card", exact: true }),
+    `replacement:${saved.requestId}`,
+  );
   await button("Resume card").click();
   await page
     .getByLabel("Reason", { exact: true })
