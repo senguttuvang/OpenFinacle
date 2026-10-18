@@ -114,6 +114,7 @@ import { RecurringCommand, RecurringTerms } from "./domain/recurring-deposits";
 import { caseActions } from "./domain/service-cases";
 import { serviceCatalog } from "./domain/services";
 import { safeRoute } from "./domain/telemetry";
+import { onboardingRoute } from "./onboarding-http";
 import { planningRequest } from "./planning-http";
 
 const failure = (message: string, status = 400) =>
@@ -483,6 +484,8 @@ const handle = (request: Request, env: Environment) =>
       );
     }
     const session = yield* getSession(request);
+    const onboarding = yield* onboardingRoute(request, session);
+    if (onboarding) return onboarding;
     if (path === "/api/planning" || path.startsWith("/api/planning/"))
       return yield* planningRequest(request, session, env.DEMO_MODE);
     if (path === "/api/session/end" && request.method === "POST") {
