@@ -70,6 +70,17 @@ function LearnMore({ href, children }: { href: string; children: ReactNode }) {
     </a>
   );
 }
+function GitHubLink() {
+  return (
+    <a
+      className="magazine-github"
+      href="https://github.com/senguttuvang/OpenFinacle"
+      title="OpenFinacle repository · access required"
+    >
+      GitHub <ArrowUpRight size={16} aria-hidden="true" />
+    </a>
+  );
+}
 function Screen({
   id,
   alt,
@@ -116,6 +127,7 @@ export function ProductStory({ children }: { children?: ReactNode }) {
           <a href="#inside">What’s inside</a>
           <a href="#next">What’s next</a>
           <a href="#imagine">Build your version</a>
+          <GitHubLink />
         </nav>
       </header>
       <section className="magazine-cover" aria-labelledby="cover-title">
@@ -524,6 +536,7 @@ export function ProductStory({ children }: { children?: ReactNode }) {
             <a href="/roadmap">The road ahead</a>
             <a href="/build-story">The build story</a>
             <a href="/assessment">Technical detail & sources</a>
+            <GitHubLink />
           </nav>
         </div>
         <span className="magazine-footer-mark">
