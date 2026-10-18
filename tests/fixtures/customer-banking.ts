@@ -41,6 +41,7 @@ export interface Savings {
   status: { id: number; active: boolean };
   allowOverdraft: boolean;
   withdrawalFeeForTransfers: boolean;
+  subStatus?: { block?: boolean; blockDebit?: boolean; blockCredit?: boolean };
   summary: { availableBalance: number; accountBalance: number };
   transactions: Transaction[];
 }

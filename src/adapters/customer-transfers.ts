@@ -37,6 +37,7 @@ const savings = Schema.Struct({
   subStatus: Schema.optional(
     Schema.Struct({
       blockDebit: Schema.optional(Schema.Boolean),
+      blockCredit: Schema.optional(Schema.Boolean),
       block: Schema.optional(Schema.Boolean),
     }),
   ),
@@ -169,7 +170,8 @@ export const customerTransferLayer = Layer.effect(
           source.account.withdrawalFeeForTransfers ||
           source.account.subStatus?.blockDebit ||
           source.account.subStatus?.block ||
-          target.account.subStatus?.block
+          target.account.subStatus?.block ||
+          target.account.subStatus?.blockCredit
         )
           return yield* Effect.fail(conflict());
         return yield* minor(source.account.summary.availableBalance);
