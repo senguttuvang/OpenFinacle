@@ -83,6 +83,16 @@ test("owning HTTP router gates demo/authority/origin/scope and cached explicit s
   expect((await http("/customers")).status).toBe(200);
   env.DEMO_MODE = "false";
   expect((await http("/customers")).status).toBe(503);
+  expect((await http("/customers/payees")).status).toBe(503);
+  expect(
+    (
+      await http(
+        "/admin/demo/payees",
+        { action: "status", branchId: "branch", start: 1, limit: 1 },
+        { Authorization: "Bearer invented-customer-admin" },
+      )
+    ).status,
+  ).toBe(403);
   expect(
     (
       await http(
@@ -93,6 +103,61 @@ test("owning HTTP router gates demo/authority/origin/scope and cached explicit s
     ).status,
   ).toBe(403);
   env.DEMO_MODE = "true";
+  expect(
+    (
+      await http("/admin/demo/payees", {
+        action: "status",
+        branchId: "branch",
+        start: 1,
+        limit: 1,
+      })
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await http(
+        "/admin/demo/payees",
+        { action: "status", branchId: "branch", start: 1, limit: 11 },
+        { Authorization: "Bearer invented-customer-admin" },
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await http(
+        "/admin/demo/payees",
+        { action: "status", branchId: "branch", start: 1, limit: 1 },
+        { Authorization: "Bearer invented-customer-admin" },
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await http("/customers/payees", undefined, {
+        "X-Customer-Scope": "stale",
+      })
+    ).status,
+  ).toBe(409);
+  expect(
+    (
+      await http("/customers/payees", undefined, {
+        "X-Customer-Scope": "branch",
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await http(
+        "/customers/payees/review",
+        {
+          holderName: "Aadhya Iyer",
+          accountNumber: "SYN00000200",
+          ownerId: "other",
+        },
+        { "X-Customer-Scope": "branch" },
+      )
+    ).status,
+  ).toBe(400);
   expect((await http("/admin/demo/customers", {})).status).toBe(401);
   expect((await http("/session", { journey: "existing" })).status).toBe(400);
   expect(

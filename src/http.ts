@@ -41,6 +41,7 @@ import {
   runCustomerAdmin,
 } from "./application/customer-admin";
 import { customerDashboard } from "./application/customer-dashboard";
+import { runPayeeAdmin } from "./application/customer-payee-admin";
 import { registerOpenedCustomer } from "./application/customer-registry";
 import { previewDemoLoan } from "./application/demo-loan-quote";
 import { prepareScenario, scenarioBank } from "./application/demo-scenarios";
@@ -102,6 +103,7 @@ import {
   ReplacementTerms,
 } from "./domain/card-replacements";
 import { CardCommand } from "./domain/cards";
+import { PayeeAdminCommand } from "./domain/customer-payees";
 import { adviceText, DepositAdviceQuery } from "./domain/deposit-advice";
 import { DepositCommand, DepositTerms } from "./domain/deposits";
 import { LoanPilotCommand } from "./domain/loan-pilot";
@@ -280,6 +282,12 @@ const handle = (request: Request, env: Environment) =>
       }
       if (path === "/api/admin/demo/loans/setup" && request.method === "GET")
         return Response.json(yield* loanSetupStatus());
+      if (path === "/api/admin/demo/payees" && request.method === "POST")
+        return Response.json(
+          yield* runPayeeAdmin(
+            yield* parse(request, PayeeAdminCommand, false, true),
+          ),
+        );
       if (path === "/api/admin/demo/customers" && request.method === "POST")
         return Response.json(
           yield* runCustomerAdmin(

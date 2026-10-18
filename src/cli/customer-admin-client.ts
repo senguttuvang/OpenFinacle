@@ -6,7 +6,13 @@ import {
   loanAdminToken,
 } from "./loan-admin";
 
-export const customerAdminClient = (url: string, secrets: string) =>
+export const customerAdminClient = (
+  url: string,
+  secrets: string,
+  endpoint:
+    | "/api/admin/demo/customers"
+    | "/api/admin/demo/payees" = "/api/admin/demo/customers",
+) =>
   Effect.gen(function* () {
     const origin = yield* loanAdminOrigin(url);
     const revision = yield* loanAdminRevision();
@@ -58,7 +64,7 @@ export const customerAdminClient = (url: string, secrets: string) =>
       call: (body: unknown) =>
         Effect.gen(function* () {
           const request = yield* HttpClientRequest.post(
-            `${origin}/api/admin/demo/customers`,
+            `${origin}${endpoint}`,
           ).pipe(
             HttpClientRequest.setHeader("Authorization", `Bearer ${token}`),
             HttpClientRequest.bodyJson(body),

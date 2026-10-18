@@ -6,12 +6,14 @@ import {
   type Session,
 } from "../domain/banking";
 import type {
+  RegisteredCustomer,
   TransferInstruction,
   TransferOffer,
   TransferReceipt,
 } from "../domain/customer-registry";
 import { CustomerTransfers } from "../domain/customer-transfers";
 import { Store } from "../domain/ports";
+import { activePayee } from "./customer-payees";
 import { registeredCustomer, sessionCustomer } from "./customer-registry";
 
 const fail = (message: string, status = 409) =>
@@ -56,6 +58,7 @@ export const reviewCustomerTransfer = (
     )
       return yield* fail("Choose an amount between ₹0.01 and ₹1 crore.", 400);
     const sender = yield* sessionCustomer(session);
+    const payee = yield* activePayee(sender.id, recipientId);
     const recipient = yield* registeredCustomer(recipientId);
     const transfer = yield* CustomerTransfers;
     const available = yield* transfer.available(sender, recipient);
@@ -70,10 +73,12 @@ export const reviewCustomerTransfer = (
       amount_minor: amountMinor,
       payment_date: bankingDate(now),
       expires_at: now + 600000,
+      payee_id: payee.id,
+      payee_version: payee.version,
     };
     const store = yield* Store;
     yield* store.run(
-      "INSERT INTO customer_transfer_offers(id,bank_id,sender_id,recipient_id,amount_minor,payment_date,expires_at) VALUES(?,?,?,?,?,?,?)",
+      "INSERT INTO customer_transfer_offers(id,bank_id,sender_id,recipient_id,amount_minor,payment_date,expires_at,payee_id,payee_version) VALUES(?,?,?,?,?,?,?,?,?)",
       offer.id,
       offer.bank_id,
       offer.sender_id,
@@ -81,6 +86,8 @@ export const reviewCustomerTransfer = (
       offer.amount_minor,
       offer.payment_date,
       offer.expires_at,
+      payee.id,
+      payee.version,
     );
     return {
       offer,
@@ -108,6 +115,11 @@ const observedOutcome = (
   key: original.command.key,
   status,
   receipt,
+  message:
+    status === "failed"
+      ? (original.command.error ??
+        "This transfer was declined before completion. Review current payee details and funds before a new instruction.")
+      : undefined,
 });
 const loadOriginal = (session: Session, id: string) =>
   Effect.gen(function* () {
@@ -132,7 +144,12 @@ const loadOriginal = (session: Session, id: string) =>
     if (!offer)
       return yield* fail("Original customer transfer review not found.");
     const sender = yield* sessionCustomer(session);
-    const recipient = yield* registeredCustomer(offer.recipient_id);
+    const recipient = yield* store.one<RegisteredCustomer>(
+      "SELECT * FROM customers WHERE id=?",
+      offer.recipient_id,
+    );
+    if (!recipient)
+      return yield* fail("Original registered recipient not found.");
     if (
       offer.sender_id !== sender.id ||
       sender.branch_id !== recipient.branch_id ||
@@ -248,10 +265,17 @@ export const confirmCustomerTransfer = (
       return yield* inspectCustomerTransfer(session, existing.id);
     }
     const now = yield* Clock.currentTimeMillis;
-    if (offer.expires_at < now || offer.payment_date !== bankingDate(now))
-      return yield* fail(
-        "The review expired. Review current funds and recipient again.",
-      );
+    const policy = yield* Effect.gen(function* () {
+      const payee = yield* activePayee(sender.id, offer.recipient_id);
+      if (payee.id !== offer.payee_id || payee.version !== offer.payee_version)
+        return yield* fail(
+          "The saved payee changed. Review the transfer again.",
+        );
+      if (offer.expires_at < now || offer.payment_date !== bankingDate(now))
+        return yield* fail(
+          "The review expired. Review current funds and recipient again.",
+        );
+    }).pipe(Effect.either);
     const id = crypto.randomUUID();
     const payload = JSON.stringify({ customerOfferId: offer.id });
     yield* store.run(
@@ -274,14 +298,40 @@ export const confirmCustomerTransfer = (
         "Another confirmation started. Inspect the original instruction.",
       );
     const original = yield* loadOriginal(session, id);
-    const claimed = yield* store.run(
-      "UPDATE commands SET status='executing',approver='policy:registered-retail-transfer' WHERE id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM core_write_claims WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain'))",
-      id,
-      session.bank_id,
-      sender.account_id,
-    );
-    if (!claimed)
-      return yield* fail(
+    const decline = (message: string) =>
+      store
+        .run(
+          "UPDATE commands SET status='failed',error=? WHERE id=? AND status='pending'",
+          message,
+          id,
+        )
+        .pipe(
+          Effect.flatMap((changed) =>
+            changed === 1
+              ? Effect.succeed({
+                  ...observedOutcome(original, "failed", null),
+                  message,
+                })
+              : fail(
+                  "The original command outcome could not be retired safely. Inspect the original before a new instruction.",
+                ),
+          ),
+        );
+    if (policy._tag === "Left") return yield* decline(policy.left.message);
+    const claimed = yield* store
+      .run(
+        "UPDATE commands SET status='executing',approver='policy:registered-retail-transfer' WHERE id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM core_write_claims WHERE bank_id=? AND account_id=? AND status IN ('executing','uncertain'))",
+        id,
+        session.bank_id,
+        sender.account_id,
+      )
+      .pipe(Effect.either);
+    if (claimed._tag === "Left")
+      return yield* decline(
+        "Saved payee authorization changed before execution; no Core request was sent. Review the payee again.",
+      );
+    if (!claimed.right)
+      return yield* decline(
         "An original Core write is unresolved. Inspect it before confirming this transfer.",
       );
     yield* invalidate(original.instruction);

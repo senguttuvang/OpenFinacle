@@ -11,6 +11,8 @@ const installCustomers = async (
     lostResponse?: boolean;
     malformedResponse?: boolean;
     historyFailure?: boolean;
+    emptyPayees?: boolean;
+    stalePayee?: boolean;
   } = {},
 ) => {
   const first = savedWorkspace(),
@@ -45,6 +47,9 @@ const installCustomers = async (
   let posts = 0;
   let lostResponse = options.lostResponse ?? false;
   let lastOutcome: Record<string, unknown> | null = null;
+  let payeeSaved = !options.emptyPayees;
+  let stalePayee = options.stalePayee ?? false;
+  let reviews = 0;
   let offer: {
     id: string;
     bank_id: string;
@@ -83,6 +88,48 @@ const installCustomers = async (
         json: { error: "Choose a customer" },
       });
     if (path === "/api/dashboard") return route.fulfill({ json: selected });
+    const payeeList = () => ({
+      payees: payeeSaved
+        ? rows
+            .filter((row) => row.bank.id !== selected?.bank.id)
+            .map((row) => ({
+              ...row.customer,
+              id: `payee-${row.customer?.id}`,
+              recipient_id: row.customer?.id,
+            }))
+        : [],
+      count: payeeSaved ? 1 : 0,
+      maximum: 50,
+    });
+    if (path === "/api/customers/payees")
+      return route.fulfill({ json: payeeList() });
+    if (path === "/api/customers/payees/review") {
+      if (
+        input.holderName !== "Aadhya Iyer" ||
+        input.accountNumber !== "SYN-0200"
+      )
+        return route.fulfill({
+          status: 400,
+          json: { error: "Check the account number and holder name." },
+        });
+      return route.fulfill({
+        json: {
+          review_id: "review-payee-001",
+          expires_at: Date.now() + 600000,
+          display_name: "Aadhya Iyer",
+          reference: "SYN-002",
+          account_suffix: "0200",
+        },
+      });
+    }
+    if (path === "/api/customers/payees/confirm") {
+      payeeSaved = true;
+      return route.fulfill({ json: payeeList() });
+    }
+    if (path === "/api/customers/payees/remove") {
+      payeeSaved = false;
+      return route.fulfill({ json: payeeList() });
+    }
     if (path === "/api/customers/recipients")
       return route.fulfill({
         json: {
@@ -102,7 +149,7 @@ const installCustomers = async (
       return route.fulfill({ json: lastOutcome });
     if (path === "/api/customer-transfers/review") {
       offer = {
-        id: "offer-registered-123",
+        id: `offer-registered-${++reviews}`,
         bank_id: selected.bank.id,
         sender_id: selected.customer?.id ?? "",
         recipient_id: input.recipientId,
@@ -128,6 +175,19 @@ const installCustomers = async (
       expect(input.offerId).toBe(offer?.id);
       if (!offer || !selected.account?.summary)
         throw new Error("Missing reviewed transfer");
+      if (stalePayee) {
+        stalePayee = false;
+        lastOutcome = {
+          id: "declined-original",
+          bank_id: selected.bank.id,
+          offer_id: offer.id,
+          key: input.key,
+          status: "failed",
+          receipt: null,
+          message: "The saved payee changed. Review the transfer again.",
+        };
+        return route.fulfill({ json: lastOutcome });
+      }
       const recipient = rows.find(
         (row) => row.customer?.id === offer?.recipient_id,
       );
@@ -216,9 +276,8 @@ test("explicit picker, reviewed transfer, switch and reload show each customer's
   await page
     .getByRole("button", { name: "Pay & transfer", exact: true })
     .click();
-  await page
-    .getByLabel("Recipient", { exact: true })
-    .selectOption("sample-aadhya");
+  await page.getByRole("combobox", { name: "Recipient", exact: true }).click();
+  await page.getByRole("option", { name: "Aadhya Iyer · ending 0200" }).click();
   await page.getByLabel("Amount in INR").fill("1234.56");
   await page
     .getByRole("button", { name: "Review transfer", exact: true })
@@ -360,9 +419,8 @@ const prepareTransfer = async (page: Page) => {
   await page
     .getByRole("button", { name: "Pay & transfer", exact: true })
     .click();
-  await page
-    .getByLabel("Recipient", { exact: true })
-    .selectOption("sample-aadhya");
+  await page.getByRole("combobox", { name: "Recipient", exact: true }).click();
+  await page.getByRole("option", { name: "Aadhya Iyer · ending 0200" }).click();
   await page.getByLabel("Amount in INR").fill("12.34");
   await page
     .getByRole("button", { name: "Review transfer", exact: true })
@@ -447,4 +505,104 @@ test("history read failure blocks a fresh transfer rather than hiding an unresol
     page.getByRole("button", { name: "Review transfer", exact: true }),
   ).toHaveCount(0);
   expect(fixture.posts()).toBe(0);
+});
+
+test("empty future customer adds a known account by holder name, reviews it and removes saved payee without enumerating the directory", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page, { emptyPayees: true });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore existing customer" }).click();
+  await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+  await page
+    .getByRole("button", { name: "Pay & transfer", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Recipient", exact: true }),
+  ).toBeDisabled();
+  await page.getByText("Manage saved payees (0)", { exact: true }).click();
+  await expect(
+    page.getByText("No saved payees yet.", { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Account holder name", { exact: true })
+    .fill("Wrong holder");
+  await page
+    .locator(".customer-payees")
+    .getByLabel("Account number", { exact: true })
+    .fill("SYN-0200");
+  await page.getByRole("button", { name: "Review payee", exact: true }).click();
+  await expect(
+    page.locator(".customer-payees").getByRole("alert"),
+  ).toContainText("Check the account number and holder name");
+  await page
+    .getByLabel("Account holder name", { exact: true })
+    .fill("Aadhya Iyer");
+  await page.getByRole("button", { name: "Review payee", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Check payee details" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Recipient", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Confirm saved payee", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Recipient", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("combobox", { name: "Recipient", exact: true }).focus();
+  await page
+    .getByRole("combobox", { name: "Recipient", exact: true })
+    .press("ArrowDown");
+  await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(1);
+  await expect(page.getByRole("listbox").getByRole("option")).toHaveText(
+    "Aadhya Iyer · ending 0200",
+  );
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("combobox", { name: "Recipient", exact: true }),
+  ).toContainText("Aadhya Iyer");
+  await page
+    .getByRole("button", { name: "Remove Aadhya Iyer", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Recipient", exact: true }),
+  ).toBeDisabled();
+  expect(fixture.posts()).toBe(0);
+});
+
+test("definitive stale payee rejection clears only proven terminal original and permits a fresh reviewed instruction", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page, { stalePayee: true });
+  await prepareTransfer(page);
+  await page.getByRole("button", { name: "Confirm transfer once" }).click();
+  await expect(
+    page.getByText("The saved payee changed. Review the transfer again.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(0);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem(
+        "openfinacle:customer-transfer:synthetic-workspace",
+      ),
+    ),
+  ).toBeNull();
+  await page.getByRole("button", { name: "Inspect original transfer" }).click();
+  expect(fixture.posts()).toBe(0);
+  await page.getByRole("button", { name: "Start another transfer" }).click();
+  await page.getByRole("combobox", { name: "Recipient", exact: true }).click();
+  await page.getByRole("option", { name: "Aadhya Iyer · ending 0200" }).click();
+  await page.getByLabel("Amount in INR").fill("1.23");
+  await page
+    .getByRole("button", { name: "Review transfer", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Confirm transfer once" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Transfer completed" }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(1);
 });

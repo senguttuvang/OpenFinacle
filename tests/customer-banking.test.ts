@@ -9,6 +9,7 @@ import {
   executeCommand,
 } from "../src/application/banking";
 import { runCustomerAdmin } from "../src/application/customer-admin";
+import { confirmPayee, reviewPayee } from "../src/application/customer-payees";
 import {
   customerSeedStatus,
   inspectCustomerSeed,
@@ -154,6 +155,12 @@ const twoCustomers = async () => {
   await run(h, prepareCustomerManifest("branch"));
   await run(h, resumeCustomerSeed("branch", 1, 1));
   const rows = (await run(h, customerSeedStatus("branch"))).customers;
+  const customer = await run(h, registeredCustomer(rows[0].id));
+  const payee = await run(
+    h,
+    reviewPayee(session(), customer.display_name, customer.account_no),
+  );
+  await run(h, confirmPayee(session(), payee.review_id));
   return {
     h,
     source: session(),
@@ -303,7 +310,7 @@ test("money, role, recipient ownership and review expiry fail before dispatch", 
         Effect.flip,
       ),
     ),
-  ).toMatchObject({ status: 404 });
+  ).toMatchObject({ status: 409 });
   await run(
     h,
     registerCustomer({
