@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
+import { openWorkspace } from "./fixtures/navigation";
 import { choosePersona } from "./fixtures/persona";
 
 const start = async (page: Page) => {
@@ -63,17 +64,31 @@ test("existing portal tab saves actual D1 records, preserves banking navigation,
   await expect(
     page.getByRole("region", { name: "Household wealth and planning" }),
   ).toContainText(relationship);
-  for (const name of [
-    "My accounts",
-    "Pay & transfer",
-    "Statements",
-    "Service requests",
-    "Cards",
-    "Deposits",
-    "Loans",
-    "My profile",
+  const navigation = page.getByRole("navigation", {
+    name: "Banking navigation",
+    exact: true,
+  });
+  for (const [family, name] of [
+    ["Accounts", "Bank Accounts"],
+    ["Payment & Transfer", "Funds Transfer"],
+    ["Customer Service", "Service Request"],
+    ["Deposits", "Fixed Deposits"],
+    ["Loans", "My Loans"],
+    ["Overview", "Personal Details"],
   ]) {
-    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+    await navigation
+      .getByRole("button", { name: family, exact: true })
+      .press("ArrowRight");
+    const destination = navigation.getByRole("button", { name, exact: true });
+    await expect(destination).toBeVisible();
+    await destination.press("Escape");
+  }
+  for (const name of ["Statements", "Debit cards"]) {
+    await expect(
+      page
+        .getByRole("navigation", { name: "Workspace shortcuts", exact: true })
+        .getByRole("button", { name, exact: true }),
+    ).toBeVisible();
   }
   await setup(page);
   await dining(page);
@@ -82,7 +97,7 @@ test("existing portal tab saves actual D1 records, preserves banking navigation,
   await expect(
     page.getByText("Saved on the planning server", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My accounts", exact: true }).click();
+  await openWorkspace(page, "accounts");
   await expect(
     page.getByRole("heading", { level: 1, name: "My accounts", exact: true }),
   ).toBeVisible();
