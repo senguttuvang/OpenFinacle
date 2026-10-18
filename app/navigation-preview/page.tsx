@@ -12,6 +12,7 @@ export default function NavigationPreview() {
   const [view, setView] = useState<View>("overview");
   const [selected, setSelected] = useState<RetailMenuItem>();
   const [busy, setBusy] = useState(false);
+  const [revision, setRevision] = useState(0);
   return (
     <div className="navigation-preview">
       <header>
@@ -21,6 +22,7 @@ export default function NavigationPreview() {
       </header>
       <div className="navigation-preview-layout">
         <RetailNavigation
+          key={revision}
           view={view}
           activeItemId={selected?.id}
           busy={busy}
@@ -44,6 +46,12 @@ export default function NavigationPreview() {
             />{" "}
             Banking request in progress
           </label>
+          <button
+            type="button"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Restart menu preview
+          </button>
           {selected?.destination.kind === "unavailable" ? (
             <RetailUnavailable
               item={selected}

@@ -120,6 +120,105 @@ test("keyboard arrows, Escape, Tab, outside click and pointer leave dismiss safe
   await expect(accounts).toBeDisabled();
 });
 
+test("stationary pointer cannot replace a keyboard-opened family after layout changes", async ({
+  page,
+}, testInfo) => {
+  const events: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().startsWith("navigation-input:"))
+      events.push(message.text());
+  });
+  await page.goto("/navigation-preview");
+  const nav = page.getByRole("navigation", {
+    name: "Main navigation",
+    exact: true,
+  });
+  await nav.evaluate((element) => {
+    for (const kind of ["pointerenter", "pointermove", "keydown"])
+      element.addEventListener(
+        kind,
+        (event) => {
+          const target = event.target;
+          const family =
+            target instanceof Element
+              ? target
+                  .closest(".retail-menu-family")
+                  ?.getAttribute("data-family")
+              : null;
+          if (
+            family !== null &&
+            family !== undefined &&
+            (kind !== "pointerenter" ||
+              (target instanceof Element &&
+                target.matches(".retail-menu-family")))
+          )
+            console.info(
+              `navigation-input:${event.type}:${family}:${event instanceof PointerEvent ? `${event.clientX},${event.clientY}` : event instanceof KeyboardEvent ? event.key : ""}`,
+            );
+        },
+        true,
+      );
+  });
+  const service = nav.getByRole("button", {
+    name: "Customer Service",
+    exact: true,
+  });
+  const loans = nav.getByRole("button", { name: "Loans", exact: true });
+  const firstLoan = nav.getByRole("button", { name: "My Loans", exact: true });
+  try {
+    await service.hover();
+    const box = await service.boundingBox();
+    if (!box) throw Error("Visible customer service trigger required");
+    const cursor = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await loans.focus();
+    await loans.press("Enter");
+    await expect(loans).toBeFocused();
+    await expect(firstLoan).toBeVisible();
+    await nav.evaluate((element) => {
+      element.style.transform = "translateX(1800px)";
+    });
+    await page.mouse.move(cursor.x, cursor.y);
+    // Let the browser update hit testing and the authored leave timer, without
+    // generating another mouse move over the newly positioned rail.
+    await page.waitForTimeout(250);
+    await nav.evaluate((element) => {
+      element.style.transform = "";
+    });
+    await page.mouse.move(cursor.x, cursor.y);
+    await page.waitForTimeout(250);
+    expect(
+      events.filter((event) =>
+        event.startsWith("navigation-input:pointerenter:8:"),
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
+    await expect(loans).toHaveAttribute("aria-expanded", "true");
+    await expect(loans).toBeFocused();
+    await expect(firstLoan).toBeVisible();
+    await expect(service).toHaveAttribute("aria-expanded", "false");
+    // Role/customer transitions create a new rail while the pointer stays put.
+    await page
+      .getByRole("button", { name: "Restart menu preview", exact: true })
+      .focus();
+    await page.keyboard.press("Enter");
+    await loans.focus();
+    await loans.press("Enter");
+    await page.mouse.move(cursor.x, cursor.y);
+    await page.waitForTimeout(250);
+    await expect(loans).toHaveAttribute("aria-expanded", "true");
+    await expect(loans).toBeFocused();
+    await expect(firstLoan).toBeVisible();
+    await expect(service).toHaveAttribute("aria-expanded", "false");
+    await page.mouse.move(1200, 900);
+    await service.hover();
+    await expect(service).toHaveAttribute("aria-expanded", "true");
+  } finally {
+    await testInfo.attach("native-input-events", {
+      body: events.join("\n"),
+      contentType: "text/plain",
+    });
+  }
+});
+
 for (const size of ["mobile", "extra-large", "zoom-reflow"] as const) {
   test(`${size}: every branch reflows and remains reachable`, async ({
     page,
