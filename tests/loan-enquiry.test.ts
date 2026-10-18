@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect";
 import { loanEnquiryLayer } from "../src/adapters/loan-enquiry";
 import { BankingError } from "../src/domain/banking";
 import { LoanEnquiry, type LoanLookup } from "../src/domain/loan-engine";
+import { loanRepaymentMarker } from "../src/domain/loan-repayment-identity";
 import { loanStatementCsv } from "../src/domain/loan-statements";
 import { Core } from "../src/domain/ports";
 
@@ -261,10 +262,17 @@ const statementRaw = {
 };
 test("an explicit statement uses one owned read, preserves manual reversals and other Core types, and exports only normalized source facts", async () => {
   const disbursement = statementRaw.transactions[0];
+  const marker = loanRepaymentMarker("20000000-0000-4000-8000-000000000002");
   const h = harness({
     ...statementRaw,
     transactions: [
-      disbursement,
+      {
+        ...disbursement,
+        transfer: {
+          ...disbursement.transfer,
+          transferDescription: "Independently invented private transfer note",
+        },
+      },
       {
         ...disbursement,
         id: 32,
@@ -275,6 +283,13 @@ test("an explicit statement uses one owned read, preserves manual reversals and 
         interestPortion: 100,
         manuallyReversed: true,
         reversedOnDate: [2026, 10, 19],
+        transfer: {
+          ...basicTransfer,
+          transferDate: [2026, 10, 18],
+          transferAmount: 1100,
+          reversed: true,
+          transferDescription: marker,
+        },
       },
       {
         ...disbursement,
@@ -282,6 +297,7 @@ test("an explicit statement uses one owned read, preserves manual reversals and 
         type: { id: 77 },
         date: [2026, 10, 19],
         amount: 0,
+        transfer: null,
       },
     ],
   });
@@ -297,6 +313,15 @@ test("an explicit statement uses one owned read, preserves manual reversals and 
     reversed_on_date: "2026-10-19",
   });
   expect(result.statement?.repayment_minor).toBe(0);
+  expect(
+    result.statement?.transactions[0].transfer?.repayment_marker,
+  ).toBeNull();
+  expect(result.statement?.transactions[1].transfer?.repayment_marker).toBe(
+    marker,
+  );
+  expect(JSON.stringify(result.statement)).not.toContain(
+    "private transfer note",
+  );
   if (!result.statement) throw new Error("Expected normalized statement");
   const csv = loanStatementCsv(
     result.statement,
@@ -318,6 +343,12 @@ test("statement ownership, completeness, exact components, dates and Core summar
   const row = statementRaw.transactions[0];
   const invalid = [
     raw,
+    {
+      ...statementRaw,
+      transactions: [
+        { ...row, transfer: { ...basicTransfer, transferAmount: 11000 } },
+      ],
+    },
     { ...statementRaw, transactions: [{ ...row, type: { id: 2 }, amount: 0 }] },
     { ...statementRaw, transactions: [] },
     { ...statementRaw, transactions: [row, row] },

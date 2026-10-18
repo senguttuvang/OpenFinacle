@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { LoanRepaymentMarker } from "./loan-repayment-identity";
 import { LoanQuote } from "./loans";
 
 const minor = Schema.Number.pipe(Schema.int(), Schema.between(0, 100000000));
@@ -24,6 +25,17 @@ export const LoanStatement = Schema.Struct({
       overpayment_minor: minor,
       unrecognized_income_minor: minor,
       manually_reversed: Schema.Boolean,
+      transfer: Schema.optional(
+        Schema.NullOr(
+          Schema.Struct({
+            id,
+            amount_minor: minor,
+            date: LoanQuote.fields.expected_disbursement_date,
+            reversed: Schema.Boolean,
+            repayment_marker: Schema.NullOr(LoanRepaymentMarker),
+          }),
+        ),
+      ),
       reversed_on_date: Schema.NullOr(
         LoanQuote.fields.expected_disbursement_date,
       ),
@@ -44,6 +56,9 @@ export const LoanStatement = Schema.Struct({
         (row, index) =>
           row.type_id !== 3 &&
           (index === 0 || row.date >= statement.transactions[index - 1].date) &&
+          (!row.transfer ||
+            (row.transfer.amount_minor === row.amount_minor &&
+              row.transfer.date === row.date)) &&
           (row.reversed_on_date === null ||
             (row.manually_reversed && row.reversed_on_date >= row.date)) &&
           (row.type_id !== 2 ||
@@ -62,7 +77,9 @@ export const loanTransactionLabel = (type: number) =>
     ? "Disbursement"
     : type === 2
       ? "Repayment"
-      : `Other Core transaction (type ${type})`;
+      : type === 10
+        ? "Accrual"
+        : `Other Core transaction (type ${type})`;
 export const loanStatementCoverage =
   "Core customer transactions: invalid, contra and automatic reversal entries are excluded by Core; manual reversals remain visible. This is not the complete accounting ledger.";
 
