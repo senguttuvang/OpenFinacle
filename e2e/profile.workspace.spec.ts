@@ -157,6 +157,8 @@ test("unverified and missing profile responses show truthful errors and onboardi
     page.getByRole("heading", { name: "No opened-account profile yet" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Account opening", exact: true }),
+    page
+      .getByRole("main")
+      .getByRole("button", { name: "Account opening", exact: true }),
   ).toBeVisible();
 });
