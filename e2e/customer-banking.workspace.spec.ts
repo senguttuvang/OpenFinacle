@@ -499,6 +499,55 @@ const prepareTransfer = async (page: Page) => {
     .getByRole("button", { name: "Review transfer", exact: true })
     .click();
 };
+test("in-flight confirmation explains verification without prematurely requesting inspection", async ({
+  page,
+}) => {
+  const fixture = await installCustomers(page);
+  await prepareTransfer(page);
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/customer-transfers/confirm", async (route) => {
+    await held;
+    await route.fallback();
+  });
+  try {
+    await page.getByRole("button", { name: "Confirm transfer once" }).click();
+    await expect(
+      page.getByText(
+        "Sending your transfer once and verifying both accounts…",
+        {
+          exact: true,
+        },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/The original outcome needs inspection/),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Inspect original transfer" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Confirm transfer once" }),
+    ).toHaveCount(0);
+    expect(fixture.posts()).toBe(0);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem(
+          "openfinacle:customer-transfer:synthetic-workspace",
+        ),
+      ),
+    ).not.toBeNull();
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole("heading", { name: "Transfer completed" }),
+  ).toBeVisible();
+  expect(fixture.posts()).toBe(1);
+});
+
 for (const mode of ["funds", "null", "malformed"] as const)
   test(`${mode} review failure explains that no transfer was sent and never creates an original command`, async ({
     page,

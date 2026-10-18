@@ -39,6 +39,7 @@ export function CustomerTransfer({
   const [review, setReview] = useState<CustomerTransferReview | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyMessage, setBusyMessage] = useState("");
   const [error, setError] = useState("");
   const [locked, setLocked] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
@@ -99,8 +100,10 @@ export function CustomerTransfer({
   const perform = <T,>(
     task: Effect.Effect<T, { message: string }>,
     receive: (result: T) => void,
+    message = "Checking transfer details…",
   ) => {
     if (busy) return;
+    setBusyMessage(message);
     setBusy(true);
     setError("");
     void Effect.runPromise(
@@ -274,6 +277,7 @@ export function CustomerTransfer({
                       );
                     }),
                     receive,
+                    "Sending your transfer once and verifying both accounts…",
                   );
                 }}
               >
@@ -291,13 +295,13 @@ export function CustomerTransfer({
           )}
         </div>
       )}
-      {busy && <p role="status">Checking the original banking instruction…</p>}
+      {busy && <p role="status">{busyMessage}</p>}
       {error && (
         <p role="alert" className="notice error">
           {error}
         </p>
       )}
-      {locked && outcome?.status !== "posted" && (
+      {locked && !busy && outcome?.status !== "posted" && (
         <p role="status">
           {outcome?.status === "failed"
             ? (outcome.message ??
@@ -345,6 +349,7 @@ export function CustomerTransfer({
                 ),
               ),
               receive,
+              "Checking the original banking instruction…",
             )
           }
         >
