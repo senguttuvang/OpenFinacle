@@ -152,7 +152,9 @@ export const customerHarness = (filename = ":memory:") => {
                   message: "Owned transaction not found",
                   status: 404,
                 });
-              return structuredClone(transaction) as T;
+              const { transactionType: _type, ...detail } =
+                structuredClone(transaction);
+              return detail as T;
             }
             const saved =
               parts[1] === "external-id"

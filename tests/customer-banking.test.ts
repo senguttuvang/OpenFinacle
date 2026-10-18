@@ -709,6 +709,17 @@ test("funding proof requires owned transaction detail receipt and cash type when
     }),
   );
   expect(listed.transactions[0].paymentDetailData).toBeUndefined();
+  const detail = await run(
+    h,
+    Effect.gen(function* () {
+      const core = yield* Core;
+      return yield* core.request<Record<string, unknown>>(
+        "GET",
+        `savingsaccounts/200/transactions/${transaction.id}`,
+      );
+    }),
+  );
+  expect(detail.transactionType).toBeUndefined();
   expect(h.accounts.get(200)?.savingsProductId).toBe(1);
   expect(Object.hasOwn(h.accounts.get(200) ?? {}, "productId")).toBe(false);
   transaction.paymentDetailData.receiptNumber = "different-original";
