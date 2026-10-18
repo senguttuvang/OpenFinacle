@@ -48,6 +48,8 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
   const [uncertain, setUncertain] = useState(false);
   const [operationId, setOperationId] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const confirmationHeading = useRef<HTMLHeadingElement>(null);
+  const focusStep = draft?.status === "draft" ? step : -1;
   const locked = useRef(false);
   const apply = useCallback((saved: OnboardingDraft) => {
     setDraft(saved);
@@ -75,8 +77,11 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
     };
   }, [apply]);
   useEffect(() => {
-    if (step >= 0) heading.current?.focus();
-  }, [step]);
+    if (focusStep >= 0) heading.current?.focus();
+  }, [focusStep]);
+  useEffect(() => {
+    if (confirming) confirmationHeading.current?.focus();
+  }, [confirming]);
   const execute = <A, E extends { message: string }>(
     effect: Effect.Effect<A, E>,
     success: (value: A) => void,
@@ -144,7 +149,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
       execute(beginOnboarding(identity), apply, true);
     } catch {
       setError(
-        "Device storage is unavailable. Enable storage to preserve the original application identity before starting.",
+        "Device storage is unavailable. Enable it to start a resumable application.",
       );
     }
   };
@@ -154,7 +159,17 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
       setMessage("Saved status loaded");
     });
   const field = (
-    key: keyof OnboardingFields,
+    key:
+      | "name"
+      | "email"
+      | "phone"
+      | "birthDate"
+      | "address"
+      | "city"
+      | "pincode"
+      | "occupation"
+      | "nomineeName"
+      | "nomineeRelationship",
     label: string,
     options?: readonly string[],
     placeholder?: string,
@@ -165,7 +180,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
         <select
           id={`opening-${key}`}
           value={String(fields?.[key] ?? "")}
-          onChange={(event) => update(key, event.target.value as never)}
+          onChange={(event) => update(key, event.target.value)}
           aria-invalid={Boolean(errors[key])}
           aria-describedby={errors[key] ? `opening-${key}-error` : undefined}
         >
@@ -178,11 +193,19 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
         </select>
       ) : (
         <input
+          type={key === "email" ? "email" : "text"}
+          inputMode={
+            key === "pincode"
+              ? "numeric"
+              : key === "email"
+                ? "email"
+                : undefined
+          }
           id={`opening-${key}`}
           value={String(fields?.[key] ?? "")}
-          onChange={(event) => update(key, event.target.value as never)}
+          onChange={(event) => update(key, event.target.value)}
           placeholder={placeholder}
-          maxLength={key === "address" ? 145 : 80}
+          maxLength={key === "address" ? 145 : key === "pincode" ? 6 : 80}
           autoComplete="off"
           aria-invalid={Boolean(errors[key])}
           aria-describedby={errors[key] ? `opening-${key}-error` : undefined}
@@ -270,7 +293,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
           </h2>
           <p>
             {draft.account
-              ? "Your account is confirmed active in the synthetic banking Core. Continue to your account to start banking."
+              ? "Your synthetic savings account is active. Continue to your account to start banking."
               : draft.applicationStatus
                 ? "Your application is saved. A bank officer reviews the sample identity pack, then a separate approver authorises opening. Check status here to see the outcome."
                 : "The original submission outcome is not confirmed. The branch must inspect this application before any further instruction."}
@@ -389,8 +412,7 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                 <>
                   <h3>Everyday Savings</h3>
                   <p>
-                    One individual account in Indian rupees, using the
-                    configured demonstration savings product. No opening deposit
+                    One individual account in Indian rupees. No opening deposit
                     is collected in this journey.
                   </p>
                   <p>
@@ -476,7 +498,12 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                           event.target.value as "india" | "other",
                         )
                       }
-                      aria-describedby="tax-help"
+                      aria-invalid={Boolean(errors.taxResidency)}
+                      aria-describedby={
+                        errors.taxResidency
+                          ? "tax-help opening-tax-error"
+                          : "tax-help"
+                      }
                     >
                       <option value="india">India only</option>
                       <option value="other">
@@ -487,7 +514,10 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                       This sample journey supports India-only tax residency.
                     </p>
                     {errors.taxResidency && (
-                      <p className="onboarding-field-error">
+                      <p
+                        className="onboarding-field-error"
+                        id="opening-tax-error"
+                      >
                         {errors.taxResidency}
                       </p>
                     )}
@@ -553,9 +583,9 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                 <>
                   <h3>Sample identity and address pack</h3>
                   <p>
-                    The pack contains two generated text records marked
-                    fictional. There is no government identifier, photograph,
-                    upload or video call to provide.
+                    The pack contains two fictional sample records. There is no
+                    government identifier, photograph, upload or video call to
+                    provide.
                   </p>
                   <p>
                     A bank officer will review these sample records after
@@ -650,9 +680,11 @@ export function CustomerOnboarding({ onOpened }: { onOpened?: () => void }) {
                 className="onboarding-confirm"
                 aria-label="Confirm application submission"
               >
-                <h3>Send this application for review?</h3>
+                <h3 ref={confirmationHeading} tabIndex={-1}>
+                  Send this application for review?
+                </h3>
                 <p>
-                  Submitting reserves this application. The account opens only
+                  Your details will be sent for review. The account opens only
                   after branch review and independent approval.
                 </p>
                 <button
