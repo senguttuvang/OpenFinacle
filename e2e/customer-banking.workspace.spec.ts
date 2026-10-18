@@ -13,6 +13,7 @@ const installCustomers = async (
     historyFailure?: boolean;
     emptyPayees?: boolean;
     stalePayee?: boolean;
+    payeeCount?: number;
   } = {},
 ) => {
   const first = savedWorkspace(),
@@ -43,6 +44,28 @@ const installCustomers = async (
     transactions: [],
   };
   const rows: Dashboard[] = [first, second];
+  first.payeeSummary = {
+    count: options.emptyPayees ? 0 : (options.payeeCount ?? 1),
+    first: options.emptyPayees
+      ? null
+      : {
+          id: "payee-sample-aadhya",
+          recipient_id: "sample-aadhya",
+          display_name: "Aadhya Iyer",
+          account_suffix: "0200",
+        },
+    maximum: 50,
+  };
+  second.payeeSummary = {
+    count: 1,
+    first: {
+      id: "payee-legacy-mira",
+      recipient_id: "legacy-mira",
+      display_name: "Mira Krishnan",
+      account_suffix: "0001",
+    },
+    maximum: 50,
+  };
   let selected: Dashboard | undefined;
   let posts = 0;
   let lostResponse = options.lostResponse ?? false;
@@ -88,8 +111,8 @@ const installCustomers = async (
         json: { error: "Choose a customer" },
       });
     if (path === "/api/dashboard") return route.fulfill({ json: selected });
-    const payeeList = () => ({
-      payees: payeeSaved
+    const payeeList = () => {
+      const payees = payeeSaved
         ? rows
             .filter((row) => row.bank.id !== selected?.bank.id)
             .map((row) => ({
@@ -97,10 +120,18 @@ const installCustomers = async (
               id: `payee-${row.customer?.id}`,
               recipient_id: row.customer?.id,
             }))
-        : [],
-      count: payeeSaved ? 1 : 0,
-      maximum: 50,
-    });
+        : [];
+      if (payeeSaved)
+        for (let index = 1; index < (options.payeeCount ?? 1); index++)
+          payees.push({
+            id: `saved-payee-${index}`,
+            recipient_id: `registered-${index}`,
+            display_name: `Lakshmi Narayanan Synthetic ${index}`,
+            reference: `SYN-${index}`,
+            account_suffix: String(2100 + index),
+          });
+      return { payees, count: payees.length, maximum: 50 };
+    };
     if (path === "/api/customers/payees")
       return route.fulfill({ json: payeeList() });
     if (path === "/api/customers/payees/review") {
@@ -124,10 +155,23 @@ const installCustomers = async (
     }
     if (path === "/api/customers/payees/confirm") {
       payeeSaved = true;
+      if (selected)
+        selected.payeeSummary = {
+          count: 1,
+          first: {
+            id: "payee-sample-aadhya",
+            recipient_id: "sample-aadhya",
+            display_name: "Aadhya Iyer",
+            account_suffix: "0200",
+          },
+          maximum: 50,
+        };
       return route.fulfill({ json: payeeList() });
     }
     if (path === "/api/customers/payees/remove") {
       payeeSaved = false;
+      if (selected)
+        selected.payeeSummary = { count: 0, first: null, maximum: 50 };
       return route.fulfill({ json: payeeList() });
     }
     if (path === "/api/customers/recipients")
@@ -606,3 +650,79 @@ test("definitive stale payee rejection clears only proven terminal original and 
   ).toBeVisible();
   expect(fixture.posts()).toBe(1);
 });
+
+for (const width of [390, 720])
+  test(`saved payee dropdown reflows at ${width}px and 200percent text with fifteen choices`, async ({
+    page,
+  }) => {
+    await installCustomers(page, { payeeCount: 15 });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await page
+      .getByRole("button", { name: "Explore existing customer" })
+      .click();
+    await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+    await page
+      .getByRole("button", { name: "Pay & transfer", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Recipient", exact: true })
+      .press("ArrowDown");
+    await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(15);
+    expect(
+      await page
+        .getByRole("listbox")
+        .getByRole("option")
+        .evaluateAll((items) =>
+          items.every((item) => item.scrollWidth <= item.clientWidth + 1),
+        ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+    await expect(page.locator("#registered-recipient")).toHaveAttribute(
+      "data-state",
+      "open",
+    );
+    await page.screenshot({
+      path: `test-results/saved-payees-${width}-200percent.png`,
+      fullPage: false,
+    });
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("combobox", { name: "Recipient", exact: true }),
+    ).toBeFocused();
+  });
+
+for (const empty of [false, true])
+  test(`registered overview uses ${empty ? "empty add-payee CTA" : "actual saved payee summary"} without a legacy placeholder`, async ({
+    page,
+  }) => {
+    await installCustomers(page, { emptyPayees: empty });
+    await page.goto("/");
+    await page
+      .getByRole("button", { name: "Explore existing customer" })
+      .click();
+    await page.getByRole("button", { name: /Mira Krishnan.*SYN-001/ }).click();
+    const summary = page.getByRole("region", { name: "Saved payee summary" });
+    await expect(summary).toBeVisible();
+    await expect(summary).not.toContainText("Arjun");
+    if (empty) {
+      await expect(
+        summary.getByText("No saved payees yet", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        summary.getByRole("button", { name: "Add a payee", exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(summary).toContainText("Aadhya Iyer");
+      await expect(summary).toContainText(
+        "Account ending 0200 · 1 saved payee",
+      );
+    }
+  });

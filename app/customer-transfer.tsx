@@ -27,9 +27,11 @@ interface Outcome {
 export function CustomerTransfer({
   bankId,
   onPosted,
+  onPayeesChanged,
 }: {
   bankId: string;
   onPosted: () => void;
+  onPayeesChanged?: () => void;
 }) {
   const [payees, setPayees] = useState<PayeeList | null>(null);
   const [recipient, setRecipient] = useState("");
@@ -152,6 +154,7 @@ export function CustomerTransfer({
           onChanged={(value) => {
             setPayees(value);
             setRecipient("");
+            onPayeesChanged?.();
           }}
         />
       )}
@@ -360,6 +363,7 @@ export function CustomerTransfer({
               setOutcome(null);
               setLocked(false);
               setRecipient("");
+              onPayeesChanged?.();
               setAmount("");
             });
           }}
