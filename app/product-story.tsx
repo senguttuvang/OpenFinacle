@@ -123,6 +123,9 @@ export function ProductStory({ children }: { children?: ReactNode }) {
           OpenFinacle<span>.</span>
         </a>
         <nav aria-label="Explore OpenFinacle">
+          <a className="magazine-action" href="/demo">
+            Try the demo <ArrowRight size={18} aria-hidden="true" />
+          </a>
           <a href="#experience">The experience</a>
           <a href="#inside">What’s inside</a>
           <a href="#next">What’s next</a>
@@ -145,9 +148,14 @@ export function ProductStory({ children }: { children?: ReactNode }) {
             Meet OpenFinacle: a working prototype powered by Apache Fineract,
             built to explore what a more connected bank could feel like.
           </p>
-          <a className="magazine-cover-link" href="#experience">
-            See the experience <ArrowDown size={18} aria-hidden="true" />
-          </a>
+          <div className="magazine-entry-actions">
+            <a className="magazine-action" href="/demo">
+              Try the demo <ArrowRight size={18} aria-hidden="true" />
+            </a>
+            <a className="magazine-cover-link" href="#experience">
+              See the experience <ArrowDown size={18} aria-hidden="true" />
+            </a>
+          </div>
           <span className="magazine-prototype">
             <span /> Live prototype · Synthetic data & money
           </span>
@@ -219,6 +227,14 @@ export function ProductStory({ children }: { children?: ReactNode }) {
           <p>
             Open a relationship, follow a payment, find a saved payee. Then
             cross the counter and see how the branch helps the same customer.
+          </p>
+          <div className="magazine-entry-actions">
+            <a className="magazine-action" href="/demo">
+              Try the demo <ArrowRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <p className="magazine-entry-note">
+            Synthetic data & money. Choose a journey or resume your saved demo.
           </p>
           <LearnMore href="/capabilities">
             Explore the connected journeys
@@ -509,8 +525,7 @@ export function ProductStory({ children }: { children?: ReactNode }) {
         </div>
         {children ?? (
           <a className="magazine-action" href="/demo">
-            Open the banking workspace{" "}
-            <ArrowRight size={18} aria-hidden="true" />
+            Try the demo <ArrowRight size={18} aria-hidden="true" />
           </a>
         )}
       </section>

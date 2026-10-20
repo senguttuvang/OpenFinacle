@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { chooseOption } from "./fixtures/form-select";
 
-test("magazine leads with capabilities, one bounded comparison, real inner stories and late original journeys", async ({
+test("magazine offers prominent demo entry, one bounded comparison and real inner stories", async ({
   page,
 }) => {
   const writes: string[] = [];
@@ -29,11 +29,10 @@ test("magazine leads with capabilities, one bounded comparison, real inner stori
     /342 tests|verification|validation|proof ledger|evidence checkpoint/i,
   );
   await expect(
-    page.getByRole("link", {
-      name: "Open the banking workspace",
-      exact: true,
-    }),
-  ).not.toBeInViewport();
+    page
+      .locator(".magazine-header")
+      .getByRole("link", { name: "Try the demo" }),
+  ).toBeInViewport();
   await page.getByRole("button", { name: "Branch team", exact: true }).click();
   await expect(page.locator(".magazine-view-switch img")).toHaveAttribute(
     "src",
