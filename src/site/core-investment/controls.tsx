@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { type CorePlan, coreInvestment, formatWeeks, inr, usd } from "./model";
 
-export function PlanSlider({
+function PlanSlider({
   label,
   value,
   min,
