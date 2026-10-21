@@ -139,6 +139,7 @@ Deployment uses the repository-owned `bun run deploy` CLI. Schema changes requir
 
 | Need | Start here |
 | --- | --- |
+| Domain ownership and executable quality rules | [Domain architecture](docs/architecture.md) |
 | Core architecture, bootstrap and recovery | [Development and operations](docs/development-and-operations.md) |
 | Financial Core choice and boundaries | [Banking Core decision](specs/decisions/001-banking-core.md) |
 | Capability interpretation | [Capability map](docs/capabilities.md) |

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import type { Role } from "../../src/domain/banking";
+import type { Role } from "../../src/platform/banking-workspace/domain/banking";
 
 export async function choosePersona(page: Page, role: Role) {
   const label = {

@@ -75,3 +75,26 @@ _Add a brief overview of your project architecture_
 ## Conventions & Patterns
 
 _Add your project-specific conventions here_
+
+<!-- arch-contract-agent-contract:start -->
+
+## Architecture Validation
+
+After every implementation task, run:
+
+```bash
+bun run static:architecture
+```
+
+You must not finish a task while architecture violations are present.
+
+Rules:
+- Read docs/architecture.md and .agents/architecture.json before structural edits.
+- Keep app as thin framework route shells; product content lives in src/site and banking capabilities in src/platform.
+- Keep synthetic datasets and demo orchestration in src/demo; Apache Fineract remains the financial system of record.
+- Use declared capability public surfaces; keep domain independent from UI, adapters and demo datasets.
+- Keep authored source, styles and tests at or below 700 lines, route shells at or below 120 lines, and directories at or below 15 direct files.
+- Add purpose-specific capability folders only when real implementation requires them; do not spill implementation into roots or generic helper buckets.
+- Run bun run check and relevant browser checks; never skip gates or baseline violations to make a refactor pass.
+
+<!-- arch-contract-agent-contract:end -->

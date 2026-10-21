@@ -1,0 +1,7 @@
+{
+  "threshold": 1,
+  "minLines": 10,
+  "minTokens": 100,
+  "reporters": ["console"],
+  "ignore": ["**/node_modules/**", "**/.next/**", "**/out/**"]
+}

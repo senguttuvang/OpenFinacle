@@ -1,5 +1,5 @@
-import { bankingDate } from "../../src/domain/banking";
-import type { LoanDetail } from "../../src/domain/loan-workflow";
+import { bankingDate } from "../../src/platform/banking-workspace/domain/banking";
+import type { LoanDetail } from "../../src/platform/lending/domain/origination/loan-workflow";
 import { workflowQuote, workflowQuotedAt } from "./loan-workflow";
 
 // Independently invented view data. Running-Core evidence is recorded separately.

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import BankingPage from "../banking-page";
-import PlanningPage from "../planning/page";
+import BankingPage from "../../src/platform/banking-workspace/ui/banking-page";
+import PlanningPage from "../../src/platform/household-planning/ui/planning-page";
 import {
   exportedPortalPaths,
   planningSections,
   resolvePortalRoute,
-} from "../portal-routes";
+} from "../../src/platform/navigation/ui/portal-routes";
 
 export const dynamicParams = false;
 export function generateStaticParams() {

@@ -1,0 +1,479 @@
+.audit-event small {
+  font-size: 9px;
+  color: #a2ad9b;
+}
+
+.loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 25px;
+  color: var(--teal);
+}
+
+.loading p {
+  font-size: 13px;
+}
+
+.welcome {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f8f8f1;
+}
+
+.welcome-copy {
+  padding: 55px 10% 30px 13%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.welcome .brand {
+  margin-bottom: 90px;
+  font-size: 27px;
+}
+
+.welcome .brand-symbol {
+  background: #e7eddf;
+  border-color: #dde6d3;
+  width: 42px;
+  height: 42px;
+}
+
+.welcome-copy > .eyebrow {
+  font-size: 9px;
+  color: #7e9577;
+  letter-spacing: 0.18em;
+  margin-bottom: 23px;
+}
+
+.welcome h1 {
+  font-family: "Manrope Variable", sans-serif;
+  font-size: clamp(45px, 5vw, 76px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
+}
+
+.welcome-copy > p {
+  color: #7f8d77;
+  max-width: 390px;
+  font-size: 14px;
+  margin: 28px 0 32px;
+  line-height: 1.9;
+}
+
+.welcome-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 10px;
+  color: #93a084;
+  margin-top: 20px;
+}
+
+.welcome-footer {
+  font-size: 10px;
+  color: #91a083;
+  margin-top: auto;
+  padding-top: 80px;
+  display: flex;
+  gap: 30px;
+}
+
+.welcome-art {
+  background: #13283e;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbit {
+  position: absolute;
+  width: 650px;
+  height: 650px;
+  border: 1px solid #6e957530;
+  border-radius: 50%;
+  right: -220px;
+  top: -200px;
+  box-shadow:
+    0 0 0 90px #6e957508,
+    0 0 0 180px #6e957508;
+}
+
+.orbit-two {
+  width: 450px;
+  height: 450px;
+  left: -130px;
+  top: auto;
+  bottom: -190px;
+}
+
+.welcome-card {
+  width: 345px;
+  height: 220px;
+  position: relative;
+  background: #f3dfc2;
+  color: #294836;
+  border-radius: 15px;
+  padding: 25px 28px;
+  transform: rotate(-9deg);
+  z-index: 2;
+  border: 1px solid #f6e5cc;
+  box-shadow: 0 40px 90px #001e2f50;
+}
+
+.welcome-card .card-top {
+  font-size: 8px;
+  letter-spacing: 0.15em;
+}
+
+.welcome-card > p {
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 35px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 25px 0;
+}
+
+.card-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.floating-proof {
+  position: absolute;
+  top: calc(50% + 100px);
+  left: 18%;
+  padding: 16px 20px;
+  background: #edf3e6;
+  border: 1px solid #d5e2c9;
+  z-index: 3;
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  border-radius: 11px;
+  transform: rotate(3deg);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.proof-icon {
+  width: 33px;
+  height: 33px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #d9e8cd;
+  border-radius: 50%;
+  color: #66895b;
+}
+
+.floating-proof small {
+  display: block;
+  font-size: 9px;
+  color: #8b9a7b;
+  font-weight: 400;
+  margin-top: 5px;
+}
+
+.art-caption {
+  position: absolute;
+  bottom: 45px;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: #789b7a;
+}
+
+@media (min-width: 1550px) {
+  .content {
+    padding-top: 45px;
+  }
+  .overview-grid,
+  .lower-grid {
+    grid-template-columns: 1.45fr 1fr;
+  }
+  .balance-card {
+    min-height: 280px;
+  }
+  .balance-amount {
+    font-size: 46px;
+  }
+  .balance-label {
+    margin-top: 28px;
+  }
+  .panel {
+    padding: 30px;
+  }
+  .next-step {
+    padding: 29px;
+  }
+  .journey-step {
+    padding: 14px 0;
+  }
+  .activity {
+    padding: 20px 0;
+  }
+  .activity strong {
+    font-size: 12px;
+  }
+  .activity small {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 1150px) {
+  .sidebar {
+    width: 215px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .main-shell {
+    margin-left: 215px;
+    width: calc(100% - 215px);
+  }
+  .topbar {
+    padding: 0 26px;
+  }
+  .content {
+    padding: 28px 26px 0;
+  }
+  .sandbox-label {
+    display: none;
+  }
+  .form-grid {
+    grid-template-columns: 1.5fr 1fr;
+  }
+  .quick-item {
+    padding: 15px 12px;
+    gap: 8px;
+  }
+  .quick-item small {
+    font-size: 8px;
+  }
+  .quick-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .quick-icon svg {
+    width: 16px;
+  }
+  .balance-card {
+    padding: 23px;
+  }
+  .next-step {
+    padding: 23px;
+  }
+  .next-step h2 {
+    font-size: 25px;
+  }
+  .page-heading h1 {
+    font-size: 28px;
+  }
+  .panel {
+    padding: 21px;
+  }
+  .panel-heading p {
+    font-size: 9px;
+  }
+  .lower-grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+  .person {
+    padding-left: 12px;
+  }
+  .welcome-copy {
+    padding-left: 10%;
+  }
+  .welcome-card {
+    width: 300px;
+  }
+  .floating-proof {
+    left: 10%;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 190px;
+    padding: 25px 12px;
+  }
+  .sidebar .brand {
+    font-size: 19px;
+    gap: 6px;
+  }
+  .brand-symbol {
+    width: 30px;
+    height: 30px;
+  }
+  .brand-dot {
+    margin-left: -7px;
+  }
+  .nav-item {
+    font-size: 11px;
+    padding: 12px 10px;
+    gap: 9px;
+  }
+  .nav-item svg {
+    width: 17px;
+  }
+  .workspace-label {
+    font-size: 8px;
+    margin: 35px 7px 15px;
+  }
+  .demo-help {
+    padding: 13px 10px;
+  }
+  .main-shell {
+    margin-left: 190px;
+    width: calc(100% - 190px);
+  }
+  .topbar {
+    height: 72px;
+    padding: 0 22px;
+  }
+  .content {
+    padding: 26px 22px 0;
+  }
+  .overview-grid,
+  .lower-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .next-step {
+    min-height: 220px;
+  }
+  .next-step h2 {
+    max-width: none;
+  }
+  .next-step p {
+    max-width: none;
+  }
+  .overview-grid {
+    grid-template-columns: 1.15fr 1fr;
+    gap: 14px;
+  }
+  .balance-card {
+    min-height: 245px;
+    padding: 20px;
+  }
+  .balance-amount {
+    font-size: 31px;
+  }
+  .balance-actions {
+    gap: 7px;
+  }
+  .balance-actions button {
+    font-size: 8px;
+    padding: 8px;
+  }
+  .next-step {
+    padding: 20px;
+  }
+  .next-step h2 {
+    font-size: 22px;
+  }
+  .next-step .eyebrow {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+  .next-step p {
+    font-size: 10px;
+  }
+  .next-step .text-link {
+    font-size: 10px;
+  }
+  .quick-row {
+    gap: 9px;
+  }
+  .quick-item {
+    padding: 13px 10px;
+  }
+  .quick-item > svg {
+    display: none;
+  }
+  .quick-item small {
+    display: none;
+  }
+  .quick-item strong {
+    font-size: 9px;
+  }
+  .quick-icon {
+    width: 27px;
+    height: 27px;
+  }
+  .page-footer {
+    font-size: 8px;
+    flex-wrap: wrap;
+  }
+  .page-heading h1 {
+    font-size: 26px;
+  }
+  .page-heading p {
+    font-size: 11px;
+  }
+  .business-date {
+    display: none;
+  }
+  .info-panel {
+    padding: 25px;
+  }
+  .info-panel h2 br {
+    display: none;
+  }
+  .info-panel h2 {
+    font-size: 26px;
+  }
+  .welcome {
+    grid-template-columns: 1.1fr 1fr;
+  }
+  .welcome .brand {
+    margin-bottom: 70px;
+    font-size: 22px;
+  }
+  .welcome-card {
+    width: 255px;
+    height: 190px;
+    padding: 20px;
+  }
+  .welcome-card > p {
+    font-size: 29px;
+    margin: 22px 0;
+  }
+  .card-bottom {
+    font-size: 6px;
+  }
+  .floating-proof {
+    left: 8%;
+    padding: 12px;
+    font-size: 9px;
+  }
+  .floating-proof small {
+    font-size: 8px;
+  }
+  .welcome-copy > p {
+    font-size: 12px;
+  }
+  .welcome-note {
+    font-size: 8px;
+  }
+  .welcome-footer {
+    font-size: 8px;
+    gap: 14px;
+  }
+  .art-caption {
+    font-size: 6px;
+  }
+  .welcome .primary {
+    font-size: 12px;
+    padding: 15px;
+  }
+}

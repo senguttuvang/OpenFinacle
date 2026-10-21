@@ -1,7 +1,7 @@
 import {
   emptyOnboarding,
   type OnboardingFields,
-} from "../../src/domain/onboarding";
+} from "../../src/platform/account-opening/domain/onboarding";
 export const completedOnboarding: OnboardingFields = {
   ...emptyOnboarding,
   eligible: true,

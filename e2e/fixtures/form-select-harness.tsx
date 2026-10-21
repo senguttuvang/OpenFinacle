@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import "../../app/globals.css";
-import "../../app/banking-design.css";
-import { FormSelect } from "../../app/form-select";
+import "../../src/platform/banking-workspace/styles/globals.css";
+import "../../src/platform/banking-workspace/styles/banking-design.css";
+import { FormSelect } from "../../src/platform/form-controls/form-select";
 
 function Harness() {
   const [value, setValue] = useState("");

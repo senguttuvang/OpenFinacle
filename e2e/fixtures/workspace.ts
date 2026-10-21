@@ -1,4 +1,4 @@
-import type { Dashboard } from "../../src/domain/view";
+import type { Dashboard } from "../../src/platform/banking-workspace/domain/view";
 
 export const savedWorkspace = (): Dashboard => ({
   bank: {

@@ -1,9 +1,9 @@
 import { Database } from "bun:sqlite";
 import { Effect, Layer } from "effect";
-import { customerProvisionerLayer } from "../../src/adapters/customer-provisioning";
-import { customerTransferLayer } from "../../src/adapters/customer-transfers";
-import { BankingError } from "../../src/domain/banking";
-import { Core, Store } from "../../src/domain/ports";
+import { BankingError } from "../../src/platform/banking-workspace/domain/banking";
+import { Core, Store } from "../../src/platform/banking-workspace/domain/ports";
+import { customerProvisionerLayer } from "../../src/platform/customers/infrastructure/customer-provisioning";
+import { customerTransferLayer } from "../../src/platform/payments/infrastructure/customer-transfers";
 
 interface Client {
   id: number;

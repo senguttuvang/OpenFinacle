@@ -2,17 +2,37 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "app/**/*.tsx",
-    "src/worker.ts",
-    "src/cli/main.ts",
+    "src/runtime/http/worker.ts",
+    "src/operations/cli/main.ts",
     "tests/**/*.ts",
-    "e2e/**/*.ts"
+    "e2e/**/*.ts",
+    "src/demo/households/planning-preview.ts",
+    "src/operations/cli/planning-preview.ts",
+    "e2e/fixtures/form-select-harness.tsx"
   ],
-  "project": ["app/**/*.{ts,tsx}", "src/**/*.ts", "tests/**/*.ts"],
+  "project": [
+    "app/**/*.{ts,tsx}",
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "src/**/*.tsx",
+    "e2e/**/*.{ts,tsx}",
+    "config/**/*.{ts,mjs}"
+  ],
   "ignoreDependencies": [
     "@effect/schema",
     "@types/bun",
     "@cloudflare/workers-types",
     "@effect/platform-node"
   ],
-  "ignore": ["next-env.d.ts"]
+  "ignore": ["next-env.d.ts"],
+  "eslint": {
+    "config": ["config/quality/eslint.config.mjs"]
+  },
+  "playwright": {
+    "config": [
+      "playwright.config.ts",
+      "config/previews/*.playwright.config.ts",
+      "e2e/account-opening/onboarding.config.ts"
+    ]
+  }
 }
