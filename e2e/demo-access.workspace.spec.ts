@@ -75,6 +75,13 @@ for (const size of [
       });
     const header = page.locator(".magazine-header a[href='/demo']");
     await expect(header).toBeInViewport();
+    // Check before keyboard navigation or clicking can scroll the page.
+    if (size.text === 100) {
+      await expect(
+        page.locator(".magazine-cover a[href='/demo']"),
+      ).toBeInViewport({ ratio: 1 });
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    }
     // Reach the header action in the native tab order, without programmatic focus.
     for (let step = 0; step < 10; step++) {
       await page.keyboard.press("Tab");

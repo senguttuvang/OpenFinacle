@@ -140,14 +140,6 @@ export function ProductStory({ children }: { children?: ReactNode }) {
             <br />
             from <span>both sides.</span>
           </h1>
-          <p>
-            A customer’s everyday banking. A branch’s working day. One connected
-            story, from the first account to the next ambition.
-          </p>
-          <p className="magazine-cover-note">
-            Meet OpenFinacle: a working prototype powered by Apache Fineract,
-            built to explore what a more connected bank could feel like.
-          </p>
           <div className="magazine-entry-actions">
             <a className="magazine-action" href="/demo">
               Try the demo <ArrowRight size={18} aria-hidden="true" />
@@ -156,6 +148,14 @@ export function ProductStory({ children }: { children?: ReactNode }) {
               See the experience <ArrowDown size={18} aria-hidden="true" />
             </a>
           </div>
+          <p>
+            A customer’s everyday banking. A branch’s working day. One connected
+            story, from the first account to the next ambition.
+          </p>
+          <p className="magazine-cover-note">
+            Meet OpenFinacle: a working prototype powered by Apache Fineract,
+            built to explore what a more connected bank could feel like.
+          </p>
           <span className="magazine-prototype">
             <span /> Live prototype · Synthetic data & money
           </span>
