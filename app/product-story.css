@@ -121,6 +121,7 @@
 .magazine-header nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem 1.8rem;
   font-size: 0.95rem;
 }
@@ -177,6 +178,17 @@
   font-weight: 600;
   padding-block: 0.5rem;
 }
+.magazine-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+.magazine-feature-intro .magazine-entry-note {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--mag-muted);
+}
 .magazine-prototype {
   display: flex;
   align-items: center;
@@ -216,12 +228,20 @@
   max-width: 38ch;
 }
 .magazine-feature {
-  display: grid;
-  grid-template-columns: 0.72fr 1.28fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 4rem;
   background: #e9effb;
   padding-block: 4rem;
   align-items: center;
+}
+.magazine-feature-intro {
+  flex: 0.72 1 0;
+  min-width: min(100%, 22rem);
+}
+.magazine-view-switch {
+  flex: 1.28 1 0;
+  min-width: min(100%, 32rem);
 }
 .magazine-feature-intro h2 span {
   color: #174abb;
@@ -855,10 +875,22 @@
   background: #172b4d;
   border-radius: 6px;
   justify-self: start;
+  min-height: 44px;
+  font-weight: 600;
+}
+.magazine .magazine-action svg {
+  flex-shrink: 0;
 }
 .magazine .magazine-action {
   color: #fff;
   text-decoration: none;
+}
+.magazine-header .magazine-action {
+  padding: 0.65rem 0.9rem;
+}
+.magazine .magazine-action:hover {
+  background: var(--mag-action);
+  text-decoration: underline;
 }
 .magazine .evidence-journeys {
   display: grid;
@@ -1043,6 +1075,7 @@
     grid-column: 1;
   }
   .magazine-header nav {
+    width: 100%;
     gap: 0.25rem 1.2rem;
     font-size: 0.9rem;
   }
