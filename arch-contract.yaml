@@ -1,0 +1,59 @@
+version: 1
+project:
+  name: openfinacle
+  packageManager: bun
+paths:
+  include: [app, src]
+layers:
+  - name: domain
+    match: ['src/platform/**/domain/**/*.ts']
+  - name: application
+    match: ['src/platform/**/application/**/*.ts']
+  - name: ui
+    match: ['src/platform/**/ui/**/*.{ts,tsx}', 'src/platform/form-controls/*.{ts,tsx}']
+  - name: infrastructure
+    match: ['src/platform/**/infrastructure/**/*.ts']
+  - name: demo-data
+    match: ['src/demo/households/planning-fixtures.ts', 'src/demo/households/planning-portal-fixture.ts']
+  - name: demo-runtime
+    match: ['src/demo/**/*.ts', 'src/demo/**/*.tsx']
+  - name: site
+    match: ['src/site/**/*.{ts,tsx}']
+  - name: runtime
+    match: ['src/runtime/**/*.ts']
+  - name: operations
+    match: ['src/operations/**/*.ts']
+  - name: routes
+    match: ['app/**/*.{ts,tsx}']
+ruleset:
+  domain: { mayDependOn: [domain] }
+  application: { mayDependOn: [domain, application, demo-data, demo-runtime] }
+  ui: { mayDependOn: [domain, ui, site, demo-data] }
+  infrastructure: { mayDependOn: [domain, infrastructure, runtime] }
+  demo-data: { mayDependOn: [domain, demo-data] }
+  demo-runtime: { mayDependOn: [domain, application, demo-data, demo-runtime, ui, runtime] }
+  site: { mayDependOn: [site, domain, ui] }
+  runtime: { mayDependOn: [runtime, domain, application, infrastructure, demo-data, demo-runtime] }
+  operations: { mayDependOn: [operations, domain, application, infrastructure, runtime, demo-runtime, demo-data] }
+  routes: { mayDependOn: [routes, site, ui, demo-runtime] }
+expectations:
+  - name: domain-independent-of-frameworks
+    expect: { layer: domain }
+    to:
+      notDependOnPackages: [next, 'next/*', react, 'react-dom', '@cloudflare/*', postgres, 'node:*', 'bun:*']
+  - name: application-independent-of-adapters
+    expect: { layer: application }
+    to:
+      notDependOnPackages: [next, 'next/*', react, 'react-dom', '@cloudflare/*', postgres]
+agent:
+  enabled: true
+  validationCommand: bun run static:architecture
+  updateDocs: [AGENTS.md, CLAUDE.md]
+  instructions:
+    - Read docs/architecture.md and .agents/architecture.json before structural edits.
+    - Keep app as thin framework route shells; product content lives in src/site and banking capabilities in src/platform.
+    - Keep synthetic datasets and demo orchestration in src/demo; Apache Fineract remains the financial system of record.
+    - Use declared capability public surfaces; keep domain independent from UI, adapters and demo datasets.
+    - Keep authored source, styles and tests at or below 700 lines, route shells at or below 120 lines, and directories at or below 15 direct files.
+    - Add purpose-specific capability folders only when real implementation requires them; do not spill implementation into roots or generic helper buckets.
+    - Run bun run check and relevant browser checks; never skip gates or baseline violations to make a refactor pass.

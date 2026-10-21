@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "openfinacle",
   "account_id": "f7861b73f1ebb5f7d13f3329200fc639",
-  "main": "src/worker.ts",
+  "main": "src/runtime/http/worker.ts",
   "compatibility_date": "2026-10-15",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [{ "pattern": "openfinacle.plts.in", "custom_domain": true }],

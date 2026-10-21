@@ -7,5 +7,5 @@
     "radius": "16px",
     "primaryControlHeight": "50px"
   },
-  "source": "app/banking-design.css and app/banking-surfaces.css"
+  "source": "src/platform/banking-workspace/styles/banking-design.css and src/platform/banking-workspace/styles/banking-surfaces.css"
 }

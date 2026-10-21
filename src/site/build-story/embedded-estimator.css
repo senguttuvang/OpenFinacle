@@ -1,0 +1,76 @@
+/* The primary estimator stays within the existing software-building section. */
+.magazine .magazine-imagine {
+  padding: 24px 32px 32px;
+  background: var(--paper);
+}
+.magazine-estimator-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.magazine .magazine-estimator-heading h2 {
+  font-size: 1.5rem;
+  margin: 0;
+  max-width: none;
+}
+.magazine-estimator-heading .magazine-link {
+  font-size: 0.875rem;
+}
+.magazine .est-embedded {
+  padding: 0;
+  max-width: none;
+}
+.est-embedded .est-title {
+  display: none;
+}
+/* Reset magazine prose spacing only inside this embedded operating tool. */
+.magazine .build-estimator p {
+  margin: 0;
+  max-width: none;
+  line-height: 1.35;
+}
+.magazine .build-estimator h2 {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  margin: 0;
+  max-width: none;
+}
+.magazine .build-estimator h3 {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  margin: 8px 0 12px;
+  max-width: none;
+}
+.magazine .build-estimator .est-reference p + p,
+.magazine .build-estimator .est-api {
+  margin-top: 12px;
+}
+.magazine .build-estimator .est-total + p,
+.magazine .build-estimator .est-insight p {
+  margin-top: 4px;
+}
+.magazine .build-estimator .est-mix {
+  margin-bottom: 8px;
+}
+.magazine .build-estimator .est-scope p + p,
+.magazine .build-estimator .est-scope > div:first-child p {
+  margin-top: 6px;
+}
+.magazine .build-estimator .est-method p,
+.magazine .build-estimator .est-completion p {
+  margin: 12px 0;
+}
+.magazine .build-estimator .est-total {
+  font-weight: 700;
+}
+.magazine-article #explorer {
+  max-width: none;
+}
+@media (max-width: 900px) {
+  .magazine .magazine-imagine {
+    padding: 20px;
+  }
+}

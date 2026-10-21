@@ -9,10 +9,16 @@
       "*.json",
       "*.ts",
       "!bun.lock",
-      "!next-env.d.ts"
+      "!next-env.d.ts",
+      "config/**",
+      ".agents/**"
     ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -20,12 +26,17 @@
       "a11y": {
         "noLabelWithoutControl": {
           "level": "error",
-          "options": { "inputComponents": ["FormSelect"] }
+          "options": {
+            "inputComponents": ["FormSelect"]
+          }
         }
       }
     }
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
   }
 }

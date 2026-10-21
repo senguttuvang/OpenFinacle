@@ -1,0 +1,128 @@
+@media (max-width: 1000px) {
+  .evidence-opening {
+    gap: 2rem;
+  }
+  .evidence-summary {
+    grid-template-columns: 1.3fr 1fr;
+    gap: 2rem;
+  }
+  .evidence-verdict {
+    padding-left: 1.5rem;
+  }
+  .evidence-journeys {
+    grid-template-columns: 1fr;
+  }
+  .evidence-journeys button {
+    width: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .evidence-header {
+    flex-wrap: wrap;
+  }
+  .evidence-opening,
+  .evidence-summary,
+  .evidence-section-heading,
+  .evidence-scope-grid,
+  .evidence-proof-grid,
+  .evidence-effort-context,
+  .evidence-model,
+  .evidence-planning-grid,
+  .evidence-source-register {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .evidence-overview {
+    padding-block: 2rem;
+  }
+  .evidence-verdict {
+    border-left: 0;
+    border-top: 1px solid #526a8c;
+    padding: 1.5rem 0 0;
+  }
+  .evidence-section {
+    padding-block: 2.5rem;
+  }
+  .evidence-nav {
+    gap: 0.15rem 1rem;
+    font-size: 0.9rem;
+  }
+  .evidence-method dl > div {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .evidence-architecture {
+    flex-direction: column;
+    align-items: start;
+  }
+  .evidence-architecture > svg {
+    transform: rotate(90deg);
+  }
+  .evidence-model {
+    padding: 1.25rem;
+  }
+  .story-calculation dl > div {
+    flex-wrap: wrap;
+  }
+  .story-calculation dd {
+    text-align: left;
+  }
+  .evidence-agent-flow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .story-gallery {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .evidence-matrix tbody th {
+    min-width: 17rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .evidence-agent-flow,
+  .story-gallery,
+  .evidence-input-pair {
+    grid-template-columns: 1fr;
+  }
+  .evidence-transfer {
+    padding: 1.25rem;
+  }
+  .evidence-transfer-pair {
+    gap: 0.5rem;
+  }
+  .evidence-transfer-pair strong {
+    font-size: 2.2rem;
+  }
+  .evidence-bar-row > strong {
+    grid-column: 1;
+    grid-row: 2;
+    text-align: left;
+  }
+  .evidence-bar-track {
+    grid-row: 3;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .evidence-stacked {
+    animation: evidence-reveal 500ms ease-out;
+    transform-origin: left;
+  }
+  @keyframes evidence-reveal {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+}
+
+.evidence-mode {
+  border: 0;
+  padding: 0;
+  margin-inline: 0;
+  min-width: 0;
+}

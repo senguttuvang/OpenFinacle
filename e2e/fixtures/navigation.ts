@@ -1,5 +1,8 @@
 import { expect, type Page } from "@playwright/test";
-import { type View, viewLabels } from "../../app/navigation";
+import {
+  type View,
+  viewLabels,
+} from "../../src/platform/navigation/ui/navigation";
 
 const sourceTargets: Partial<Record<View, readonly [string, string]>> = {
   overview: ["Overview", "My View"],

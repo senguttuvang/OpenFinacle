@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "project": "OpenFinacle",
+  "entryPoints": {
+    "instructions": "AGENTS.md",
+    "architecture": "docs/architecture.md",
+    "ownership": ".agents/architecture.json",
+    "dependencies": "arch-contract.yaml"
+  },
+  "areas": {
+    "publicProductSite": "src/site",
+    "bankingCapabilities": "src/platform",
+    "syntheticDemonstration": "src/demo",
+    "runtimeAdapters": "src/runtime",
+    "operations": "src/operations",
+    "frameworkRoutes": "app"
+  },
+  "verification": {
+    "architecture": "bun run static:architecture",
+    "all": "bun run check",
+    "browser": "bun run test:e2e"
+  }
+}

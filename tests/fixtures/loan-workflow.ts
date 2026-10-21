@@ -1,8 +1,8 @@
 import type {
   LoanWriteInstruction,
   LoanWriteResult,
-} from "../../src/domain/loan-writing";
-import type { LoanQuote } from "../../src/domain/loans";
+} from "../../src/platform/lending/domain/origination/loan-writing";
+import type { LoanQuote } from "../../src/platform/lending/domain/origination/loans";
 
 export const workflowQuotedAt = Date.parse("2026-10-17T09:00:00Z");
 export const workflowQuote: LoanQuote = {

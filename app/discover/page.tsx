@@ -1,13 +1,1 @@
-import { ProductStory } from "../product-story";
-export const metadata = {
-  title: "OpenFinacle — Banking, seen from both sides",
-  description:
-    "Explore connected banking journeys, household planning and the next chapter of a banking prototype.",
-};
-export default function DiscoverPage() {
-  return (
-    <main className="product-landing">
-      <ProductStory />
-    </main>
-  );
-}
+export { default, metadata } from "../../src/site/discover/discover-page";

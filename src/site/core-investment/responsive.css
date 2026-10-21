@@ -1,0 +1,135 @@
+@media (max-width: 1150px) {
+  .core-review {
+    padding-inline: 28px;
+  }
+  .ci-editorial > div {
+    padding: 24px;
+  }
+  .ci-ledger-body {
+    gap: 28px;
+    grid-template-columns: 1fr 270px;
+  }
+  .ci-workbench {
+    grid-template-columns: 300px 1fr;
+  }
+  .ci-workbench-result {
+    padding: 28px;
+  }
+  .ci-workbench-total > strong {
+    font-size: 3rem;
+  }
+}
+@media (max-width: 900px) {
+  .ci-page-intro,
+  .ci-common-scope,
+  .ci-editorial,
+  .ci-ledger-body,
+  .ci-workbench,
+  .ci-timeline-body,
+  .ci-decision-top,
+  .ci-decision-bottom,
+  .ci-evidence-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .ci-page-intro h1 {
+    font-size: 2.75rem;
+  }
+  .ci-ledger-title,
+  .ci-timeline > header {
+    display: block;
+  }
+  .ci-ledger-title p,
+  .ci-timeline > header p {
+    margin-top: 16px;
+  }
+  .ci-ledger-body > .ci-controls {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .ci-editorial {
+    gap: 0;
+  }
+  .ci-controls-compact {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+  .ci-controls-compact .ci-account-sliders {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .ci-controls-compact .ci-presets,
+  .ci-controls-compact .ci-tools-line {
+    grid-column: auto;
+  }
+  .ci-decision-price {
+    justify-content: start;
+  }
+}
+@media (max-width: 600px) {
+  .core-review {
+    padding: 20px 20px 40px;
+  }
+  .core-review h1 {
+    font-size: 2.25rem;
+  }
+  .core-review h3 {
+    font-size: 1.75rem;
+  }
+  .ci-page-header {
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .ci-page-intro {
+    margin-bottom: 24px;
+  }
+  .ci-common-scope {
+    gap: 16px;
+  }
+  .ci-variant-header {
+    align-items: start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .ci-review-section {
+    padding: 32px 0;
+  }
+  .ci-ledger,
+  .ci-timeline,
+  .ci-decision {
+    padding: 24px 20px;
+  }
+  .ci-ledger table {
+    min-width: 540px;
+  }
+  .ci-workbench aside,
+  .ci-workbench-result {
+    padding: 24px;
+  }
+  .ci-workbench-total {
+    padding-top: 28px;
+  }
+  .ci-workbench-total > strong {
+    font-size: 2.25rem;
+  }
+  .ci-workbench-stats {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ci-controls-compact {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .ci-controls-compact .ci-account-sliders,
+  .ci-controls-compact .ci-extra {
+    grid-column: 1;
+  }
+  .ci-milestones {
+    padding-left: 16px;
+  }
+  .ci-milestones li {
+    padding-left: 4px;
+  }
+  .ci-decision-price > strong {
+    font-size: 2rem;
+  }
+}

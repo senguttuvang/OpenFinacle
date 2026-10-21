@@ -39,5 +39,5 @@ Next.js owns both interactive experiences. A CMS could later manage help, produc
 - Supplied UpNote export: `UpNote_2026-10-15_22-08-44`, four Markdown notes. Original material remains outside the repository.
 - [Fineract 1.15.0 source](https://github.com/apache/fineract/tree/1.15.0), pinned commit `d5636847ac556c30b437254c353f05526d172b97`.
 - [API/UI security boundary](https://github.com/apache/fineract/blob/1.15.0/SECURITY.md).
-- Repository implementation: `src/application/banking.ts`, `src/http.ts`, `app/page.tsx`.
-- Behavioral proof: `tests/banking.test.ts` and the deployed-system journey in `e2e/everyday.spec.ts`. Live verification results belong in the deployment evidence; source availability alone is not successful execution.
+- Repository implementation: `src/platform/banking-workspace/application/banking.ts`, `src/runtime/http/http.ts`, `src/platform/banking-workspace/ui/banking-page.tsx`.
+- Behavioral proof: `tests/banking-workspace/banking.test.ts` and the deployed-system journey in `e2e/banking-workspace/everyday.spec.ts`. Live verification results belong in the deployment evidence; source availability alone is not successful execution.

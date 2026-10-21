@@ -1,8 +1,8 @@
 "use client";
 import { Effect } from "effect";
 import { useEffect } from "react";
-import { reportBrowserException } from "./browser-errors";
-import { initializeTelemetry } from "./telemetry";
+import { reportBrowserException } from "../src/platform/observability/ui/browser-errors";
+import { initializeTelemetry } from "../src/platform/observability/ui/telemetry";
 export default function GlobalError({
   error,
   reset,
