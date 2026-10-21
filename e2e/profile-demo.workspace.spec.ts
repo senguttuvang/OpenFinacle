@@ -80,14 +80,28 @@ test("public website stays public with an active demo; entry deliberately resume
   page,
 }) => {
   const fixture = await install(page);
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Banking, seen from both sides." }),
-  ).toBeVisible();
-  expect(fixture.reads).toEqual([]);
-  await page.locator("#demo-entry a").click();
-  await expect(page).toHaveURL(/\/demo$/);
-  await expect(profile(page)).toBeVisible();
+  for (const path of ["/", "/discover"]) {
+    for (const entry of [
+      ".magazine-header",
+      ".magazine-cover",
+      "#experience",
+      "#demo-entry",
+    ]) {
+      await page.goto(path);
+      await expect(
+        page.getByRole("heading", { name: "Banking, seen from both sides." }),
+      ).toBeVisible();
+      expect(fixture.reads).toEqual([]);
+      await page
+        .locator(entry)
+        .getByRole("link", { name: "Try the demo" })
+        .click();
+      await expect(page).toHaveURL(/\/demo$/);
+      await expect(profile(page)).toBeVisible();
+      expect(fixture.writes).toEqual([]);
+      fixture.reads.length = 0;
+    }
+  }
   await profile(page).focus();
   await page.keyboard.press("ArrowDown");
   await expect(

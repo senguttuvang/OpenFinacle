@@ -499,4 +499,16 @@
   background: #172b4d;
   border-radius: 6px;
   justify-self: start;
+  min-height: 44px;
+  font-weight: 600;
+}
+.magazine .magazine-action svg {
+  flex-shrink: 0;
+}
+.magazine-header .magazine-action {
+  padding: 0.65rem 0.9rem;
+}
+.magazine .magazine-action:hover {
+  background: var(--mag-action);
+  text-decoration: underline;
 }
