@@ -2,6 +2,7 @@
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { FormSelect } from "../../platform/form-controls/form-select";
+import { BuildEstimator } from "../build-estimator/build-estimator";
 import {
   type ComparisonInput,
   calculateHistory,
@@ -30,6 +31,10 @@ import {
 } from "./investment-controls";
 
 export function BuildRecipe() {
+  return <BuildEstimator embedded />;
+}
+
+export function DetailedBuildRecipe() {
   const [input, setInput] = useState(defaultComparison);
   const [a, setA] = useState(() => defaultTeam("A")),
     [b, setB] = useState(() => defaultTeam("B"));

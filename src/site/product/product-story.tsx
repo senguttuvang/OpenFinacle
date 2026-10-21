@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Network,
   ShieldCheck,
-  Sparkles,
   Users,
   Wallet,
 } from "lucide-react";
@@ -177,31 +176,11 @@ export function ProductStory({ children }: { children?: ReactNode }) {
         className="magazine-imagine"
         aria-labelledby="imagine-title"
       >
-        <div className="magazine-imagine-heading">
-          <div>
-            <h2 id="imagine-title">
-              Decades of banking.
-              <br />
-              <span>Ten weeks to build.</span>
-            </h2>
-            <p>
-              Finacle’s product journey. A new human-led team. A new AI-first
-              team. Shape the talent, scope and budget, then explore what each
-              could deliver in ten weeks. The judgment is yours.
-            </p>
-          </div>
-          <div className="magazine-build-note">
-            <Sparkles aria-hidden="true" />
-            <p>
-              The founder reports a week and about 500M AI tokens to reach this
-              prototype, building on an existing open-source core. The
-              comparison below explores different scopes and people with
-              explicit assumptions.
-            </p>
-            <LearnMore href="/build-story">
-              The story behind the build
-            </LearnMore>
-          </div>
+        <div className="magazine-estimator-heading">
+          <h2 id="imagine-title">Three starting points. One scope in view.</h2>
+          <LearnMore href="/build-story#explorer">
+            Advanced investment explorer
+          </LearnMore>
         </div>
         <BuildRecipe />
       </section>

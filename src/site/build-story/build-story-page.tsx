@@ -1,5 +1,6 @@
 import { ProductArticle } from "../product/product-article";
 import { ProductTable } from "../product/product-table";
+import { DetailedBuildRecipe } from "./build-recipe";
 import {
   defaultHistory,
   historicalSources,
@@ -17,6 +18,19 @@ export default function BuildPage() {
       title="Decades of investment. Two teams starting today."
       intro="Compare a mature product’s history with new human-led and AI-first teams. Published milestones and editable scenarios have different evidence behind them."
     >
+      <section id="explorer">
+        <h2>Advanced investment explorer</h2>
+        <p>
+          Explore custom capabilities, all six team compositions, historical
+          scenarios and optional impact. This independent scenario starts from
+          its own defaults; it does not inherit changes made in the compact
+          comparison.
+        </p>
+        <p>
+          <a href="/discover#imagine">Return to the compact comparison ↗</a>
+        </p>
+        <DetailedBuildRecipe />
+      </section>
       <section id="history">
         <h2>What the historical record establishes.</h2>
         <p>

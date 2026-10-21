@@ -22,7 +22,11 @@
     "playwright.config.ts",
     "tsconfig.json",
     "wrangler.jsonc",
-    ".git"
+    ".git",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
   ],
   "rootDirectories": [
     ".agents",
@@ -70,7 +74,9 @@
     "capabilities",
     "discover",
     "product",
-    "roadmap"
+    "roadmap",
+    "build-estimator",
+    "core-investment"
   ],
   "sourceAreas": ["demo", "operations", "platform", "runtime", "site"],
   "forbiddenDirectoryNames": [

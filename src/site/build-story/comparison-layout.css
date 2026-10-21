@@ -1,0 +1,697 @@
+.team-comparison {
+  min-width: 0;
+}
+.team-comparison p {
+  font-size: 1rem;
+}
+.team-comparison button {
+  font: inherit;
+}
+.comparison-history {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 2rem 3rem;
+  padding: 2rem 0 2.5rem;
+  border-top: 1px solid var(--mag-rule);
+  border-bottom: 1px solid var(--mag-rule);
+}
+.comparison-history h3 {
+  max-width: 15ch;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+}
+.comparison-history > dl {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+  margin: 0;
+}
+.comparison-history dt {
+  color: var(--mag-muted);
+  font-size: 0.9rem;
+}
+.comparison-history dd {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.team-comparison .comparison-history-note {
+  grid-column: 1 / -1;
+  max-width: 90ch;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--mag-muted);
+}
+.comparison-brief {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 3rem 0 1.5rem;
+}
+.comparison-brief h3 {
+  font-size: 1.8rem;
+}
+.comparison-brief p {
+  margin: 0;
+  max-width: 50ch;
+}
+.comparison-jump {
+  font-size: 0.9rem;
+}
+.comparison-shared {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem 3rem;
+  padding: 0 0 2rem;
+}
+.comparison-shared > p,
+.comparison-capabilities {
+  grid-column: 1 / -1;
+}
+.comparison-shared > p {
+  margin: 0;
+  color: var(--mag-muted);
+  font-size: 0.9rem;
+}
+.comparison-slider {
+  min-width: 0;
+  margin: 1rem 0;
+}
+.comparison-slider label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.comparison-slider strong {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-slider input {
+  width: 100%;
+  min-height: 40px;
+  accent-color: #174abb;
+  cursor: pointer;
+  display: block;
+}
+.comparison-capabilities {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.comparison-capabilities legend {
+  padding: 0;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+.magazine .comparison-capabilities label {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin: 0;
+  font-size: 0.95rem;
+}
+.comparison-capabilities input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: #174abb;
+  margin: 0.2rem 0 0;
+}
+.comparison-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+.comparison-team {
+  min-width: 0;
+  padding: 1.75rem;
+  background: #edf2fa;
+  border-radius: 14px;
+  border: 1px solid #cbd5dc;
+}
+.comparison-team.team-b {
+  background: #e8f2ee;
+}
+.comparison-team > header {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 1.5rem;
+}
+.comparison-team > header h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.comparison-team > header p {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+.comparison-team-letter {
+  font:
+    500 2rem "Manrope Variable",
+    sans-serif;
+  color: #52627a;
+}
+.comparison-team fieldset {
+  border: 0;
+  padding: 0;
+  margin: 1.5rem 0;
+  min-width: 0;
+}
+.comparison-team legend {
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+.comparison-compositions,
+.comparison-reasoning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.comparison-team button,
+.comparison-metric button {
+  color: var(--mag-ink);
+  background: transparent;
+  border: 1px solid #8293a9;
+  border-radius: 6px;
+  min-height: 44px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: normal;
+}
+.comparison-team button[aria-pressed="true"],
+.comparison-metric button[aria-pressed="true"] {
+  background: #172b4d;
+  color: white;
+  border-color: #172b4d;
+}
+.comparison-team button:hover,
+.comparison-metric button:hover {
+  border-color: #174abb;
+}
+.team-comparison .comparison-crew {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #52627a;
+}
+.comparison-crew svg {
+  flex-shrink: 0;
+}
+.comparison-model {
+  min-width: 0;
+  margin-top: 0.8rem;
+}
+.comparison-model > label {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+.comparison-team-total {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  border-top: 1px solid #b7c6cf;
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+.comparison-team-total span {
+  display: block;
+  font-size: 0.85rem;
+  color: #52627a;
+}
+.comparison-team-total strong {
+  display: block;
+  font-size: 1.65rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.comparison-details {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--mag-rule);
+  min-width: 0;
+}
+.comparison-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.comparison-details summary svg {
+  vertical-align: middle;
+  margin-left: 0.3rem;
+}
+.comparison-details[open] > div {
+  padding: 1.5rem 0 0.5rem;
+}
+.comparison-details p {
+  font-size: 0.9rem;
+  color: var(--mag-muted);
+}
+.comparison-number {
+  min-width: 0;
+  margin: 1rem 0;
+}
+.comparison-number label {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+.comparison-number input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.7rem;
+  min-height: 48px;
+  border: 1px solid #8293a9;
+  border-radius: 6px;
+  font: inherit;
+  color: var(--mag-ink);
+  background: white;
+}
+.comparison-number small {
+  color: #a12525;
+  display: block;
+  margin-top: 0.5rem;
+}
+.comparison-results {
+  margin: 3.5rem 0 1.5rem;
+  scroll-margin-top: 1rem;
+}
+.comparison-results-heading {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: 2rem;
+}
+.comparison-results-heading h3 {
+  font-size: clamp(2rem, 3.4vw, 3.2rem);
+  max-width: 15ch;
+  margin: 0;
+}
+.comparison-results-heading p {
+  margin: 0;
+  color: var(--mag-muted);
+}
+.comparison-delivery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+.comparison-delivery > div {
+  padding: 1.5rem 0;
+  border-top: 2px solid #657d99;
+}
+.comparison-delivery .delivery-b {
+  border-color: #50796b;
+}
+.comparison-delivery h4 {
+  margin: 0 0 0.75rem;
+}
+.comparison-duration {
+  display: block;
+  font-size: clamp(1.7rem, 2.8vw, 2.5rem);
+  font-family: "Manrope Variable", sans-serif;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-delivery p {
+  margin: 0.5rem 0 1rem;
+}
+.comparison-delivery small {
+  display: block;
+  color: var(--mag-muted);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+.comparison-delivery .comparison-human-controls {
+  font-size: 0.85rem;
+  margin: 1rem 0 0;
+  color: var(--mag-muted);
+}
+.comparison-demand {
+  height: 0.65rem;
+  background: #d5dde5;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.comparison-demand > span {
+  display: block;
+  height: 100%;
+  background: #395e9b;
+}
+.delivery-b .comparison-demand > span {
+  background: #357361;
+}
+.team-comparison .comparison-outcome-note {
+  font-size: 0.85rem;
+  color: var(--mag-muted);
+  max-width: 90ch;
+  margin-bottom: 2.5rem;
+}
+.comparison-metric {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+}
+.comparison-metric legend {
+  margin-bottom: 0.75rem;
+  padding: 0;
+  font-weight: 600;
+}
+.comparison-metric > label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin: 0 0 0 auto;
+}
+.comparison-metric input {
+  width: 20px;
+  height: 20px;
+  accent-color: #174abb;
+}
+.magazine .comparison-chart {
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--mag-rule);
+}
+.magazine .comparison-chart figcaption,
+.comparison-timeline figcaption {
+  display: block;
+  font-size: 1rem;
+  color: var(--mag-ink);
+}
+.comparison-chart figcaption span,
+.comparison-timeline figcaption span {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--mag-muted);
+  font-size: 0.85rem;
+}
+.comparison-bars {
+  margin-top: 1.25rem;
+}
+.comparison-bar-row {
+  margin-bottom: 1.2rem;
+}
+.comparison-bar-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+}
+.comparison-bar-row strong {
+  font-variant-numeric: tabular-nums;
+}
+.comparison-bar-row small {
+  font-size: 0.8rem;
+  color: var(--mag-muted);
+  display: block;
+  margin-top: 0.3rem;
+}
+.comparison-bar-track {
+  height: 1.1rem;
+  background: #e0e5ea;
+}
+.comparison-bar-track > span {
+  display: block;
+  min-width: 0;
+  height: 100%;
+  transition: width 180ms ease-out;
+}
+.comparison-bar-track .history {
+  background: #72568b;
+}
+.comparison-bar-track .team-a {
+  background: #395e9b;
+}
+.comparison-bar-track .team-b {
+  background: #357361;
+}
+.team-comparison .comparison-chart-note {
+  font-size: 0.85rem;
+  max-width: 90ch;
+  margin-bottom: 2rem;
+  color: var(--mag-muted);
+}
+.comparison-six {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+.comparison-timeline {
+  border-top: 1px solid var(--mag-rule);
+  padding: 1.5rem 0;
+}
+.comparison-timeline > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 1rem;
+  margin-top: 1.25rem;
+  font-size: 0.95rem;
+}
+.comparison-timeline strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-timeline-track {
+  position: relative;
+  grid-column: 1 / -1;
+  background: #e0e5ea;
+  height: 0.85rem;
+}
+.comparison-timeline-track > span {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #395e9b;
+}
+.comparison-timeline-track .team-b {
+  background: #357361;
+}
+.comparison-timeline-track i {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  background: #172b4d;
+  z-index: 1;
+}
+.comparison-timeline > p {
+  font-size: 0.85rem;
+  margin-top: 1rem;
+  color: var(--mag-muted);
+}
+.comparison-history-inputs,
+.comparison-impact-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 3rem;
+}
+.comparison-impact,
+.comparison-impact-controls > p {
+  grid-column: 1 / -1;
+}
+.comparison-history-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding-top: 1rem;
+}
+.comparison-history-totals dt {
+  font-size: 0.9rem;
+  color: var(--mag-muted);
+}
+.comparison-history-totals dd {
+  margin: 0.3rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.comparison-impact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+.comparison-impact h4 {
+  line-height: 1.5;
+}
+.comparison-responsibilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-top: 2.5rem;
+}
+.comparison-responsibilities p {
+  font-size: 0.95rem;
+}
+.team-comparison .comparison-source-note {
+  max-width: 90ch;
+  font-size: 0.85rem;
+  color: var(--mag-muted);
+  margin-top: 1.5rem;
+}
+.comparison-source-note a {
+  display: inline;
+}
+@media (max-width: 800px) {
+  .comparison-history,
+  .comparison-shared,
+  .comparison-teams,
+  .comparison-results-heading,
+  .comparison-delivery,
+  .comparison-six,
+  .comparison-history-inputs,
+  .comparison-history-totals,
+  .comparison-impact-controls,
+  .comparison-impact,
+  .comparison-responsibilities {
+    grid-template-columns: 1fr;
+  }
+  .comparison-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .comparison-history {
+    gap: 1.5rem;
+  }
+  .comparison-team {
+    padding: 1.25rem;
+  }
+  .comparison-six {
+    gap: 1rem;
+  }
+  .comparison-metric > label {
+    margin-left: 0;
+  }
+}
+@media (max-width: 480px) {
+  .comparison-capabilities {
+    grid-template-columns: 1fr;
+  }
+  .comparison-timeline > div {
+    grid-template-columns: 1fr;
+  }
+  .comparison-timeline strong {
+    text-align: left;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comparison-bar-track > span {
+    transition: none;
+  }
+}
+.comparison-milestones {
+  border-top: 1px solid var(--mag-rule);
+  padding-top: 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+.comparison-milestones > p {
+  font-size: 0.9rem;
+  color: var(--mag-muted);
+}
+.comparison-milestone-head,
+.comparison-milestones li {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 1.25rem;
+  font-size: 0.9rem;
+}
+.comparison-milestone-head {
+  padding: 0.75rem 0;
+  color: var(--mag-muted);
+}
+.comparison-milestones ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.comparison-milestones li {
+  padding: 1rem 0;
+  border-top: 1px solid var(--mag-rule);
+}
+.comparison-milestones small {
+  display: block;
+  color: var(--mag-muted);
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+@media (max-width: 650px) {
+  .comparison-milestone-head {
+    display: none;
+  }
+  .comparison-milestones li {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .comparison-milestones li > span:nth-child(2)::before {
+    content: "Team A · ";
+    font-weight: 600;
+  }
+  .comparison-milestones li > span:nth-child(3)::before {
+    content: "Team B · ";
+    font-weight: 600;
+  }
+}
+.comparison-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--mag-rule);
+  color: var(--mag-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.team-comparison .comparison-results-heading h3 {
+  font-size: clamp(2rem, 3.4vw, 3.2rem);
+}
+.team-comparison .comparison-history h3 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+}
+.team-comparison .comparison-brief h3 {
+  font-size: 1.8rem;
+}
+.comparison-completion-cost {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+}
+.comparison-completion-cost > strong {
+  font-size: 0.9rem;
+}
+.comparison-completion-cost span {
+  font-variant-numeric: tabular-nums;
+}
+.comparison-shared > .comparison-slider:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.team-comparison .comparison-visible-assumptions {
+  font-size: 0.85rem;
+  color: var(--mag-muted);
+  margin: 0 0 1.25rem;
+}
+.team-comparison label {
+  color: var(--mag-ink);
+}
