@@ -73,6 +73,8 @@ Direct banking links resume the current saved session or ask you to enter the de
 
 The roadmap is a direction, not a delivery commitment. The [production-readiness assessment](https://openfinacle.plts.in/assessment#readiness) explains the gaps in more detail.
 
+The [production capability roadmap](docs/production-roadmap.md) records the broader product scope and its Beads owners. Its recommended first production slice is [repayment of an existing personal loan](specs/015-production-repayments/spec.md), with [explicit delivery and acceptance gates](specs/015-production-repayments/plan.md). This is planned scope; lender/provider decisions and independent production acceptance remain outstanding.
+
 | Workstream | Next evidence needed |
 | --- | --- |
 | Reliable everyday journeys | Measured latency, stronger operational reconciliation, clear exception handling and broader acceptance coverage |
