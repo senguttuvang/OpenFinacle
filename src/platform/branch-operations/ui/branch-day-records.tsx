@@ -9,6 +9,7 @@ import {
 import type { BranchMutation } from "./branch-day-actions";
 export function BranchAccountDetail({
   relationship: r,
+  reviewFixture,
   role,
   busy,
   mutate,
@@ -16,6 +17,7 @@ export function BranchAccountDetail({
   accounting,
 }: {
   relationship: BranchRelationship;
+  reviewFixture?: boolean;
   role: Role;
   busy: boolean;
   mutate: BranchMutation;
@@ -42,8 +44,9 @@ export function BranchAccountDetail({
         · Originating office: inspect journals.
       </p>
       <p>
-        Source: Fineract · {account?.currency?.code ?? "Unknown currency"} ·
-        observed {new Date(r.observedAt).toLocaleString("en-IN")}
+        Source: {reviewFixture ? "STATIC REVIEW FIXTURE" : "Fineract"} ·{" "}
+        {account?.currency?.code ?? "Unknown currency"} · observed{" "}
+        {new Date(r.observedAt).toLocaleString("en-IN")}
       </p>
       {!account && <p role="alert">{r.error ?? "Core account unavailable"}</p>}
       {account && (

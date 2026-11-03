@@ -6,10 +6,12 @@ import type { AccountingEvidence } from "../domain/accounting";
 import { type BranchRelationship, coreDate } from "../domain/branch-day";
 export function AccountingExplorer({
   relationship: r,
+  reviewFixture,
   businessDate,
   openCommand,
 }: {
   relationship: BranchRelationship;
+  reviewFixture?: boolean;
   businessDate: string;
   openCommand: (id: string, customer: string) => void;
 }) {
@@ -48,9 +50,12 @@ export function AccountingExplorer({
         servicing branch {r.customer.branch_id} · business date {businessDate}
       </p>
       <p>
-        Source: Fineract account-filtered journals and chart. Journal
-        dates/currencies are shown per row; this enquiry includes historical
-        entries. Observed{" "}
+        Source:{" "}
+        {reviewFixture
+          ? "STATIC REVIEW FIXTURE — no core evidence"
+          : "Fineract account-filtered journals and chart"}
+        . Journal dates/currencies are shown per row; this enquiry includes
+        historical entries. Observed{" "}
         {evidence
           ? new Date(evidence.observedAt).toLocaleString("en-IN")
           : "pending"}

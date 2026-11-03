@@ -16,6 +16,9 @@ test("local review URL exposes six screens and visibly refuses a financial instr
   await navigation
     .getByRole("button", { name: "Account", exact: true })
     .click();
+  await expect(
+    workspace.getByText(/Source: STATIC REVIEW FIXTURE · INR/),
+  ).toBeVisible();
   await workspace.getByLabel("Amount in INR").fill("100");
   await workspace
     .getByRole("textbox", { name: "Original instruction", exact: true })

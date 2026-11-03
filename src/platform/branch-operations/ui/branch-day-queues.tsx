@@ -55,7 +55,10 @@ export function BranchSummary({
                 : "Incomplete"}
             </strong>
             <small>
-              {day.businessDate} · {day.branchId} · core observation above
+              {day.businessDate} · {day.branchId} ·{" "}
+              {day.reviewFixture
+                ? "invented review values"
+                : "core observation above"}
             </small>
           </div>
         ))}

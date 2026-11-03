@@ -223,6 +223,7 @@ export function BranchDayWorkspace({
               <BranchAccountDetail
                 key={relationship.customer.id}
                 relationship={relationship}
+                reviewFixture={day.reviewFixture}
                 role={data.role}
                 busy={busy}
                 mutate={mutate}
@@ -249,6 +250,7 @@ export function BranchDayWorkspace({
               <AccountingExplorer
                 key={`${customerId}-${revision}`}
                 relationship={relationship}
+                reviewFixture={day.reviewFixture}
                 businessDate={day.businessDate}
                 openCommand={openCommand}
               />
