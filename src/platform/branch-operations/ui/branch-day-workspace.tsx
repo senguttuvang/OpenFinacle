@@ -276,6 +276,7 @@ export function BranchDayWorkspace({
               busy={busy}
               mutate={mutate}
               openCommand={openCommand}
+              openCustomer={openCustomer}
             />
           )}
         </>

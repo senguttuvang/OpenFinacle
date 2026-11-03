@@ -2,19 +2,22 @@
 import { useState } from "react";
 import { formatMoney } from "../../banking-workspace/domain/banking";
 import {
+  serviceReference,
+  serviceStatus,
+} from "../../service-requests/ui/service-case-detail";
+import {
   type BranchDay,
   type branchTotals,
   unresolvedStatuses,
 } from "../domain/branch-day";
+
+import {
+  branchServiceWork,
+  hasUnverifiedDelivery,
+  isOpenServiceRequest,
+} from "../domain/service-work";
 import type { BranchMutation } from "./branch-day-actions";
 
-const terminalServiceStates = new Set([
-  "fulfilled",
-  "rejected",
-  "cancelled",
-  "resolved",
-  "closed",
-]);
 type OpenCommand = (id: string, customer: string) => void;
 export function BranchSummary({
   day,
@@ -206,12 +209,15 @@ export function DailyControl({
   busy,
   mutate,
   openCommand,
+  openCustomer,
 }: {
   day: BranchDay;
   busy: boolean;
   mutate: BranchMutation;
   openCommand: OpenCommand;
+  openCustomer: (id: string) => void;
 }) {
+  const serviceItems = branchServiceWork(day);
   const items = day.relationships.flatMap((r) =>
     r.commands
       .filter((c) => unresolvedStatuses.has(c.status))
@@ -241,15 +247,53 @@ export function DailyControl({
         <li>
           Open service requests:{" "}
           {day.relationships.reduce(
-            (n, r) =>
-              n +
-              r.requests.filter((s) => !terminalServiceStates.has(s.status))
-                .length,
+            (n, r) => n + r.requests.filter(isOpenServiceRequest).length,
             0,
           )}
           . Audit enquiry is bounded to the latest 100 events per customer.
         </li>
       </ul>
+      <h4>Service work and delivery exceptions</h4>
+      <p>
+        Saved application workflow only. Completed requests can still have
+        outstanding or missing delivery evidence. Last recorded actors are not
+        responsibility assignments.
+      </p>
+      {day.coverage.workflowLimited && (
+        <p role="alert">
+          Workflow coverage is incomplete; this queue cannot establish that all
+          branch work is listed.
+        </p>
+      )}
+      {serviceItems.map(({ customer, request }) => (
+        <article className="branch-day-item" key={request.id}>
+          <button type="button" onClick={() => openCustomer(customer.id)}>
+            {customer.display_name} · {serviceReference(request.id)} ·{" "}
+            {request.kind}
+          </button>
+          <p>
+            {serviceStatus(request.status)} · {request.detail}
+          </p>
+          {hasUnverifiedDelivery(request) && (
+            <p>
+              Delivery exception:{" "}
+              {request.delivery_status
+                ? serviceStatus(request.delivery_status)
+                : "Evidence not returned"}
+            </p>
+          )}
+          <small>
+            Created {request.created_at} UTC · Last actor:{" "}
+            {request.updated_by || "Not returned"}
+          </small>
+        </article>
+      ))}
+      {!serviceItems.length && (
+        <p>
+          No open requests or delivery exceptions in the loaded scope. This is
+          not evidence of branch close or physical delivery.
+        </p>
+      )}
       <h4>Unresolved instructions · assign responsibility</h4>
       <p>
         Assignments persist as workflow labels. They grant no approval authority

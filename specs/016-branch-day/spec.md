@@ -66,3 +66,7 @@ KYC, business mandates, signatures or nominee registration. This increment is re
 ## Service-history drill-down acceptance
 
 CUS-12 and service-centre increment: selecting a request within an owned branch relationship reads the existing case service and displays saved actors, transitions, notes, version, outcome and delivery state. The endpoint is read-only and returns no permitted mutations. Customer roles, foreign branch relationships and foreign-customer case identifiers are rejected. Errors withhold previous detail; customer changes clear selection. Fixture timelines remain unconnected. Case completion and delivery remain separate evidence.
+
+## Daily service-work acceptance
+
+OPS daily control lists saved open requests and fulfilled requests with outstanding/missing delivery evidence separately. Each row drills into its owned customer and saved case history. Fulfilled with delivery none/delivered/cancelled is not an outstanding delivery; unrecognised workflow states stay open. Incomplete loaded workflow coverage is explicit. Empty queues do not certify physical delivery, settlement or formal close. Last actors are historical evidence, not new responsibility assignments.
