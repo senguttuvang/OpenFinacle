@@ -18,6 +18,8 @@ import {
 } from "../domain/service-work";
 import type { BranchMutation } from "./branch-day-actions";
 
+import { ProcessingEnquiry } from "./processing-evidence";
+
 type OpenCommand = (id: string, customer: string) => void;
 export function BranchSummary({
   day,
@@ -253,6 +255,11 @@ export function DailyControl({
           . Audit enquiry is bounded to the latest 100 events per customer.
         </li>
       </ul>
+      <ProcessingEnquiry
+        customerId={day.relationships[0]?.customer.id ?? ""}
+        branchId={day.branchId}
+        reviewFixture={day.reviewFixture}
+      />
       <h4>Service work and delivery exceptions</h4>
       <p>
         Saved application workflow only. Completed requests can still have

@@ -12,6 +12,7 @@ import {
   branchCustomer,
   readBranchDay,
 } from "../../../platform/branch-operations/application/branch-day";
+import { readProcessing } from "../../../platform/branch-operations/application/processing";
 import { relationshipEnquiry } from "../../../platform/branch-operations/application/relationship";
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
@@ -24,6 +25,13 @@ export const branchRoutes = (request: Request, session: Session) =>
     if (url.pathname === "/api/branch/relationship" && request.method === "GET")
       return Response.json(
         yield* relationshipEnquiry(
+          session,
+          url.searchParams.get("customerId") ?? "",
+        ),
+      );
+    if (url.pathname === "/api/branch/processing" && request.method === "GET")
+      return Response.json(
+        yield* readProcessing(
           session,
           url.searchParams.get("customerId") ?? "",
         ),
