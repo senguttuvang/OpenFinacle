@@ -7,6 +7,7 @@ import {
   coreDate,
 } from "../domain/branch-day";
 import type { BranchMutation } from "./branch-day-actions";
+import { BranchServiceHistory } from "./branch-service-history";
 import { CoreAccountTerms } from "./core-account-terms";
 import { coreAmount, RelationshipDetails } from "./relationship-details";
 import { useRelationshipEnquiry } from "./use-relationship-enquiry";
@@ -241,13 +242,7 @@ export function BranchAccountDetail({
           Start a different instruction
         </button>
       </form>
-      <h4>Service history</h4>
-      {r.requests.map((s) => (
-        <p key={s.id}>
-          {s.kind} · {s.status} · {s.detail}
-        </p>
-      ))}
-      {!r.requests.length && <p>No recorded service requests.</p>}
+      <BranchServiceHistory relationship={r} reviewFixture={reviewFixture} />
       <h4>Instructions</h4>
       {r.commands.map((c) => (
         <p key={c.id}>

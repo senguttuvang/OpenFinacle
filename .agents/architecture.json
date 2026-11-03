@@ -166,7 +166,8 @@
       "src/platform/service-requests/ui/service-case-detail.tsx",
       "src/platform/service-requests/ui/service-centre.css",
       "src/platform/service-requests/ui/service-centre.tsx",
-      "src/platform/service-requests/ui/service-request-form.tsx"
+      "src/platform/service-requests/ui/service-request-form.tsx",
+      "src/platform/service-requests/ui/service-case-api.ts"
     ],
     "cards": [
       "src/platform/cards/application/card-replacements.ts",

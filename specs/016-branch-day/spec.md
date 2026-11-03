@@ -62,3 +62,7 @@ other native accounts, charge records, application profile/history, application 
 metadata and any staged demo nominee declaration with explicit source/verification boundaries.
 Core active status, uploaded metadata and simulated onboarding checks do not verify identity,
 KYC, business mandates, signatures or nominee registration. This increment is read-only.
+
+## Service-history drill-down acceptance
+
+CUS-12 and service-centre increment: selecting a request within an owned branch relationship reads the existing case service and displays saved actors, transitions, notes, version, outcome and delivery state. The endpoint is read-only and returns no permitted mutations. Customer roles, foreign branch relationships and foreign-customer case identifiers are rejected. Errors withhold previous detail; customer changes clear selection. Fixture timelines remain unconnected. Case completion and delivery remain separate evidence.
