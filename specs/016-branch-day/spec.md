@@ -51,3 +51,14 @@ unsupported entity rows and marking the journal set incomplete for reconciliatio
 pagination must distinguish provider rows, excluded rows and remaining pages. Never match
 an operation through a guessed transaction prefix or amount. Core business-date enquiry
 currently returns no configured date; keep the application IST date explicit.
+
+## Core customer 360 increment
+
+Reuse CUS-01/03/04/12 and DEP-13. Staff enquiry must verify branch membership and the
+registered Fineract client before loading its native portfolio and document metadata.
+Show available balance from the matching native client-portfolio account, never substitute
+ledger balance. Preserve per-source observation times. Display core legal form/status/office,
+other native accounts, charge records, application profile/history, application document
+metadata and any staged demo nominee declaration with explicit source/verification boundaries.
+Core active status, uploaded metadata and simulated onboarding checks do not verify identity,
+KYC, business mandates, signatures or nominee registration. This increment is read-only.

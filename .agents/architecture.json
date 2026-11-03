@@ -156,7 +156,8 @@
       "src/platform/branch-operations/ui/branch.css",
       "src/platform/branch-operations/application/branch-day.ts",
       "src/platform/branch-operations/application/accounting.ts",
-      "src/platform/branch-operations/domain/branch-day.ts"
+      "src/platform/branch-operations/domain/branch-day.ts",
+      "src/platform/branch-operations/application/relationship.ts"
     ],
     "service-requests": [
       "src/platform/service-requests/application/service-cases.ts",
@@ -223,7 +224,8 @@
       "src/platform/customers/domain/profile-effects.ts",
       "src/platform/customers/infrastructure/customer-provisioning.ts",
       "src/platform/customers/ui/customer-picker.tsx",
-      "src/platform/customers/ui/customer-profile.tsx"
+      "src/platform/customers/ui/customer-profile.tsx",
+      "src/platform/customers/domain/profile.ts"
     ],
     "payments": [
       "src/platform/payments/application/customer-payee-admin.ts",

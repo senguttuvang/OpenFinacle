@@ -107,3 +107,8 @@
   background: #173d86;
   color: white;
 }
+.app-shell .branch-day .account-facts dd > small {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted, #52627a);
+}

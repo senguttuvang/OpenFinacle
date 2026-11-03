@@ -8,6 +8,13 @@ import {
 } from "../domain/branch-day";
 import type { BranchMutation } from "./branch-day-actions";
 
+const terminalServiceStates = new Set([
+  "fulfilled",
+  "rejected",
+  "cancelled",
+  "resolved",
+  "closed",
+]);
 type OpenCommand = (id: string, customer: string) => void;
 export function BranchSummary({
   day,
@@ -236,9 +243,8 @@ export function DailyControl({
           {day.relationships.reduce(
             (n, r) =>
               n +
-              r.requests.filter(
-                (s) => s.status !== "resolved" && s.status !== "closed",
-              ).length,
+              r.requests.filter((s) => !terminalServiceStates.has(s.status))
+                .length,
             0,
           )}
           . Audit enquiry is bounded to the latest 100 events per customer.
