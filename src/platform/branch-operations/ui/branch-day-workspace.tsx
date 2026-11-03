@@ -17,6 +17,7 @@ import {
 } from "./branch-day-queues";
 import { BranchAccountDetail, InstructionDetail } from "./branch-day-records";
 import { BranchAdvances } from "./loans/branch-advances";
+import { LoanAccountingExplorer } from "./loans/loan-accounting";
 
 const tabs = [
   "Overview",
@@ -38,6 +39,7 @@ export function BranchDayWorkspace({
   const [tab, setTab] = useState<Tab>("Overview");
   const [customerId, setCustomerId] = useState("");
   const [loanId, setLoanId] = useState(0);
+  const [accountingMode, setAccountingMode] = useState("savings");
   const [commandId, setCommandId] = useState("");
   const [instructionCustomer, setInstructionCustomer] = useState("");
   const [revision, setRevision] = useState(0);
@@ -110,12 +112,14 @@ export function BranchDayWorkspace({
   const openCustomer = (id: string) => {
     setCustomerId(id);
     setLoanId(0);
+    setAccountingMode("savings");
     setCommandId("");
     setTab("Account");
   };
   const openCommand = (id: string, customer: string, filterCustomer = "") => {
     setInstructionCustomer(filterCustomer);
     setLoanId(0);
+    setAccountingMode("savings");
     setCustomerId(customer);
     setCommandId(id);
     setTab("Transactions & approvals");
@@ -286,7 +290,14 @@ export function BranchDayWorkspace({
                 busy={busy}
                 mutate={mutate}
                 openCommand={openCommand}
-                accounting={() => setTab("Accounting")}
+                accounting={() => {
+                  setAccountingMode("savings");
+                  setTab("Accounting");
+                }}
+                loanAccounting={() => {
+                  setAccountingMode("loan");
+                  setTab("Accounting");
+                }}
                 caseChanged={(next) =>
                   caseChanged(relationship.customer.id, next)
                 }
@@ -309,13 +320,43 @@ export function BranchDayWorkspace({
           )}
           {tab === "Accounting" &&
             (relationship ? (
-              <AccountingExplorer
-                key={`${customerId}-${revision}`}
-                relationship={relationship}
-                reviewFixture={day.reviewFixture}
-                businessDate={day.businessDate}
-                openCommand={openCommand}
-              />
+              <>
+                <section className="panel">
+                  <h3>Accounting scope</h3>
+                  <div className="branch-day-actions">
+                    <button
+                      type="button"
+                      onClick={() => setAccountingMode("savings")}
+                    >
+                      Registered savings journals
+                    </button>
+                    {loanId > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAccountingMode("loan")}
+                      >
+                        Selected Core loan {loanId} journals
+                      </button>
+                    )}
+                  </div>
+                </section>
+                {accountingMode === "loan" && loanId > 0 ? (
+                  <LoanAccountingExplorer
+                    key={`${customerId}-${loanId}-${revision}`}
+                    relationship={relationship}
+                    loanId={loanId}
+                    reviewFixture={day.reviewFixture}
+                  />
+                ) : (
+                  <AccountingExplorer
+                    key={`${customerId}-${revision}`}
+                    relationship={relationship}
+                    reviewFixture={day.reviewFixture}
+                    businessDate={day.businessDate}
+                    openCommand={openCommand}
+                  />
+                )}
+              </>
             ) : (
               <p>Choose a customer first.</p>
             ))}

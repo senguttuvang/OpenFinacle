@@ -13,11 +13,13 @@ export function BranchLoanDetail({
   branchId,
   loanId,
   reviewFixture,
+  accounting,
 }: {
   customerId: string;
   branchId: string;
   loanId: number;
   reviewFixture?: boolean;
+  accounting: () => void;
 }) {
   const { value, error, loading, refresh } = useBranchLoanRead(
     `/branch/loan?customerId=${encodeURIComponent(customerId)}&id=${loanId}`,
@@ -55,6 +57,9 @@ export function BranchLoanDetail({
       )}
       {loan && owned && (
         <>
+          <button type="button" onClick={accounting}>
+            Trace loan product → journals → GL
+          </button>
           <p>
             Source: Apache Fineract · loan {loan.accountNo} · observed{" "}
             {new Date(owned.observedAt).toLocaleString("en-IN")}. Core

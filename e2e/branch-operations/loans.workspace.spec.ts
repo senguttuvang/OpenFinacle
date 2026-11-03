@@ -167,7 +167,7 @@ for (const width of [1440, 390]) {
     await expect(
       enquiry.getByText("Disbursement", { exact: true }),
     ).toBeVisible();
-    await expect(enquiry.getByRole("button")).toHaveCount(1);
+    await expect(enquiry.getByRole("button")).toHaveCount(2);
     await page.locator(".branch-day").evaluate((el) => {
       (el as HTMLElement).style.fontSize = "200%";
     });

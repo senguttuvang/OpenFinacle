@@ -122,9 +122,10 @@ export function RelationshipDetails({
                               Inspect Core loan {row.id}
                             </button>
                           )}
-                          {row.id === value.selectedSavings?.id && (
-                            <small>Registered servicing account</small>
-                          )}
+                          {family === "Savings" &&
+                            row.id === value.selectedSavings?.id && (
+                              <small>Registered servicing account</small>
+                            )}
                         </td>
                         <td>
                           {row.productName ?? row.productId ?? "Not returned"}
