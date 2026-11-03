@@ -65,7 +65,7 @@ export function BranchLoanDetail({
               {loan.loanProductName ?? `Core product ${loan.loanProductId}`} /{" "}
               {loan.status.value ?? loan.status.id}
             </dd>
-            <dt>Core principal</dt>
+            <dt>Core principal term</dt>
             <dd>{money(loan.principal)}</dd>
             <dt>Annual interest rate · Core value</dt>
             <dd>
@@ -94,9 +94,10 @@ export function BranchLoanDetail({
           </dl>
           <h5>Core repayment schedule</h5>
           <p>
-            Scheduled dues and recorded paid amounts as returned by Core. A
-            funding line is separate from an instalment. Schedule values do not
-            establish settlement, collections or customer notification.
+            Core-calculated schedule values, including schedule funding amounts.
+            These do not verify actual funding or repayment. Recorded
+            transactions and the Core summary are separate evidence. Settlement,
+            collections and customer notification remain unverified.
           </p>
           {!periods ? (
             <p>Repayment schedule not returned.</p>
@@ -124,7 +125,8 @@ export function BranchLoanDetail({
                         <small>{coreDate(p.dueDate)}</small>
                         {p.principalDisbursed !== undefined && (
                           <small>
-                            Principal disbursed: {money(p.principalDisbursed)}
+                            Schedule funding amount:{" "}
+                            {money(p.principalDisbursed)}
                           </small>
                         )}
                       </td>
