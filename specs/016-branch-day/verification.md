@@ -54,8 +54,8 @@ It rejects all writes and non-loopback hosts. No cloud deployment is required.
 - Application branch membership is distinct from a core account-owning office. Originating
   office is returned per journal, never inferred from the servicing branch label.
 - The day filter uses the application IST date. Core business-date/COB agreement is unverified.
-- Savings totals cover at most 100 registered relationships, not all bank accounts or advances.
-  Journal enquiry exposes its first-200-row limit; audit history exposes its latest-100 limit.
+- Savings totals cover at most 200 registered relationships, not all bank accounts or advances.
+  Journal enquiry pages provider rows in batches of 200, with excluded counterpart counts; audit history exposes its latest-100 limit per relationship. Branch commands and service requests are bounded at 5000 each and expose incomplete coverage if exceeded.
 - Legal entity classification, mandates, signatories, nominees and verified documents are absent.
   The directory can show business names without implying a verified business relationship.
 - Consolidated loans, fixed/recurring deposit totals and full fee/product terms are not loaded.
@@ -67,3 +67,7 @@ It rejects all writes and non-loopback hosts. No cloud deployment is required.
 Migration is additive; do not deploy the new branch API against a database missing 0019.
 Rollback application code through the normal release path; retain the responsibility table
 rather than deleting workflow history. No deployment or production-readiness claim is made.
+
+## PR116 live checkpoint and follow-up
+
+PR116 merged at `2b75fbe3b2007b6f61ea5d2a63acc528460b961c` and deployed. Live health identified that source; core readiness recovered after container warmup. The 101-customer directory and sampled core balance were retained. All six live views opened with no browser errors or mobile page overflow. Its conservative journal guard withheld a mixed savings/loan-counterpart set, and its 100-customer cap left one relationship out; this acceptance increment addresses both findings. The native Fineract1.15 savings filter uses linked savings-transaction identifiers and can include a loan counterpart. Non-savings rows remain excluded and explicitly counted; a foreign savings-account row still withholds the page. No journal balance or settlement certificate is inferred.

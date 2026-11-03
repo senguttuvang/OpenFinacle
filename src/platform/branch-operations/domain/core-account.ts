@@ -70,6 +70,11 @@ const command = Schema.Struct({
   created_at: Schema.String,
 });
 export const BranchDayEnvelope = Schema.Struct({
+  coverage: Schema.Struct({
+    totalCustomers: Schema.Number,
+    limit: Schema.Number,
+    workflowLimited: Schema.Boolean,
+  }),
   branchId: Schema.String,
   businessDate: Schema.String,
   observedAt: finite,

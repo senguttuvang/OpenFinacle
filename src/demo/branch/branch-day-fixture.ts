@@ -2,6 +2,7 @@ import type { BranchDay } from "../../platform/branch-operations/domain/branch-d
 export function branchDayFixture() {
   const day: BranchDay = {
     reviewFixture: true,
+    coverage: { totalCustomers: 2, limit: 200, workflowLimited: false },
     branchId: "synthetic-adyar",
     businessDate: "2026-11-03",
     observedAt: 1793728800000,

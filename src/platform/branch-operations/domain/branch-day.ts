@@ -32,7 +32,9 @@ export interface Responsibility {
   version: number;
   updated_at: string;
 }
+export const branchCustomerLimit = 200;
 export interface BranchDay {
+  coverage: { totalCustomers: number; limit: number; workflowLimited: boolean };
   reviewFixture?: boolean;
   branchId: string;
   businessDate: string;
@@ -55,7 +57,10 @@ export function branchTotals(day: BranchDay) {
   let balanceMinor = 0;
   let creditsMinor = 0;
   let debitsMinor = 0;
-  let complete = !day.truncated && day.relationships.length > 0;
+  let complete =
+    !day.truncated &&
+    !day.coverage.workflowLimited &&
+    day.relationships.length > 0;
   for (const { account } of day.relationships) {
     if (
       !account ||
