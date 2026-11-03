@@ -7,6 +7,10 @@ import {
   type BranchRelationship,
   coreDate,
 } from "../domain/branch-day";
+import {
+  branchInstructionRows,
+  filterInstructions,
+} from "../domain/work-filters";
 import type { BranchMutation } from "./branch-day-actions";
 import { BranchServiceHistory } from "./branch-service-history";
 import { CoreAccountTerms } from "./core-account-terms";
@@ -278,6 +282,7 @@ export function InstructionDetail({
   day,
   customerId,
   commandId,
+  initialCustomerId,
   openCommand,
   role,
   busy,
@@ -287,40 +292,122 @@ export function InstructionDetail({
   day: BranchDay;
   customerId: string;
   commandId: string;
+  initialCustomerId?: string;
   openCommand: (id: string, customer: string) => void;
   role: Role;
   busy: boolean;
   mutate: BranchMutation;
   accounting: () => void;
 }) {
-  const [pendingOnly, setPendingOnly] = useState(true);
+  const [query, setQuery] = useState("");
+  const [state, setState] = useState("unresolved");
+  const [owner, setOwner] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState(initialCustomerId ?? "");
+  const rows = filterInstructions(day, query, state, owner, customerFilter);
+  const total = branchInstructionRows(day).length;
   const r = day.relationships.find((item) => item.customer.id === customerId);
   const command = r?.commands.find((c) => c.id === commandId);
   return (
     <section className="panel">
       <h3>Transaction enquiry & approval inbox</h3>
       <label>
-        <input
-          type="checkbox"
-          checked={pendingOnly}
-          onChange={(e) => setPendingOnly(e.target.checked)}
-        />
-        Pending only
+        Search instructions, customer or Core reference
+        <input value={query} onChange={(e) => setQuery(e.target.value)} />
       </label>
-      {day.relationships.flatMap((item) =>
-        item.commands
-          .filter((c) => !pendingOnly || c.status === "pending")
-          .map((c) => (
-            <p key={c.id}>
-              <button
-                type="button"
-                onClick={() => openCommand(c.id, item.customer.id)}
-              >
-                {item.customer.display_name} · {c.kind} · {c.status} · {c.id}
-              </button>
-            </p>
-          )),
+      <div className="branch-day-actions branch-day-filters">
+        <label>
+          Instruction customer filter
+          <select
+            value={customerFilter}
+            onChange={(e) => setCustomerFilter(e.target.value)}
+          >
+            <option value="">All loaded customers</option>
+            {day.relationships.map(({ customer }) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.display_name} · {customer.reference}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Instruction state filter
+          <select value={state} onChange={(e) => setState(e.target.value)}>
+            {[
+              ["unresolved", "All unresolved"],
+              ["pending", "Pending approval"],
+              ["executing", "Executing"],
+              ["uncertain", "Uncertain"],
+              ["failed", "Failed"],
+              ["posted", "Posted"],
+              ["rejected", "Rejected"],
+              ["all", "All states"],
+            ].map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Instruction owner filter
+          <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="all">All owner labels</option>
+            {["unassigned", "teller", "checker", "manager", "accountant"].map(
+              (value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setQuery("");
+          setState("unresolved");
+          setOwner("all");
+          setCustomerFilter("");
+        }}
+      >
+        Reset instruction filters
+      </button>
+      <p>
+        {rows.length} of {total} loaded instructions match. Owner labels
+        organise work and grant no approval authority. Filters do not change
+        branch coverage or close readiness.
+      </p>
+      {day.coverage.workflowLimited && (
+        <p role="alert">
+          Workflow coverage is incomplete. Filter results cannot establish that
+          all branch instructions are listed.
+        </p>
       )}
+      {rows.map(({ customer, command: c, owner }) => (
+        <p key={c.id}>
+          <button type="button" onClick={() => openCommand(c.id, customer.id)}>
+            {customer.display_name} · {c.kind} · {c.status} · {c.id}
+          </button>
+          <small>Owner label: {owner}</small>
+        </p>
+      ))}
+      {!rows.length && (
+        <p>
+          No matching instructions in loaded records. Reset filters to inspect
+          other work.
+        </p>
+      )}
+      {command &&
+        !rows.some(
+          (row) =>
+            row.command.id === command.id && row.customer.id === customerId,
+        ) && (
+          <p role="status">
+            The selected original instruction is outside these filters. Its
+            detail remains visible below.
+          </p>
+        )}
       {command && r ? (
         <article className="branch-day-item">
           <h4>

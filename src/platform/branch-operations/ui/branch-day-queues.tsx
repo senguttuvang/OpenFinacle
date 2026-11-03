@@ -16,11 +16,20 @@ import {
   hasUnverifiedDelivery,
   isOpenServiceRequest,
 } from "../domain/service-work";
+import {
+  filterRelationships,
+  productKey,
+  relationshipWork,
+} from "../domain/work-filters";
 import type { BranchMutation } from "./branch-day-actions";
 
 import { ProcessingEnquiry } from "./processing-evidence";
 
-type OpenCommand = (id: string, customer: string) => void;
+type OpenCommand = (
+  id: string,
+  customer: string,
+  filterCustomer?: string,
+) => void;
 export function BranchSummary({
   day,
   totals,
@@ -144,15 +153,24 @@ export function BranchSummary({
 export function CustomerDirectory({
   day,
   openCustomer,
+  openCommand,
 }: {
   day: BranchDay;
   openCustomer: (id: string) => void;
+  openCommand: OpenCommand;
 }) {
   const [query, setQuery] = useState("");
-  const rows = day.relationships.filter((r) =>
-    `${r.customer.display_name} ${r.customer.reference} ${r.customer.account_no}`
-      .toLowerCase()
-      .includes(query.toLowerCase()),
+  const [work, setWork] = useState("all");
+  const [product, setProduct] = useState("all");
+  const rows = filterRelationships(day, query, work, product);
+  const products = new Map(
+    day.relationships.map((r) => [
+      productKey(r),
+      r.account?.savingsProductName ??
+        (productKey(r) === "unknown"
+          ? "Product not returned"
+          : `Core product ${productKey(r)}`),
+    ]),
   );
   return (
     <section className="panel">
@@ -161,6 +179,43 @@ export function CustomerDirectory({
         Search name, reference or account
         <input value={query} onChange={(e) => setQuery(e.target.value)} />
       </label>
+      <div className="branch-day-actions branch-day-filters">
+        <label>
+          Customer work filter
+          <select value={work} onChange={(e) => setWork(e.target.value)}>
+            <option value="all">All relationships</option>
+            <option value="instructions">Unresolved instructions</option>
+            <option value="services">Service work / delivery exceptions</option>
+            <option value="core">Core account unavailable</option>
+          </select>
+        </label>
+        <label>
+          Savings product filter
+          <select value={product} onChange={(e) => setProduct(e.target.value)}>
+            <option value="all">All loaded products</option>
+            {[...products].map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setQuery("");
+          setWork("all");
+          setProduct("all");
+        }}
+      >
+        Clear customer filters
+      </button>
+      <p>
+        Filters apply to loaded records only; they do not change branch totals
+        or certify that all work is listed. Service work includes unverified
+        delivery on completed requests.
+      </p>
       <p>
         {rows.length} of {day.relationships.length} loaded relationships ·{" "}
         {day.branchId}
@@ -172,28 +227,56 @@ export function CustomerDirectory({
               <th>Relationship</th>
               <th>Account</th>
               <th>Origin</th>
+              <th>Work in loaded records</th>
               <th>Enquiry</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ customer }) => (
-              <tr key={customer.id}>
-                <td>
-                  {customer.display_name}
-                  <small>{customer.reference}</small>
-                </td>
-                <td>{customer.account_no}</td>
-                <td>{customer.origin}</td>
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => openCustomer(customer.id)}
-                  >
-                    Open customer 360
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((relationship) => {
+              const { customer } = relationship;
+              const work = relationshipWork(relationship);
+              const first = relationship.commands.find((c) =>
+                unresolvedStatuses.has(c.status),
+              );
+              return (
+                <tr key={customer.id}>
+                  <td>
+                    {customer.display_name}
+                    <small>{customer.reference}</small>
+                  </td>
+                  <td>{customer.account_no}</td>
+                  <td>{customer.origin}</td>
+                  <td>
+                    {first ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openCommand(first.id, customer.id, customer.id)
+                        }
+                      >
+                        {work.instructions} unresolved instructions
+                      </button>
+                    ) : (
+                      <span>0 unresolved instructions</span>
+                    )}
+                    <small>
+                      {work.services} service work / delivery exceptions
+                    </small>
+                    {!relationship.account && (
+                      <small>Core account unavailable</small>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => openCustomer(customer.id)}
+                    >
+                      Open customer 360
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
