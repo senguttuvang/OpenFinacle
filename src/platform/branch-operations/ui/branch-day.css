@@ -5,6 +5,7 @@
 }
 .app-shell .branch-day .panel {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .app-shell .branch-day-heading {
   display: grid;

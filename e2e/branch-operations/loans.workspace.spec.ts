@@ -10,6 +10,16 @@ for (const width of [1440, 390]) {
     const day = branchDayFixture();
     day.reviewFixture = false;
     const customer = day.relationships[0].customer;
+    day.relationships[0].audit = [
+      {
+        id: "synthetic-long-audit",
+        bank_id: customer.bank_id,
+        actor: "officer",
+        action: "service.awaiting_approval",
+        detail: "Synthetic audit entry with a saved workflow identifier",
+        created_at: "2026-11-04 03:50:00",
+      },
+    ];
     const currency = { code: "INR", decimalPlaces: 2 };
     const loan = {
       id: 7,
@@ -166,6 +176,17 @@ for (const width of [1440, 390]) {
         () => document.documentElement.scrollWidth > innerWidth,
       ),
     ).toBe(false);
+    const scheduleScroller = enquiry.getByRole("region", {
+      name: "Core loan repayment schedule table",
+    });
+    await scheduleScroller.focus();
+    await expect(scheduleScroller).toBeFocused();
+    if (width === 390) {
+      await page.keyboard.press("ArrowRight");
+      await expect
+        .poll(() => scheduleScroller.evaluate((el) => el.scrollLeft))
+        .toBeGreaterThan(0);
+    }
     await enquiry
       .getByRole("button", { name: "Refresh Core loan enquiry", exact: true })
       .click();
