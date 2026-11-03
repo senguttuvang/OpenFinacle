@@ -5,7 +5,11 @@ import {
 } from "../../banking-workspace/domain/banking";
 import { Core } from "../../banking-workspace/domain/ports";
 import { readLoanPostingEvidence } from "../../lending/application/loan-posting-evidence";
-import { GlChart, ProductAccounting } from "../domain/accounting";
+import {
+  GlChart,
+  journalPageHasExpectedCoverage,
+  ProductAccounting,
+} from "../domain/accounting";
 import {
   type LoanAccountingEvidence,
   LoanJournalPage,
@@ -82,11 +86,7 @@ export const readLoanAccounting = (
         : false,
     };
     let journals = rawJournals;
-    if (
-      journals &&
-      journals.pageItems.length !==
-        Math.min(200, Math.max(0, journals.totalFilteredRecords - offset))
-    ) {
+    if (journals && !journalPageHasExpectedCoverage(journals, offset)) {
       errors.push(
         "Core journal page coverage is inconsistent. Journal evidence withheld.",
       );
@@ -102,6 +102,7 @@ export const readLoanAccounting = (
         "Core returned a different loan subledger. Journal evidence withheld.",
       );
       journals = null;
+      coverage.hasMore = false;
     }
     if (journals) {
       const retained = journals.pageItems.filter(

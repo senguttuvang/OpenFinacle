@@ -1,8 +1,8 @@
 "use client";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { useEffect, useState } from "react";
 import { api } from "../../banking-workspace/ui/api";
-import type { AccountingEvidence } from "../domain/accounting";
+import { AccountingEvidence } from "../domain/accounting";
 import { type BranchRelationship, coreDate } from "../domain/branch-day";
 export function AccountingExplorer({
   relationship: r,
@@ -24,15 +24,18 @@ export function AccountingExplorer({
     setEvidence(null);
     setError("");
     Effect.runPromise(
-      api<AccountingEvidence>(
+      api<unknown>(
         `/branch/accounting?customerId=${encodeURIComponent(r.customer.id)}&offset=${offset}`,
-      ),
+      ).pipe(Effect.flatMap(Schema.decodeUnknown(AccountingEvidence))),
     )
       .then((value) => {
         if (active) setEvidence(value);
       })
-      .catch((e: Error) => {
-        if (active) setError(e.message);
+      .catch(() => {
+        if (active)
+          setError(
+            "Accounting evidence is unavailable or invalid. Choose the account again to read.",
+          );
       });
     return () => {
       active = false;

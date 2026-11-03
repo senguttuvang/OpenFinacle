@@ -104,7 +104,7 @@ test("mixed native counterpart row is excluded without hiding owned savings jour
           ? []
           : path.startsWith("journalentries?")
             ? {
-                totalFilteredRecords: 402,
+                totalFilteredRecords: 202,
                 pageItems: [
                   row,
                   { ...row, id: 2, entityType: { id: 1, value: "LOAN" } },
@@ -133,7 +133,7 @@ test("mixed native counterpart row is excluded without hiding owned savings jour
     limit: 200,
     sourceRows: 2,
     excludedRows: 1,
-    hasMore: true,
+    hasMore: false,
   });
   expect(evidence.errors[0]).toContain("Excluded 1 counterpart");
   const calls = paths.length;

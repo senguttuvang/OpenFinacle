@@ -7,7 +7,8 @@ import { Core } from "../../banking-workspace/domain/ports";
 import {
   type AccountingEvidence,
   GlChart,
-  JournalPage,
+  InrJournalPage,
+  journalPageHasExpectedCoverage,
   ProductAccounting,
 } from "../domain/accounting";
 import { branchCustomer } from "./branch-day";
@@ -27,7 +28,7 @@ export const readAccounting = (
       );
     const coverage = {
       offset,
-      limit: 200,
+      limit: 200 as const,
       sourceRows: 0,
       excludedRows: 0,
       hasMore: false,
@@ -48,7 +49,11 @@ export const readAccounting = (
       Schema.Struct({
         id: Schema.Number,
         clientId: Schema.Number,
-        savingsProductId: Schema.Number,
+        savingsProductId: Schema.Number.pipe(
+          Schema.int(),
+          Schema.positive(),
+          Schema.filter(Number.isSafeInteger),
+        ),
       }),
     );
     if (
@@ -75,16 +80,25 @@ export const readAccounting = (
         product: null,
         errors,
       } satisfies AccountingEvidence;
-    const chart = yield* read("glaccounts", GlChart);
+    const chart = yield* read(
+      "glaccounts",
+      GlChart.pipe(Schema.maxItems(2000)),
+    );
     let journals = yield* read(
       `journalentries?savingsId=${customer.account_id}&limit=200&offset=${offset}&transactionDetails=true`,
-      JournalPage,
+      InrJournalPage,
     );
     if (journals) {
       coverage.sourceRows = journals.pageItems.length;
       coverage.hasMore =
         offset + coverage.sourceRows < journals.totalFilteredRecords;
-      if (
+      if (!journalPageHasExpectedCoverage(journals, offset)) {
+        errors.push(
+          "Core journal page coverage is inconsistent. Journal evidence withheld.",
+        );
+        journals = null;
+        coverage.hasMore = false;
+      } else if (
         journals.pageItems.some(
           (j) => j.entityType?.id === 2 && j.entityId !== customer.account_id,
         )
@@ -93,6 +107,7 @@ export const readAccounting = (
           "Core returned a different subledger. Journal evidence withheld.",
         );
         journals = null;
+        coverage.hasMore = false;
       } else {
         const owned = journals.pageItems.filter(
           (j) => j.entityType?.id === 2 && j.entityId === customer.account_id,
@@ -107,10 +122,16 @@ export const readAccounting = (
         journals = { ...journals, pageItems: owned };
       }
     }
-    const product = yield* read(
+    const rawProduct = yield* read(
       `savingsproducts/${account.savingsProductId}`,
       ProductAccounting,
     );
+    const product =
+      rawProduct?.id === account.savingsProductId ? rawProduct : null;
+    if (rawProduct && !product)
+      errors.push(
+        "Core savings product identity differs. Product mapping withheld.",
+      );
     return {
       coverage,
       observedAt: yield* Clock.currentTimeMillis,

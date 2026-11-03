@@ -1,28 +1,13 @@
 import { Schema } from "effect";
 import { LoanPostingEvidence } from "../../lending/domain/origination/loan-posting-evidence";
-import { GlChart, JournalPage, ProductAccounting } from "./accounting";
+import {
+  GlChart,
+  InrJournalPage,
+  type JournalPage,
+  ProductAccounting,
+} from "./accounting";
 import { LoanEnquiry } from "./loans";
-export const LoanJournalPage = JournalPage.pipe(
-  Schema.filter(
-    (page) =>
-      Number.isSafeInteger(page.totalFilteredRecords) &&
-      page.totalFilteredRecords >= page.pageItems.length &&
-      page.pageItems.length <= 200 &&
-      new Set(page.pageItems.map((row) => row.id)).size ===
-        page.pageItems.length &&
-      page.pageItems.every(
-        (row) =>
-          Number.isSafeInteger(row.id) &&
-          row.id > 0 &&
-          row.currency.code === "INR" &&
-          Number.isFinite(row.amount) &&
-          row.amount >= 0 &&
-          Number.isSafeInteger(Math.round(row.amount * 100)) &&
-          row.amount === Math.round(row.amount * 100) / 100 &&
-          [1, 2].includes(row.entryType.id),
-      ),
-  ),
-);
+export const LoanJournalPage = InrJournalPage;
 export const LoanAccountingEvidence = Schema.Struct({
   customerId: Schema.String,
   branchId: Schema.String,
