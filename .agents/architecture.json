@@ -153,7 +153,10 @@
     ],
     "branch-operations": [
       "src/platform/branch-operations/ui/branch-overview.tsx",
-      "src/platform/branch-operations/ui/branch.css"
+      "src/platform/branch-operations/ui/branch.css",
+      "src/platform/branch-operations/application/branch-day.ts",
+      "src/platform/branch-operations/application/accounting.ts",
+      "src/platform/branch-operations/domain/branch-day.ts"
     ],
     "service-requests": [
       "src/platform/service-requests/application/service-cases.ts",

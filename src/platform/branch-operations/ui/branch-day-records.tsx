@@ -1,0 +1,407 @@
+"use client";
+import { useState } from "react";
+import { formatMoney, type Role } from "../../banking-workspace/domain/banking";
+import {
+  type BranchDay,
+  type BranchRelationship,
+  coreDate,
+} from "../domain/branch-day";
+import type { BranchMutation } from "./branch-day-actions";
+export function BranchAccountDetail({
+  relationship: r,
+  reviewFixture,
+  role,
+  busy,
+  mutate,
+  openCommand,
+  accounting,
+}: {
+  relationship: BranchRelationship;
+  reviewFixture?: boolean;
+  role: Role;
+  busy: boolean;
+  mutate: BranchMutation;
+  openCommand: (id: string, customer: string) => void;
+  accounting: () => void;
+}) {
+  const [kind, setKind] = useState("deposit");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [key, setKey] = useState(() => crypto.randomUUID());
+  const account = r.account;
+  const inr =
+    account?.currency?.code === "INR" && account.currency.decimalPlaces === 2;
+  return (
+    <section className="panel">
+      <span className="eyebrow">Customer 360 → account</span>
+      <h3>{r.customer.display_name}</h3>
+      <p>
+        {r.customer.reference} · {r.customer.account_no}
+      </p>
+      <p>
+        Servicing branch: {r.customer.branch_id} · Account-owning core office:{" "}
+        {account?.clientOfficeName ?? account?.clientOfficeId ?? "Not returned"}{" "}
+        · Originating office: inspect journals.
+      </p>
+      <p>
+        Source: {reviewFixture ? "STATIC REVIEW FIXTURE" : "Fineract"} ·{" "}
+        {account?.currency?.code ?? "Unknown currency"} · observed{" "}
+        {new Date(r.observedAt).toLocaleString("en-IN")}
+      </p>
+      {!account && <p role="alert">{r.error ?? "Core account unavailable"}</p>}
+      {account && (
+        <>
+          <dl className="account-facts">
+            <dt>Ledger balance</dt>
+            <dd>
+              {inr && typeof account.summary?.accountBalance === "number"
+                ? formatMoney(account.summary.accountBalance)
+                : "Unavailable"}
+            </dd>
+            <dt>Available balance</dt>
+            <dd>
+              {inr && typeof account.summary?.availableBalance === "number"
+                ? formatMoney(account.summary.availableBalance)
+                : "Not returned by core"}
+            </dd>
+            <dt>Product</dt>
+            <dd>
+              {account.savingsProductName ??
+                account.savingsProductId ??
+                "Not returned"}
+            </dd>
+            <dt>Annual interest rate</dt>
+            <dd>
+              {account.nominalAnnualInterestRate === undefined
+                ? "Not returned"
+                : `${account.nominalAnnualInterestRate}%`}
+            </dd>
+            <dt>Interest posted to date</dt>
+            <dd>
+              {inr && typeof account.summary?.totalInterestPosted === "number"
+                ? formatMoney(account.summary.totalInterestPosted)
+                : "Not returned by core"}
+            </dd>
+            <dt>Fees charged to date</dt>
+            <dd>
+              {inr && typeof account.summary?.totalFeeCharge === "number"
+                ? formatMoney(account.summary.totalFeeCharge)
+                : "Not returned by core"}
+            </dd>
+            <dt>Penalties charged to date</dt>
+            <dd>
+              {inr && typeof account.summary?.totalPenaltyCharge === "number"
+                ? formatMoney(account.summary.totalPenaltyCharge)
+                : "Not returned by core"}
+            </dd>
+            <dt>Account status / restriction</dt>
+            <dd>
+              {account.status.value} /{" "}
+              {account.subStatus?.value ?? "Restriction evidence not returned"}
+            </dd>
+          </dl>
+          <p>
+            Fee tariff, complete product terms and loan schedules: not loaded by
+            this savings enquiry. Signatories, nominees and verified documents:
+            unsupported. Do not treat absence here as absence of restrictions.
+          </p>
+          <button type="button" onClick={accounting}>
+            Trace product → journal → GL
+          </button>
+          <h4>Core transaction history</h4>
+          <div className="table-scroll">
+            <table className="branch-table">
+              <thead>
+                <tr>
+                  <th>Core reference</th>
+                  <th>Business date</th>
+                  <th>Type</th>
+                  <th>Amount · {account.currency?.code}</th>
+                  <th>State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {account.transactions?.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.id}</td>
+                    <td>{coreDate(t.date)}</td>
+                    <td>{t.transactionType.value}</td>
+                    <td>
+                      {inr ? formatMoney(t.amount) : "Unsupported currency"}
+                    </td>
+                    <td>{t.reversed ? "Reversed" : "Core record"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!account.transactions && (
+            <p>
+              Transaction history not returned. Activity and close checks are
+              incomplete.
+            </p>
+          )}
+        </>
+      )}
+      <h4>Controlled servicing instruction</h4>
+      <p>
+        Submit once, then inspect the original instruction. No automatic retry
+        of an uncertain outcome.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void mutate(
+            "/branch/instruction",
+            {
+              customerId: r.customer.id,
+              instruction: {
+                kind,
+                ...(["freeze", "unfreeze"].includes(kind)
+                  ? {}
+                  : { amount: Number(amount) }),
+                description,
+              },
+            },
+            key,
+          );
+        }}
+      >
+        <label>
+          Operation
+          <select
+            value={kind}
+            disabled={busy}
+            onChange={(e) => setKind(e.target.value)}
+          >
+            {["deposit", "withdrawal", "freeze", "unfreeze"].map((k) => (
+              <option key={k}>{k}</option>
+            ))}
+          </select>
+        </label>
+        {!["freeze", "unfreeze"].includes(kind) && (
+          <label>
+            Amount in INR
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </label>
+        )}
+        <label>
+          Original instruction
+          <input
+            required
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
+        <p>Original operation key: {key}</p>
+        <button
+          type="submit"
+          disabled={busy || role !== "officer" || !account || !inr}
+        >
+          Submit for independent approval
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setKey(crypto.randomUUID());
+            setDescription("");
+            setAmount("");
+          }}
+        >
+          Start a different instruction
+        </button>
+      </form>
+      <h4>Service history</h4>
+      {r.requests.map((s) => (
+        <p key={s.id}>
+          {s.kind} · {s.status} · {s.detail}
+        </p>
+      ))}
+      {!r.requests.length && <p>No recorded service requests.</p>}
+      <h4>Instructions</h4>
+      {r.commands.map((c) => (
+        <p key={c.id}>
+          <button
+            type="button"
+            onClick={() => openCommand(c.id, r.customer.id)}
+          >
+            {c.id} · {c.kind} · {c.status}
+          </button>
+        </p>
+      ))}
+      <h4>Latest application audit events (up to 100)</h4>
+      {r.audit.map((a) => (
+        <p key={a.id}>
+          {a.created_at} · {a.actor} · {a.action} · {a.detail}
+        </p>
+      ))}
+    </section>
+  );
+}
+export function InstructionDetail({
+  day,
+  customerId,
+  commandId,
+  openCommand,
+  role,
+  busy,
+  mutate,
+  accounting,
+}: {
+  day: BranchDay;
+  customerId: string;
+  commandId: string;
+  openCommand: (id: string, customer: string) => void;
+  role: Role;
+  busy: boolean;
+  mutate: BranchMutation;
+  accounting: () => void;
+}) {
+  const [pendingOnly, setPendingOnly] = useState(true);
+  const r = day.relationships.find((item) => item.customer.id === customerId);
+  const command = r?.commands.find((c) => c.id === commandId);
+  return (
+    <section className="panel">
+      <h3>Transaction enquiry & approval inbox</h3>
+      <label>
+        <input
+          type="checkbox"
+          checked={pendingOnly}
+          onChange={(e) => setPendingOnly(e.target.checked)}
+        />
+        Pending only
+      </label>
+      {day.relationships.flatMap((item) =>
+        item.commands
+          .filter((c) => !pendingOnly || c.status === "pending")
+          .map((c) => (
+            <p key={c.id}>
+              <button
+                type="button"
+                onClick={() => openCommand(c.id, item.customer.id)}
+              >
+                {item.customer.display_name} · {c.kind} · {c.status} · {c.id}
+              </button>
+            </p>
+          )),
+      )}
+      {command && r ? (
+        <article className="branch-day-item">
+          <h4>
+            {r.customer.display_name} · {command.id}
+          </h4>
+          <p>
+            Servicing branch {day.branchId} · account {command.account_id} ·{" "}
+            {day.businessDate} · INR · observed{" "}
+            {new Date(day.observedAt).toLocaleString("en-IN")}
+          </p>
+          <dl>
+            <dt>Instruction</dt>
+            <dd>{command.description}</dd>
+            <dt>Kind / status</dt>
+            <dd>
+              {command.kind} / {command.status}
+            </dd>
+            <dt>Instruction amount</dt>
+            <dd>{formatMoney(command.amount_minor / 100)}</dd>
+            <dt>Maker / checker</dt>
+            <dd>
+              {command.maker} / {command.approver ?? "No decision recorded"}
+            </dd>
+            <dt>Core reference</dt>
+            <dd>{command.core_id ?? "No confirmed financial reference"}</dd>
+            <dt>Created</dt>
+            <dd>{command.created_at} UTC</dd>
+            <dt>Recovery</dt>
+            <dd>
+              {command.error ??
+                "Inspect status and core references before repeating an instruction."}
+            </dd>
+          </dl>
+          <details>
+            <summary>Original saved payload</summary>
+            <pre>{command.payload}</pre>
+          </details>
+          <div className="branch-day-actions">
+            <button
+              type="button"
+              disabled={
+                busy ||
+                role !== "approver" ||
+                command.status !== "pending" ||
+                command.maker === "approver"
+              }
+              onClick={() =>
+                void mutate("/branch/decision", {
+                  customerId,
+                  commandId,
+                  decision: "approve",
+                })
+              }
+            >
+              Approve original instruction
+            </button>
+            <button
+              type="button"
+              disabled={
+                busy || role !== "approver" || command.status !== "pending"
+              }
+              onClick={() =>
+                void mutate("/branch/decision", {
+                  customerId,
+                  commandId,
+                  decision: "reject",
+                })
+              }
+            >
+              Reject
+            </button>
+            <button type="button" onClick={accounting}>
+              Inspect core journals
+            </button>
+            {command.status === "posted" &&
+              ["deposit", "withdrawal"].includes(command.kind) && (
+                <button
+                  type="button"
+                  disabled={busy || role !== "officer"}
+                  onClick={() =>
+                    void mutate(
+                      "/branch/instruction",
+                      {
+                        customerId,
+                        instruction: {
+                          kind: "reverse",
+                          originalId: command.id,
+                          description: `Reverse ${command.id}`,
+                        },
+                      },
+                      `branch-reverse-${command.id}`,
+                    )
+                  }
+                >
+                  Request controlled reversal
+                </button>
+              )}
+          </div>
+          <p>
+            A posted instruction alone does not prove a balanced journal,
+            physical cash count or settlement match. Uncertain/executing
+            instructions require reconciliation; there is no force-post action.
+          </p>
+        </article>
+      ) : (
+        <p>
+          Select an instruction to inspect its original record and decision.
+        </p>
+      )}
+    </section>
+  );
+}

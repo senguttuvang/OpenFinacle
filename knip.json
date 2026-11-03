@@ -8,7 +8,8 @@
     "e2e/**/*.ts",
     "src/demo/households/planning-preview.ts",
     "src/operations/cli/planning-preview.ts",
-    "e2e/fixtures/form-select-harness.tsx"
+    "e2e/fixtures/form-select-harness.tsx",
+    "src/demo/branch/branch-preview.ts"
   ],
   "project": [
     "app/**/*.{ts,tsx}",

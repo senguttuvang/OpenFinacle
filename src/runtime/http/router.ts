@@ -21,6 +21,7 @@ import {
   hash,
 } from "./request-context";
 import { parseJsonRequest as parse } from "./request-json";
+import { branchRoutes } from "./routes/branch-routes";
 import { documentRoutes } from "./routes/document-routes";
 import { productRoutes } from "./routes/product-routes";
 import { readinessRoutes } from "./routes/readiness";
@@ -73,6 +74,10 @@ export const handle = (request: Request, env: Environment) =>
       if (response) return response;
     }
     const session = yield* getSession(request);
+    if (path === "/api/branch" || path.startsWith("/api/branch/")) {
+      const response = yield* branchRoutes(request, session);
+      if (response) return response;
+    }
     const onboarding = yield* onboardingRoute(request, session);
     if (onboarding) return onboarding;
     if (path === "/api/planning" || path.startsWith("/api/planning/"))

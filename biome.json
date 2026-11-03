@@ -11,7 +11,8 @@
       "!bun.lock",
       "!next-env.d.ts",
       "config/**",
-      ".agents/**"
+      ".agents/**",
+      "!**/.wrangler"
     ]
   },
   "formatter": {

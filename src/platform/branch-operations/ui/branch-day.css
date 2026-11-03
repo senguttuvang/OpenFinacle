@@ -1,0 +1,109 @@
+.app-shell .branch-day {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.app-shell .branch-day .panel {
+  min-width: 0;
+}
+.app-shell .branch-day-heading {
+  display: grid;
+  gap: 0.8rem;
+}
+.app-shell .branch-day-heading p {
+  overflow-wrap: anywhere;
+}
+.app-shell .branch-day label {
+  display: grid;
+  gap: 0.4rem;
+  margin-block: 0.8rem;
+}
+.app-shell .branch-day input,
+.app-shell .branch-day select {
+  max-width: 100%;
+  min-height: 3rem;
+  font: inherit;
+  border: 1px solid var(--rule, #dae2ef);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  color: inherit;
+}
+.app-shell .branch-day button {
+  min-height: 3rem;
+  padding: 0.6rem 0.9rem;
+  overflow-wrap: anywhere;
+}
+.app-shell .branch-day button:focus-visible,
+.app-shell .branch-day input:focus-visible,
+.app-shell .branch-day select:focus-visible {
+  outline: 3px solid #2458d3;
+  outline-offset: 3px;
+}
+.app-shell .branch-day button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.app-shell .branch-day-tabs,
+.app-shell .branch-day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.app-shell .branch-day-tabs button {
+  border: 1px solid #dae2ef;
+  background: white;
+  color: #172b4d;
+  border-radius: 0.5rem;
+}
+.app-shell .branch-day-tabs button[aria-current] {
+  background: #173d86;
+  color: white;
+}
+.app-shell .branch-day-item {
+  padding: 1rem;
+  margin-block: 1rem;
+  border: 1px solid #dae2ef;
+  border-radius: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.app-shell .branch-day dd {
+  margin: 0 0 0.8rem;
+  overflow-wrap: anywhere;
+}
+.app-shell .branch-day dt {
+  font-weight: 600;
+}
+.app-shell .branch-day pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.app-shell .branch-day .branch-metric strong {
+  font-size: clamp(1.3rem, 2vw, 2rem);
+}
+.app-shell .branch-day .table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.app-shell .branch-day .table-scroll:focus-visible {
+  outline: 3px solid #2458d3;
+}
+@media (max-width: 700px) {
+  .app-shell .branch-day .branch-metrics {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .branch-day-tabs button {
+    flex: 1 1 45%;
+  }
+}
+
+.app-shell .branch-day button:not(.branch-metric) {
+  border: 1px solid #dae2ef;
+  border-radius: 0.5rem;
+  background: white;
+  color: #172b4d;
+}
+.app-shell .branch-day .branch-day-tabs button[aria-current] {
+  background: #173d86;
+  color: white;
+}
