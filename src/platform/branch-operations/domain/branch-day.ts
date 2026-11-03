@@ -61,15 +61,27 @@ export const unresolvedStatuses = new Set([
   "uncertain",
   "failed",
 ]);
-export const coreDate = (date: number[]) =>
-  date.length === 3
-    ? `${date[0]}-${String(date[1]).padStart(2, "0")}-${String(date[2]).padStart(2, "0")}`
-    : "Unknown";
+export const coreDate = (date: readonly number[]) => {
+  if (date.length !== 3 || !date.every(Number.isSafeInteger)) return "Unknown";
+  const [year, month, day] = date;
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31)
+    return "Unknown";
+  const calendar = new Date(0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  if (
+    calendar.getUTCFullYear() !== year ||
+    calendar.getUTCMonth() !== month - 1 ||
+    calendar.getUTCDate() !== day
+  )
+    return "Unknown";
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
 export function branchTotals(day: BranchDay) {
   let balanceMinor = 0;
   let creditsMinor = 0;
   let debitsMinor = 0;
   let complete =
+    coreDate(day.businessDate.split("-").map(Number)) === day.businessDate &&
     !day.truncated &&
     !day.coverage.workflowLimited &&
     day.relationships.length > 0;
@@ -86,7 +98,13 @@ export function branchTotals(day: BranchDay) {
     balanceMinor += Math.round((account.summary?.accountBalance ?? 0) * 100);
     if (!account.transactions) complete = false;
     for (const item of account.transactions ?? []) {
-      if (item.reversed || coreDate(item.date) !== day.businessDate) continue;
+      if (item.reversed) continue;
+      const date = coreDate(item.date);
+      if (date === "Unknown") {
+        complete = false;
+        continue;
+      }
+      if (date !== day.businessDate) continue;
       if (!Number.isFinite(item.amount) || item.amount < 0) {
         complete = false;
         continue;

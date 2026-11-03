@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 30000,
   workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:3060",
+    baseURL: process.env.BASE_URL ?? "http://127.0.0.1:3060",
     headless: true,
     viewport: { width: 1440, height: 1000 },
   },

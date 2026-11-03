@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { CoreDateEvidence } from "./core-account";
 
 const named = Schema.Struct({
   id: Schema.Number,
@@ -22,7 +23,7 @@ export const JournalPage = Schema.Struct({
       glAccountName: Schema.String,
       glAccountCode: Schema.String,
       transactionId: Schema.String,
-      transactionDate: Schema.Array(Schema.Number),
+      transactionDate: CoreDateEvidence,
       entryType: Schema.Struct({ id: Schema.Number, value: Schema.String }),
       amount: Schema.Number,
       currency: Schema.Struct({ code: Schema.String }),

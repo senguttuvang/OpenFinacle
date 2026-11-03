@@ -70,3 +70,7 @@ CUS-12 and service-centre increment: selecting a request within an owned branch 
 ## Daily service-work acceptance
 
 OPS daily control lists saved open requests and fulfilled requests with outstanding/missing delivery evidence separately. Each row drills into its owned customer and saved case history. Fulfilled with delivery none/delivered/cancelled is not an outstanding delivery; unrecognised workflow states stay open. Incomplete loaded workflow coverage is explicit. Empty queues do not certify physical delivery, settlement or formal close. Last actors are historical evidence, not new responsibility assignments.
+
+## Evidence validation follow-up
+
+Actual Gregorian dates are required for returned transaction/journal/activation date evidence. Impossible or malformed transaction dates must not silently count as other-day activity while daily totals appear complete. Malformed business dates withhold aggregates. Optional delivery metadata must be text before browser rendering; missing fields retain explicit unavailable evidence. No financial command or date-selection policy changes.
