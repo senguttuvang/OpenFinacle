@@ -3,10 +3,14 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
+  actions: read
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Cold Apache archive fetches can take 12 minutes before cache export.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -17,4 +21,42 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install --yes --no-install-recommends sqlite3
       - run: bun install --frozen-lockfile
+      # Share the same Docker daemon/default builder with Wrangler's real build.
+      - name: Set up CI Docker cache support
+        uses: docker/setup-docker-action@7ec28a010822b4626af4874f9448a4b05ac6f3e5 # v5
+        with:
+          version: v29.9.2
+          set-host: true
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+      - name: Verify shared Docker builder
+        run: |
+          docker info --format '{{json .DriverStatus}}' | bun -e '
+            const rows = JSON.parse(await Bun.stdin.text());
+            if (!rows.some(([key, value]) => key === "driver-type" && value === "io.containerd.snapshotter.v1")) {
+              throw new Error("The shared Docker daemon must use the containerd image store");
+            }
+          '
+          docker buildx inspect default --bootstrap
+      - name: Prewarm pinned Fineract build cache
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: infrastructure/fineract
+          file: infrastructure/fineract/Dockerfile
+          builder: default
+          platforms: linux/amd64
+          tags: openfinacle-ci-fineract:verified
+          load: true
+          push: false
+          provenance: false
+          cache-from: type=gha,version=2,scope=openfinacle-fineract
+          # Only main writes the shared cache; PRs can restore it or build cold.
+          cache-to: ${{ github.ref == 'refs/heads/main' && 'type=gha,version=2,scope=openfinacle-fineract,mode=max,ignore-error=true,timeout=5m' || '' }}
+      # Keep all source, test, production-build and Wrangler Docker checks.
       - run: bun run check
