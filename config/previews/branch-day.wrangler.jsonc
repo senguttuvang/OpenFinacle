@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "openfinacle-branch-day-local-review",
+  "main": "../../src/demo/branch/branch-preview.ts",
+  "compatibility_date": "2026-10-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../../out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/"]
+  },
+  "vars": { "LOCAL_BRANCH_PREVIEW": "true" }
+}
