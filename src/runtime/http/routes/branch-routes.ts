@@ -13,6 +13,7 @@ import {
   readBranchDay,
 } from "../../../platform/branch-operations/application/branch-day";
 import { relationshipEnquiry } from "../../../platform/branch-operations/application/relationship";
+import { serviceCase } from "../../../platform/service-requests/application/service-cases";
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
 export const branchRoutes = (request: Request, session: Session) =>
@@ -27,6 +28,20 @@ export const branchRoutes = (request: Request, session: Session) =>
           url.searchParams.get("customerId") ?? "",
         ),
       );
+    if (
+      url.pathname === "/api/branch/service-case" &&
+      request.method === "GET"
+    ) {
+      const { scoped } = yield* branchCustomer(
+        session,
+        url.searchParams.get("customerId") ?? "",
+      );
+      const detail = yield* serviceCase(
+        scoped,
+        url.searchParams.get("id") ?? "",
+      );
+      return Response.json({ ...detail, actions: [] });
+    }
     if (url.pathname === "/api/branch/accounting" && request.method === "GET")
       return Response.json(
         yield* readAccounting(
