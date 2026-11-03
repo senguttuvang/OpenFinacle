@@ -367,6 +367,11 @@ export function BranchDayWorkspace({
               mutate={mutate}
               openCommand={openCommand}
               openCustomer={openCustomer}
+              openLoan={(customer, loan) => {
+                setCustomerId(customer);
+                setLoanId(loan);
+                setTab("Account");
+              }}
             />
           )}
         </>
