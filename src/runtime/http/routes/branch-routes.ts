@@ -17,6 +17,7 @@ import { relationshipEnquiry } from "../../../platform/branch-operations/applica
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
 import { branchCaseRoutes } from "./branch-case-routes";
+import { branchLoanRoutes } from "./branch-loan-routes";
 export const branchRoutes = (request: Request, session: Session) =>
   Effect.gen(function* () {
     const url = new URL(request.url);
@@ -36,6 +37,8 @@ export const branchRoutes = (request: Request, session: Session) =>
           url.searchParams.get("customerId") ?? "",
         ),
       );
+    const loanResponse = yield* branchLoanRoutes(request, session);
+    if (loanResponse) return loanResponse;
     const caseResponse = yield* branchCaseRoutes(request, session);
     if (caseResponse) return caseResponse;
     if (url.pathname === "/api/branch/accounting" && request.method === "GET")

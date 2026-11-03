@@ -112,8 +112,9 @@ export function BranchSummary({
           </p>
         )}
         <p>
-          Advances, fixed and recurring deposits: consolidated core-backed
-          branch totals are not implemented.
+          Native loan exposure is available in the registered-client enquiry
+          above. Fixed and recurring deposits: consolidated core-backed branch
+          totals are not implemented.
         </p>
         {day.relationships.map((r) => (
           <button

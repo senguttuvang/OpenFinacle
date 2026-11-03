@@ -14,9 +14,11 @@ export const coreAmount = (
 export function RelationshipDetails({
   state,
   reviewFixture = false,
+  openLoan,
 }: {
   state: RelationshipState;
   reviewFixture?: boolean;
+  openLoan?: (id: number) => void;
 }) {
   if (reviewFixture)
     return (
@@ -112,6 +114,14 @@ export function RelationshipDetails({
                       <tr key={`${family}-${row.id}`}>
                         <td>
                           {family} · {row.accountNo}
+                          {family === "Loan" && openLoan && (
+                            <button
+                              type="button"
+                              onClick={() => openLoan(row.id)}
+                            >
+                              Inspect Core loan {row.id}
+                            </button>
+                          )}
                           {row.id === value.selectedSavings?.id && (
                             <small>Registered servicing account</small>
                           )}
