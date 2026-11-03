@@ -3,6 +3,7 @@ import { useState } from "react";
 import { formatMoney } from "../../../banking-workspace/domain/banking";
 import type { BranchDay } from "../../domain/branch-day";
 import { LoanExposure, loanExposureTotals } from "../../domain/loans";
+import { LoanTableScroll } from "./loan-table-scroll";
 import { useBranchLoanRead } from "./use-loan-enquiry";
 export function BranchAdvances({
   day,
@@ -86,7 +87,7 @@ export function BranchAdvances({
           ) : (
             <>
               <h4>Core outstanding by loan product</h4>
-              <div className="table-scroll">
+              <LoanTableScroll label="Loan product outstanding table">
                 <table className="branch-table">
                   <thead>
                     <tr>
@@ -107,7 +108,7 @@ export function BranchAdvances({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </LoanTableScroll>
               <p>
                 Principal and total outstanding are separate Core fields. These
                 figures include all returned loan states and do not represent
@@ -117,7 +118,7 @@ export function BranchAdvances({
             </>
           )}
           <h4>Underlying Core loans</h4>
-          <div className="table-scroll">
+          <LoanTableScroll label="Registered client Core loan table">
             <table className="branch-table">
               <thead>
                 <tr>
@@ -165,7 +166,7 @@ export function BranchAdvances({
                 ))}
               </tbody>
             </table>
-          </div>
+          </LoanTableScroll>
         </>
       )}
     </section>

@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { formatMoney } from "../../../banking-workspace/domain/banking";
 import { coreDate } from "../../domain/branch-day";
 import { LoanEnquiry } from "../../domain/loans";
+import { LoanTableScroll } from "./loan-table-scroll";
 import { useBranchLoanRead } from "./use-loan-enquiry";
 
 const money = (value: number | undefined) =>
@@ -104,7 +105,7 @@ export function BranchLoanDetail({
           ) : periods.length === 0 ? (
             <p>No repayment period rows returned by Core.</p>
           ) : (
-            <div className="table-scroll">
+            <LoanTableScroll label="Core loan repayment schedule table">
               <table className="branch-table">
                 <thead>
                   <tr>
@@ -145,7 +146,7 @@ export function BranchLoanDetail({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </LoanTableScroll>
           )}
           <h5>Core recorded loan transactions</h5>
           {!loan.transactions ? (
@@ -153,7 +154,7 @@ export function BranchLoanDetail({
           ) : loan.transactions.length === 0 ? (
             <p>No transaction rows returned by Core.</p>
           ) : (
-            <div className="table-scroll">
+            <LoanTableScroll label="Core recorded loan transactions table">
               <table className="branch-table">
                 <thead>
                   <tr>
@@ -185,7 +186,7 @@ export function BranchLoanDetail({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </LoanTableScroll>
           )}
         </>
       )}
