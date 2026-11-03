@@ -27,6 +27,7 @@ export function BranchAccountDetail({
   mutate,
   openCommand,
   accounting,
+  loanAccounting,
   caseChanged,
 }: {
   relationship: BranchRelationship;
@@ -38,6 +39,7 @@ export function BranchAccountDetail({
   mutate: BranchMutation;
   openCommand: (id: string, customer: string) => void;
   accounting: () => void;
+  loanAccounting: () => void;
   caseChanged: (next: CaseDetail) => void;
 }) {
   const [kind, setKind] = useState("deposit");
@@ -186,6 +188,7 @@ export function BranchAccountDetail({
         customerId={r.customer.id}
         branchId={r.customer.branch_id}
         loanId={loanId}
+        accounting={loanAccounting}
         reviewFixture={reviewFixture}
       />
       <h4>Controlled servicing instruction</h4>

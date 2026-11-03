@@ -159,7 +159,8 @@
       "src/platform/branch-operations/domain/branch-day.ts",
       "src/platform/branch-operations/application/relationship.ts",
       "src/platform/branch-operations/application/processing.ts",
-      "src/platform/branch-operations/application/loans.ts"
+      "src/platform/branch-operations/application/loans.ts",
+      "src/platform/branch-operations/application/loan-accounting.ts"
     ],
     "service-requests": [
       "src/platform/service-requests/application/service-cases.ts",
@@ -193,6 +194,8 @@
     ],
     "lending": [
       "src/platform/lending/application/loan-origination.ts",
+      "src/platform/lending/application/loan-posting-evidence.ts",
+      "src/platform/lending/domain/origination/loan-posting-evidence.ts",
       "src/platform/lending/application/loan-records.ts",
       "src/platform/lending/application/loan-repayment-records.ts",
       "src/platform/lending/application/loan-repayment.ts",

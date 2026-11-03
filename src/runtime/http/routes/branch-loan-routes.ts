@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import type { Session } from "../../../platform/banking-workspace/domain/banking";
+import { readLoanAccounting } from "../../../platform/branch-operations/application/loan-accounting";
 import {
   readBranchLoan,
   readLoanExposure,
@@ -11,6 +12,15 @@ export const branchLoanRoutes = (request: Request, session: Session) =>
     const customerId = url.searchParams.get("customerId") ?? "";
     if (url.pathname === "/api/branch/advances")
       return Response.json(yield* readLoanExposure(session, customerId));
+    if (url.pathname === "/api/branch/loan-accounting")
+      return Response.json(
+        yield* readLoanAccounting(
+          session,
+          customerId,
+          Number(url.searchParams.get("id")),
+          Number(url.searchParams.get("offset") ?? "0"),
+        ),
+      );
     if (url.pathname === "/api/branch/loan")
       return Response.json(
         yield* readBranchLoan(
