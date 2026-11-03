@@ -77,7 +77,9 @@ test("branch customer service history shows scoped decisions and delivery, clear
     history.getByText("Independent demo review", { exact: true }),
   ).toBeVisible();
   await expect(
-    history.getByText("Delivery: Delivery not recorded", { exact: true }),
+    history
+      .getByText("Delivery: Delivery not recorded", { exact: true })
+      .first(),
   ).toBeVisible();
   await expect(
     history.getByRole("button", { name: "Record completion" }),

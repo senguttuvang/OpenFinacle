@@ -1,20 +1,26 @@
 "use client";
 import { Effect } from "effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CaseDetail } from "../../service-requests/domain/service-cases";
+import { serviceDefinition } from "../../service-requests/domain/services";
 import { serviceCaseApi } from "../../service-requests/ui/service-case-api";
 import {
+  ServiceCaseDetail,
   serviceReference,
   serviceStatus,
 } from "../../service-requests/ui/service-case-detail";
+import type { ServicePerform } from "../../service-requests/ui/service-request-form";
+import "../../service-requests/ui/service-centre.css";
 import type { BranchRelationship } from "../domain/branch-day";
 
 export function BranchServiceHistory({
   relationship,
   reviewFixture = false,
+  caseChanged,
 }: {
   relationship: BranchRelationship;
   reviewFixture?: boolean;
+  caseChanged: (next: CaseDetail) => void;
 }) {
   const [selected, setSelected] = useState("");
   const [revision, setRevision] = useState(0);
@@ -22,6 +28,27 @@ export function BranchServiceHistory({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const customerId = relationship.customer.id;
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const executing = useRef(false);
+  const perform: ServicePerform = (task, message) => {
+    if (executing.current) return;
+    executing.current = true;
+    setBusy(true);
+    setNotice("");
+    void Effect.runPromise(task)
+      .then(() => setNotice(message))
+      .catch(() =>
+        setNotice(
+          "The action was not confirmed. Review the saved request history before another action.",
+        ),
+      )
+      .finally(() => {
+        executing.current = false;
+        setBusy(false);
+      });
+  };
+  const readPath = `/branch/service-case?customerId=${encodeURIComponent(customerId)}&id=${encodeURIComponent(selected)}`;
   useEffect(() => {
     let active = true;
     setDetail(null);
@@ -39,7 +66,7 @@ export function BranchServiceHistory({
       .catch(() => {
         if (active)
           setError(
-            "The saved service history could not be verified. Refresh this read-only enquiry.",
+            "The saved service history could not be verified. Refresh the saved enquiry before acting.",
           );
       })
       .finally(() => {
@@ -60,12 +87,16 @@ export function BranchServiceHistory({
         <p key={request.id}>
           <button
             type="button"
-            disabled={reviewFixture}
+            disabled={reviewFixture || busy}
             aria-pressed={selected === request.id}
             onClick={() => setSelected(request.id)}
           >
             {serviceReference(request.id)} · {request.kind} ·{" "}
-            {serviceStatus(request.status)}
+            {serviceStatus(
+              detail?.request.id === request.id
+                ? detail.request.status
+                : request.status,
+            )}
           </button>{" "}
           {request.detail}
         </p>
@@ -83,52 +114,40 @@ export function BranchServiceHistory({
         >
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || busy}
             onClick={() => setRevision((value) => value + 1)}
           >
             Refresh service history
           </button>
           {loading && <p role="status">Reading saved request timeline…</p>}
           {error && <p role="alert">{error}</p>}
+          {notice && <p role="status">{notice}</p>}
           {detail && (
             <>
-              <h4>
-                {serviceReference(detail.request.id)} · {detail.request.kind}
-              </h4>
-              <p>
-                {serviceStatus(detail.request.status)} · version{" "}
-                {detail.request.version} · updated {detail.request.updated_at}{" "}
-                UTC
-              </p>
               <p>Delivery: {serviceStatus(detail.request.delivery_status)}</p>
               <p>
                 Recorded outcome:{" "}
                 {detail.request.outcome_note || "No outcome recorded"}
               </p>
               <p>Last actor: {detail.request.updated_by || "Not recorded"}</p>
-              <ol>
-                {detail.history.map((event) => (
-                  <li key={event.id}>
-                    <strong>{serviceStatus(event.to_status)}</strong> ·{" "}
-                    {event.actor} · {event.created_at} UTC
-                    <p>{event.note || "No note recorded"}</p>
-                    <p>{event.detail}</p>
-                    <small>
-                      Previous:{" "}
-                      {event.from_status
-                        ? serviceStatus(event.from_status)
-                        : "Initial record"}{" "}
-                      · Delivery: {serviceStatus(event.delivery_status)}
-                    </small>
-                  </li>
-                ))}
-              </ol>
-              {!detail.history.length && (
-                <p>No saved timeline events returned.</p>
-              )}
+              <ServiceCaseDetail
+                key={`${selected}-${revision}`}
+                initial={detail}
+                definition={serviceDefinition(detail.request.kind)}
+                busy={busy}
+                perform={perform}
+                changed={() => {}}
+                readPath={readPath}
+                actionPath={`/branch/service-case/action?customerId=${encodeURIComponent(customerId)}`}
+                updated={(next) => {
+                  setDetail(next);
+                  caseChanged(next);
+                }}
+              />
               <p>
-                Read-only branch enquiry. Use the customer’s service centre for
-                permitted case actions.
+                Actions use existing demo staff authority and saved versions.
+                Delivery recording is an application declaration, not physical
+                verification.
               </p>
             </>
           )}

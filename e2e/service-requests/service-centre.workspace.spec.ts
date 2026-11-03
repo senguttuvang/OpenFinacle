@@ -385,8 +385,7 @@ test("staff reviews versioned actions and refreshes a conflicting case before an
       json: url.pathname === "/api/dashboard" ? data : {},
     });
   });
-  await page.goto("/demo");
-  await page.getByRole("button", { name: /Open service requests/ }).click();
+  await page.goto("/customer-service/requests");
   await page.getByRole("button", { name: /View request SR-/ }).click();
   await expect(
     page.getByRole("dialog").getByRole("heading", { name: "Request history" }),

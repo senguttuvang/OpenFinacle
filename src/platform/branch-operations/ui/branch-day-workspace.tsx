@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Dashboard } from "../../banking-workspace/domain/view";
 import { api } from "../../banking-workspace/ui/api";
 import type { View } from "../../navigation/ui/navigation";
+import type { CaseDetail } from "../../service-requests/domain/service-cases";
 import { type BranchDay, branchTotals } from "../domain/branch-day";
 import { BranchDayEnvelope } from "../domain/core-account";
 import { AccountingExplorer } from "./accounting-explorer";
@@ -84,6 +85,25 @@ export function BranchDayWorkspace({
   const relationship = day?.relationships.find(
     (r) => r.customer.id === customerId,
   );
+  const caseChanged = (customerId: string, next: CaseDetail) =>
+    setDay((current) =>
+      current
+        ? {
+            ...current,
+            relationships: current.relationships.map((r) =>
+              r.customer.id === customerId &&
+              r.customer.bank_id === next.request.bank_id
+                ? {
+                    ...r,
+                    requests: r.requests.map((request) =>
+                      request.id === next.request.id ? next.request : request,
+                    ),
+                  }
+                : r,
+            ),
+          }
+        : current,
+    );
   const openCustomer = (id: string) => {
     setCustomerId(id);
     setCommandId("");
@@ -242,6 +262,9 @@ export function BranchDayWorkspace({
                 mutate={mutate}
                 openCommand={openCommand}
                 accounting={() => setTab("Accounting")}
+                caseChanged={(next) =>
+                  caseChanged(relationship.customer.id, next)
+                }
               />
             ) : (
               <p>Choose a registered customer in Customers.</p>

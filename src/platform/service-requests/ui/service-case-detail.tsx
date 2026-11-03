@@ -67,12 +67,18 @@ export function ServiceCaseDetail({
   busy,
   perform,
   changed,
+  readPath,
+  actionPath = "/service-cases/action",
+  updated,
 }: {
   initial: CaseDetail;
   definition?: ServiceDefinition;
   busy: boolean;
   perform: ServicePerform;
   changed: () => void;
+  readPath?: string;
+  actionPath?: string;
+  updated?: (next: CaseDetail) => void;
 }) {
   const [detail, setDetail] = useState(initial);
   const [action, setAction] = useState<CaseAction | "">("");
@@ -84,7 +90,9 @@ export function ServiceCaseDetail({
   const record = detail.request;
   const refresh = () =>
     perform(
-      serviceCaseApi(`/service-cases?id=${encodeURIComponent(record.id)}`).pipe(
+      serviceCaseApi(
+        readPath ?? `/service-cases?id=${encodeURIComponent(record.id)}`,
+      ).pipe(
         Effect.tap((next) =>
           Effect.sync(() => {
             setDetail(next);
@@ -94,6 +102,7 @@ export function ServiceCaseDetail({
             setAction("");
             setNote("");
             setError("");
+            updated?.(next);
             changed();
           }),
         ),
@@ -108,7 +117,7 @@ export function ServiceCaseDetail({
     if (!action) return;
     setError("");
     perform(
-      serviceCaseApi("/service-cases/action", {
+      serviceCaseApi(actionPath, {
         id: record.id,
         version: record.version,
         action,
@@ -121,6 +130,7 @@ export function ServiceCaseDetail({
             setAction("");
             setConfirm(false);
             setNote("");
+            updated?.(next);
             changed();
           }),
         ),

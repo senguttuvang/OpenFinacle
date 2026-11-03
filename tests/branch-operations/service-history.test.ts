@@ -5,7 +5,7 @@ import { branchRoutes } from "../../src/runtime/http/routes/branch-routes";
 import { createHarness } from "../customers/customer-banking.harness";
 
 const harness = createHarness();
-test("branch service timeline preserves customer ownership and exposes no actions", async () => {
+test("branch service timeline preserves customer ownership and exposes only permitted staff actions", async () => {
   const { h, source, recipientId } = await harness.twoCustomers();
   const officer = { ...source, role: "officer" as const };
   const { customer } = await harness.run(
@@ -45,7 +45,7 @@ test("branch service timeline preserves customer ownership and exposes no action
   expect(response?.status).toBe(200);
   expect(await response?.json()).toMatchObject({
     request: { id: "owned-case", detail: "Saved synthetic request" },
-    actions: [],
+    actions: ["start", "request_information", "reject"],
   });
   expect(
     await harness.run(h, read(recipientId, "foreign-case").pipe(Effect.flip)),

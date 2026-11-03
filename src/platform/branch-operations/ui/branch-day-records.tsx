@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { formatMoney, type Role } from "../../banking-workspace/domain/banking";
+import type { CaseDetail } from "../../service-requests/domain/service-cases";
 import {
   type BranchDay,
   type BranchRelationship,
@@ -19,6 +20,7 @@ export function BranchAccountDetail({
   mutate,
   openCommand,
   accounting,
+  caseChanged,
 }: {
   relationship: BranchRelationship;
   reviewFixture?: boolean;
@@ -27,6 +29,7 @@ export function BranchAccountDetail({
   mutate: BranchMutation;
   openCommand: (id: string, customer: string) => void;
   accounting: () => void;
+  caseChanged: (next: CaseDetail) => void;
 }) {
   const [kind, setKind] = useState("deposit");
   const [amount, setAmount] = useState("");
@@ -242,7 +245,15 @@ export function BranchAccountDetail({
           Start a different instruction
         </button>
       </form>
-      <BranchServiceHistory relationship={r} reviewFixture={reviewFixture} />
+      <BranchServiceHistory
+        key={role}
+        relationship={r}
+        reviewFixture={reviewFixture}
+        caseChanged={(next) => {
+          caseChanged(next);
+          if (next.request.profile_patch) enquiry.reload();
+        }}
+      />
       <h4>Instructions</h4>
       {r.commands.map((c) => (
         <p key={c.id}>

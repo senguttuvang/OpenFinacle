@@ -13,9 +13,9 @@ import {
   readBranchDay,
 } from "../../../platform/branch-operations/application/branch-day";
 import { relationshipEnquiry } from "../../../platform/branch-operations/application/relationship";
-import { serviceCase } from "../../../platform/service-requests/application/service-cases";
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
+import { branchCaseRoutes } from "./branch-case-routes";
 export const branchRoutes = (request: Request, session: Session) =>
   Effect.gen(function* () {
     const url = new URL(request.url);
@@ -28,20 +28,8 @@ export const branchRoutes = (request: Request, session: Session) =>
           url.searchParams.get("customerId") ?? "",
         ),
       );
-    if (
-      url.pathname === "/api/branch/service-case" &&
-      request.method === "GET"
-    ) {
-      const { scoped } = yield* branchCustomer(
-        session,
-        url.searchParams.get("customerId") ?? "",
-      );
-      const detail = yield* serviceCase(
-        scoped,
-        url.searchParams.get("id") ?? "",
-      );
-      return Response.json({ ...detail, actions: [] });
-    }
+    const caseResponse = yield* branchCaseRoutes(request, session);
+    if (caseResponse) return caseResponse;
     if (url.pathname === "/api/branch/accounting" && request.method === "GET")
       return Response.json(
         yield* readAccounting(

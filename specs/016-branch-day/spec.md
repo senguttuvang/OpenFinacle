@@ -74,3 +74,7 @@ OPS daily control lists saved open requests and fulfilled requests with outstand
 ## Evidence validation follow-up
 
 Actual Gregorian dates are required for returned transaction/journal/activation date evidence. Impossible or malformed transaction dates must not silently count as other-day activity while daily totals appear complete. Malformed business dates withhold aggregates. Optional delivery metadata must be text before browser rendering; missing fields retain explicit unavailable evidence. No financial command or date-selection policy changes.
+
+## Branch case handling
+
+CUS-12/service-centre increment: staff can handle the selected branch customer's existing case without switching the header customer. The existing case service owns permitted actions, version checks, transitions, independent approval, profile effects and history. Branch scope is verified before reads/actions. Case responses update only that customer's saved workflow rows in the branch snapshot; financial observation time is unchanged. Lost acknowledgements/conflicts require history refresh before another action. Existing service-centre routes remain the default for its shared component. Delivery recording remains a declaration, not physical verification. Local review fixtures still refuse writes.
