@@ -16,6 +16,7 @@ import {
   DailyControl,
 } from "./branch-day-queues";
 import { BranchAccountDetail, InstructionDetail } from "./branch-day-records";
+import { BranchAdvances } from "./loans/branch-advances";
 
 const tabs = [
   "Overview",
@@ -36,6 +37,7 @@ export function BranchDayWorkspace({
   const [day, setDay] = useState<BranchDay | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
   const [customerId, setCustomerId] = useState("");
+  const [loanId, setLoanId] = useState(0);
   const [commandId, setCommandId] = useState("");
   const [instructionCustomer, setInstructionCustomer] = useState("");
   const [revision, setRevision] = useState(0);
@@ -107,11 +109,13 @@ export function BranchDayWorkspace({
     );
   const openCustomer = (id: string) => {
     setCustomerId(id);
+    setLoanId(0);
     setCommandId("");
     setTab("Account");
   };
   const openCommand = (id: string, customer: string, filterCustomer = "") => {
     setInstructionCustomer(filterCustomer);
+    setLoanId(0);
     setCustomerId(customer);
     setCommandId(id);
     setTab("Transactions & approvals");
@@ -245,13 +249,23 @@ export function BranchDayWorkspace({
             </p>
           )}
           {tab === "Overview" && (
-            <BranchSummary
-              day={day}
-              totals={branchTotals(day)}
-              openCustomer={openCustomer}
-              openCommand={openCommand}
-              daily={() => setTab("Daily control")}
-            />
+            <>
+              <BranchAdvances
+                day={day}
+                openLoan={(customer, loan) => {
+                  setCustomerId(customer);
+                  setLoanId(loan);
+                  setTab("Account");
+                }}
+              />
+              <BranchSummary
+                day={day}
+                totals={branchTotals(day)}
+                openCustomer={openCustomer}
+                openCommand={openCommand}
+                daily={() => setTab("Daily control")}
+              />
+            </>
           )}
           {tab === "Customers" && (
             <CustomerDirectory
@@ -265,6 +279,8 @@ export function BranchDayWorkspace({
               <BranchAccountDetail
                 key={relationship.customer.id}
                 relationship={relationship}
+                loanId={loanId}
+                chooseLoan={setLoanId}
                 reviewFixture={day.reviewFixture}
                 role={data.role}
                 busy={busy}

@@ -14,10 +14,13 @@ import {
 import type { BranchMutation } from "./branch-day-actions";
 import { BranchServiceHistory } from "./branch-service-history";
 import { CoreAccountTerms } from "./core-account-terms";
+import { BranchLoanDetail } from "./loans/branch-loan-detail";
 import { coreAmount, RelationshipDetails } from "./relationship-details";
 import { useRelationshipEnquiry } from "./use-relationship-enquiry";
 export function BranchAccountDetail({
   relationship: r,
+  loanId,
+  chooseLoan,
   reviewFixture,
   role,
   busy,
@@ -27,6 +30,8 @@ export function BranchAccountDetail({
   caseChanged,
 }: {
   relationship: BranchRelationship;
+  loanId: number;
+  chooseLoan: (id: number) => void;
   reviewFixture?: boolean;
   role: Role;
   busy: boolean;
@@ -172,7 +177,17 @@ export function BranchAccountDetail({
           )}
         </>
       )}
-      <RelationshipDetails state={enquiry} reviewFixture={reviewFixture} />
+      <RelationshipDetails
+        state={enquiry}
+        reviewFixture={reviewFixture}
+        openLoan={chooseLoan}
+      />
+      <BranchLoanDetail
+        customerId={r.customer.id}
+        branchId={r.customer.branch_id}
+        loanId={loanId}
+        reviewFixture={reviewFixture}
+      />
       <h4>Controlled servicing instruction</h4>
       <p>
         Submit once, then inspect the original instruction. No automatic retry
