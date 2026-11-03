@@ -1,4 +1,8 @@
 import { Schema } from "effect";
+import { coreDate } from "./branch-day";
+export const CoreDateEvidence = Schema.Array(Schema.Number).pipe(
+  Schema.filter((date) => coreDate(date) !== "Unknown"),
+);
 
 const finite = Schema.Number.pipe(Schema.finite());
 export const BranchAccountEvidence = Schema.Struct({
@@ -54,7 +58,7 @@ export const BranchAccountEvidence = Schema.Struct({
     Schema.Array(
       Schema.Struct({
         id: Schema.Number,
-        date: Schema.Array(Schema.Number),
+        date: CoreDateEvidence,
         amount: finite,
         reversed: Schema.optional(Schema.Boolean),
         transactionType: Schema.Struct({
@@ -137,6 +141,9 @@ export const BranchDayEnvelope = Schema.Struct({
           kind: Schema.String,
           status: Schema.String,
           detail: Schema.String,
+          delivery_status: Schema.optional(Schema.String),
+          updated_by: Schema.optional(Schema.String),
+          updated_at: Schema.optional(Schema.String),
         }),
       ),
       audit: Schema.Array(

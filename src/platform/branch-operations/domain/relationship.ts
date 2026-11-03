@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { ProfileDetail } from "../../customers/domain/profile";
+import { CoreDateEvidence } from "./core-account";
 
 const finite = Schema.Number.pipe(Schema.finite());
 const option = Schema.Struct({ id: Schema.Number, value: Schema.String });
@@ -16,7 +17,7 @@ export const CoreClientEvidence = Schema.Struct({
   legalForm: Schema.optional(option),
   officeId: Schema.Number,
   officeName: Schema.optional(Schema.String),
-  activationDate: Schema.optional(Schema.Array(Schema.Number)),
+  activationDate: Schema.optional(CoreDateEvidence),
 });
 const portfolioAccount = Schema.Struct({
   id: Schema.Number,

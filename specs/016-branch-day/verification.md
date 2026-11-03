@@ -84,3 +84,7 @@ The branch service-case endpoint first resolves the staff-owned branch customer 
 ## Daily service exceptions
 
 The daily-control queue uses saved service requests across the loaded branch. Open/unknown workflow states and fulfilled requests with unverified delivery are listed with an owned-customer drill-down. Known none/delivered/cancelled delivery states do not create outstanding delivery rows. Missing delivery evidence remains explicit. Actor labels report history, not ownership grants. The same terminal-state predicate drives the open-case count. State tests cover unknown and terminal workflow/delivery combinations; the browser journey verifies delivery disclosure, exclusion of no-delivery completions, customer drill-down and mobile text enlargement.
+
+## Calendar and delivery evidence validation
+
+Core account, journal and activation dates require valid Gregorian calendar dates. Daily totals independently reject malformed business or transaction dates. Evidence tests cover leap days, impossible months/days, incomplete/fractional/nonfinite dates and malformed delivery metadata; browser negative cases withhold totals and servicing controls when the branch envelope is invalid. Missing delivery fields remain optional and unknown textual states remain visible. These checks change no financial command or core configuration.
