@@ -78,3 +78,7 @@ Actual Gregorian dates are required for returned transaction/journal/activation 
 ## Branch case handling
 
 CUS-12/service-centre increment: staff can handle the selected branch customer's existing case without switching the header customer. The existing case service owns permitted actions, version checks, transitions, independent approval, profile effects and history. Branch scope is verified before reads/actions. Case responses update only that customer's saved workflow rows in the branch snapshot; financial observation time is unchanged. Lost acknowledgements/conflicts require history refresh before another action. Existing service-centre routes remain the default for its shared component. Delivery recording remains a declaration, not physical verification. Local review fixtures still refuse writes.
+
+## Native processing enquiry
+
+OPS-01..10: Daily control lazily reads tenant-wide scheduler, jobs and business dates through branch-authorised GET only. Return a validated minimal projection; omit raw error/log/stack fields. Failed/malformed sources are unavailable, never zero/complete. Empty business dates mean no rows returned, with agreement unknown. Counts, scheduler active and last-run status do not establish branch/account COB, physical cash, settlement, reconciliation or close. Display source time and Core-provided times without inferring timezone. No trigger, scheduler mutation, date change or new close action. Validate staff/foreign branch access before Core requests; test malformed/duplicate/over-cap rows, refresh errors and mobile behavior.

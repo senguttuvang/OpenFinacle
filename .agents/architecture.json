@@ -157,7 +157,8 @@
       "src/platform/branch-operations/application/branch-day.ts",
       "src/platform/branch-operations/application/accounting.ts",
       "src/platform/branch-operations/domain/branch-day.ts",
-      "src/platform/branch-operations/application/relationship.ts"
+      "src/platform/branch-operations/application/relationship.ts",
+      "src/platform/branch-operations/application/processing.ts"
     ],
     "service-requests": [
       "src/platform/service-requests/application/service-cases.ts",
