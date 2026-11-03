@@ -2,6 +2,34 @@ import { Schema } from "effect";
 
 const finite = Schema.Number.pipe(Schema.finite());
 export const BranchAccountEvidence = Schema.Struct({
+  nominalAnnualInterestRate: Schema.optional(finite),
+  savingsProductId: Schema.optional(Schema.Number),
+  savingsProductName: Schema.optional(Schema.String),
+  clientOfficeId: Schema.optional(Schema.Number),
+  clientOfficeName: Schema.optional(Schema.String),
+  subStatus: Schema.optional(
+    Schema.Struct({
+      value: Schema.String,
+      blockDebit: Schema.optional(Schema.Boolean),
+      block: Schema.optional(Schema.Boolean),
+    }),
+  ),
+  interestCompoundingPeriodType: Schema.optional(
+    Schema.Struct({ id: Schema.Number, value: Schema.String }),
+  ),
+  interestPostingPeriodType: Schema.optional(
+    Schema.Struct({ id: Schema.Number, value: Schema.String }),
+  ),
+  interestCalculationType: Schema.optional(
+    Schema.Struct({ id: Schema.Number, value: Schema.String }),
+  ),
+  interestCalculationDaysInYearType: Schema.optional(
+    Schema.Struct({ id: Schema.Number, value: Schema.String }),
+  ),
+  withdrawalFeeForTransfers: Schema.optional(Schema.Boolean),
+  allowOverdraft: Schema.optional(Schema.Boolean),
+  enforceMinRequiredBalance: Schema.optional(Schema.Boolean),
+  withHoldTax: Schema.optional(Schema.Boolean),
   id: Schema.Number,
   accountNo: Schema.String,
   clientId: Schema.Number,

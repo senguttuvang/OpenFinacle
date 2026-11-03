@@ -12,6 +12,7 @@ import {
   branchCustomer,
   readBranchDay,
 } from "../../../platform/branch-operations/application/branch-day";
+import { relationshipEnquiry } from "../../../platform/branch-operations/application/relationship";
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
 export const branchRoutes = (request: Request, session: Session) =>
@@ -19,6 +20,13 @@ export const branchRoutes = (request: Request, session: Session) =>
     const url = new URL(request.url);
     if (url.pathname === "/api/branch" && request.method === "GET")
       return Response.json(yield* readBranchDay(session));
+    if (url.pathname === "/api/branch/relationship" && request.method === "GET")
+      return Response.json(
+        yield* relationshipEnquiry(
+          session,
+          url.searchParams.get("customerId") ?? "",
+        ),
+      );
     if (url.pathname === "/api/branch/accounting" && request.method === "GET")
       return Response.json(
         yield* readAccounting(

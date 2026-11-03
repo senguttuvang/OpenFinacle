@@ -7,6 +7,14 @@ import type {
 import type { RegisteredCustomer } from "../../customers/domain/customer-registry";
 
 export interface BranchAccount extends Account {
+  interestCompoundingPeriodType?: { id: number; value: string };
+  interestPostingPeriodType?: { id: number; value: string };
+  interestCalculationType?: { id: number; value: string };
+  interestCalculationDaysInYearType?: { id: number; value: string };
+  withdrawalFeeForTransfers?: boolean;
+  allowOverdraft?: boolean;
+  enforceMinRequiredBalance?: boolean;
+  withHoldTax?: boolean;
   summary?: NonNullable<Account["summary"]> & {
     totalFeeCharge?: number;
     totalPenaltyCharge?: number;

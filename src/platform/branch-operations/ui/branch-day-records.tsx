@@ -7,6 +7,9 @@ import {
   coreDate,
 } from "../domain/branch-day";
 import type { BranchMutation } from "./branch-day-actions";
+import { CoreAccountTerms } from "./core-account-terms";
+import { coreAmount, RelationshipDetails } from "./relationship-details";
+import { useRelationshipEnquiry } from "./use-relationship-enquiry";
 export function BranchAccountDetail({
   relationship: r,
   reviewFixture,
@@ -28,6 +31,7 @@ export function BranchAccountDetail({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [key, setKey] = useState(() => crypto.randomUUID());
+  const enquiry = useRelationshipEnquiry(r.customer.id, reviewFixture);
   const account = r.account;
   const inr =
     account?.currency?.code === "INR" && account.currency.decimalPlaces === 2;
@@ -58,11 +62,27 @@ export function BranchAccountDetail({
                 ? formatMoney(account.summary.accountBalance)
                 : "Unavailable"}
             </dd>
-            <dt>Available balance</dt>
+            <dt>Available balance · core portfolio</dt>
             <dd>
-              {inr && typeof account.summary?.availableBalance === "number"
-                ? formatMoney(account.summary.availableBalance)
-                : "Not returned by core"}
+              <strong>
+                {reviewFixture
+                  ? "Not connected in review fixture"
+                  : enquiry.loading
+                    ? "Reading core portfolio…"
+                    : enquiry.value
+                      ? coreAmount(
+                          enquiry.value.selectedSavings?.availableBalance,
+                          enquiry.value.selectedSavings?.currency,
+                        )
+                      : "Unavailable"}
+              </strong>
+              {enquiry.value && (
+                <small>
+                  {" "}
+                  Portfolio observed{" "}
+                  {new Date(enquiry.value.observedAt).toLocaleString("en-IN")}
+                </small>
+              )}
             </dd>
             <dt>Product</dt>
             <dd>
@@ -100,10 +120,11 @@ export function BranchAccountDetail({
               {account.subStatus?.value ?? "Restriction evidence not returned"}
             </dd>
           </dl>
+          <CoreAccountTerms account={account} />
           <p>
-            Fee tariff, complete product terms and loan schedules: not loaded by
-            this savings enquiry. Signatories, nominees and verified documents:
-            unsupported. Do not treat absence here as absence of restrictions.
+            Full tariff, loan schedules, signatory authority and verified
+            mandates require separate evidence. Absence here is not proof of
+            unrestricted servicing.
           </p>
           <button type="button" onClick={accounting}>
             Trace product → journal → GL
@@ -143,6 +164,7 @@ export function BranchAccountDetail({
           )}
         </>
       )}
+      <RelationshipDetails state={enquiry} reviewFixture={reviewFixture} />
       <h4>Controlled servicing instruction</h4>
       <p>
         Submit once, then inspect the original instruction. No automatic retry
