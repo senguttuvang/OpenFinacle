@@ -24,6 +24,7 @@ export const branchRoutes = (request: Request, session: Session) =>
         yield* readAccounting(
           session,
           url.searchParams.get("customerId") ?? "",
+          Number(url.searchParams.get("offset") ?? "0"),
         ),
       );
     if (url.pathname === "/api/branch/assign" && request.method === "POST") {

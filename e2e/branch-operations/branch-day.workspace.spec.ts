@@ -21,6 +21,13 @@ for (const width of [1440, 390])
       if (path === "/api/branch/accounting")
         return route.fulfill({
           json: {
+            coverage: {
+              offset: 0,
+              limit: 200,
+              sourceRows: 0,
+              excludedRows: 0,
+              hasMore: false,
+            },
             observedAt: day.observedAt,
             chart: [{ id: 2, name: "Customer deposits", glCode: "OF2001" }],
             product: {
@@ -122,3 +129,82 @@ for (const width of [1440, 390])
       fullPage: true,
     });
   });
+test("accounting pages preserve selected relationship scope and expose provider coverage", async ({
+  page,
+}) => {
+  const data = savedWorkspace();
+  data.role = "officer";
+  const day = branchDayFixture();
+  const offsets: number[] = [];
+  await page.route("**/api/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/dashboard") return route.fulfill({ json: data });
+    if (url.pathname === "/api/telemetry-config")
+      return route.fulfill({ json: {} });
+    if (url.pathname === "/api/branch") return route.fulfill({ json: day });
+    if (url.pathname === "/api/branch/accounting") {
+      expect(url.searchParams.get("customerId")).toBe(
+        day.relationships[0].customer.id,
+      );
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      offsets.push(offset);
+      const count = offset === 0 ? 200 : 1;
+      return route.fulfill({
+        json: {
+          observedAt: day.observedAt,
+          chart: [],
+          product: null,
+          errors: [],
+          coverage: {
+            offset,
+            limit: 200,
+            sourceRows: count,
+            excludedRows: 0,
+            hasMore: offset === 0,
+          },
+          journals: {
+            totalFilteredRecords: 201,
+            pageItems: Array.from({ length: count }, (_, i) => ({
+              id: offset + i + 1,
+              officeId: 1,
+              glAccountId: 2,
+              glAccountCode: "OF2001",
+              glAccountName: "Deposits",
+              transactionId: `S${offset + i + 1}`,
+              transactionDate: [2026, 11, 3],
+              entryType: { id: 1, value: "CREDIT" },
+              amount: 1,
+              currency: { code: "INR" },
+              entityId: day.relationships[0].customer.account_id,
+              entityType: { id: 2, value: "SAVING" },
+            })),
+          },
+        },
+      });
+    }
+    return route.fulfill({
+      status: 404,
+      json: { error: "Outside pagination fixture" },
+    });
+  });
+  await page.goto("/overview");
+  const workspace = page.locator(".branch-day");
+  await workspace
+    .getByRole("navigation", { name: "Branch day screens" })
+    .getByRole("button", { name: "Accounting", exact: true })
+    .click();
+  await expect(workspace.locator("tbody tr")).toHaveCount(200);
+  await expect(
+    workspace.getByRole("button", { name: "Previous journal page" }),
+  ).toBeDisabled();
+  await workspace.getByRole("button", { name: "Next journal page" }).click();
+  await expect(workspace.locator("tbody tr")).toHaveCount(1);
+  await expect(
+    workspace.getByRole("button", { name: "Next journal page" }),
+  ).toBeDisabled();
+  await workspace
+    .getByRole("button", { name: "Previous journal page" })
+    .click();
+  await expect(workspace.locator("tbody tr")).toHaveCount(200);
+  expect(offsets).toEqual([0, 200, 0]);
+});

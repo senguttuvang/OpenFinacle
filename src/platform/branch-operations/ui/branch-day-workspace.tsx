@@ -127,8 +127,8 @@ export function BranchDayWorkspace({
           </span>
           <h2>One branch day</h2>
           <p>
-            Servicing branch: {day?.branchId ?? "Loading"} · Business date:{" "}
-            {day?.businessDate ?? data.businessDate} · INR
+            Servicing branch: {day?.branchId ?? "Loading"} · Application date
+            (IST): {day?.businessDate ?? data.businessDate} · INR
           </p>
           <p>
             Source:{" "}
@@ -200,10 +200,23 @@ export function BranchDayWorkspace({
       {busy && <p role="status">Reading or updating branch records…</p>}
       {day && (
         <>
+          <p>
+            {day.relationships.length} of {day.coverage.totalCustomers}{" "}
+            registered relationships loaded · core account capacity{" "}
+            {day.coverage.limit}. Date filter uses the application IST date;
+            core business-date/COB agreement is unverified.
+          </p>
+          {day.coverage.workflowLimited && (
+            <p role="alert">
+              Workflow result limit reached. Queues and close checks are
+              incomplete.
+            </p>
+          )}
           {day.truncated && (
             <p role="alert">
-              Only the first 100 registered relationships are loaded. Branch
-              totals and close readiness are incomplete.
+              Only the first {day.coverage.limit} of{" "}
+              {day.coverage.totalCustomers} registered relationships are loaded.
+              Branch totals and close readiness are incomplete.
             </p>
           )}
           {tab === "Overview" && (

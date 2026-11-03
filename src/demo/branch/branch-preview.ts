@@ -63,6 +63,13 @@ export default {
     if (url.pathname === "/api/branch") return Response.json(day);
     if (url.pathname === "/api/branch/accounting")
       return Response.json({
+        coverage: {
+          offset: 0,
+          limit: 200,
+          sourceRows: 0,
+          excludedRows: 0,
+          hasMore: false,
+        },
         observedAt: day.observedAt,
         chart: null,
         journals: null,

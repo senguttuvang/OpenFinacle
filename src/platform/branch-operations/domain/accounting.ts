@@ -47,6 +47,13 @@ export const ProductAccounting = Schema.Struct({
   ),
 });
 export interface AccountingEvidence {
+  coverage: {
+    offset: number;
+    limit: number;
+    sourceRows: number;
+    excludedRows: number;
+    hasMore: boolean;
+  };
   observedAt: number;
   chart: typeof GlChart.Type | null;
   journals: typeof JournalPage.Type | null;

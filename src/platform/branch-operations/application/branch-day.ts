@@ -9,10 +9,11 @@ import {
 } from "../../banking-workspace/domain/banking";
 import { Core, Store } from "../../banking-workspace/domain/ports";
 import type { RegisteredCustomer } from "../../customers/domain/customer-registry";
-import type {
-  BranchAccount,
-  BranchDay,
-  Responsibility,
+import {
+  type BranchAccount,
+  type BranchDay,
+  branchCustomerLimit,
+  type Responsibility,
 } from "../domain/branch-day";
 import { BranchAccountEvidence } from "../domain/core-account";
 
@@ -57,12 +58,39 @@ export const readBranchDay = (session: Session) =>
     const store = yield* Store;
     const core = yield* Core;
     const observedAt = yield* Clock.currentTimeMillis;
-    const customers = yield* store.all<RegisteredCustomer>(
-      "SELECT * FROM customers WHERE branch_id=? AND status='active' ORDER BY display_name,id LIMIT 101",
-      branchId,
-    );
+    const [customers, count, allCommands, allRequests, allAudit] =
+      yield* Effect.all(
+        [
+          store.all<RegisteredCustomer>(
+            "SELECT * FROM customers WHERE branch_id=? AND status='active' ORDER BY display_name,id LIMIT ?",
+            branchId,
+            branchCustomerLimit + 1,
+          ),
+          store.one<{ total: number }>(
+            "SELECT count(*) AS total FROM customers WHERE branch_id=? AND status='active'",
+            branchId,
+          ),
+          store.all<BankingCommand>(
+            "SELECT c.* FROM commands c JOIN customers r ON r.bank_id=c.bank_id WHERE r.branch_id=? AND r.status='active' ORDER BY c.created_at DESC,c.rowid DESC LIMIT 5001",
+            branchId,
+          ),
+          store.all<ServiceRequest>(
+            "SELECT s.* FROM service_requests s JOIN customers r ON r.bank_id=s.bank_id WHERE r.branch_id=? AND r.status='active' ORDER BY s.created_at DESC,s.id DESC LIMIT 5001",
+            branchId,
+          ),
+          store.all<Audit>(
+            "SELECT id,bank_id,actor,action,detail,created_at FROM (SELECT a.*,row_number() OVER (PARTITION BY a.bank_id ORDER BY a.created_at DESC,a.rowid DESC) AS sequence FROM audit a JOIN customers r ON r.bank_id=a.bank_id WHERE r.branch_id=? AND r.status='active') WHERE sequence<=100",
+            branchId,
+          ),
+        ],
+        { concurrency: 3 },
+      );
+    if (!count)
+      return yield* fail("Branch coverage could not be established.", 503);
+    const workflowLimited =
+      allCommands.length > 5000 || allRequests.length > 5000;
     const relationships = yield* Effect.forEach(
-      customers.slice(0, 100),
+      customers.slice(0, branchCustomerLimit),
       (customer) =>
         Effect.gen(function* () {
           const observed = yield* core
@@ -96,17 +124,14 @@ export const readBranchDay = (session: Session) =>
                 Effect.succeed({ account: null, error: error.message }),
               ),
             );
-          const commands = yield* store.all<BankingCommand>(
-            "SELECT * FROM commands WHERE bank_id=? ORDER BY created_at DESC,rowid DESC",
-            customer.bank_id,
-          );
-          const requests = yield* store.all<ServiceRequest>(
-            "SELECT * FROM service_requests WHERE bank_id=? ORDER BY created_at DESC",
-            customer.bank_id,
-          );
-          const audit = yield* store.all<Audit>(
-            "SELECT * FROM audit WHERE bank_id=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
-            customer.bank_id,
+          const commands = allCommands
+            .slice(0, 5000)
+            .filter((row) => row.bank_id === customer.bank_id);
+          const requests = allRequests
+            .slice(0, 5000)
+            .filter((row) => row.bank_id === customer.bank_id);
+          const audit = allAudit.filter(
+            (row) => row.bank_id === customer.bank_id,
           );
           return {
             customer,
@@ -117,19 +142,24 @@ export const readBranchDay = (session: Session) =>
             observedAt: yield* Clock.currentTimeMillis,
           };
         }),
-      { concurrency: 3 },
+      { concurrency: 8 },
     );
     const responsibilities = yield* store.all<Responsibility>(
       "SELECT command_id,owner,version,updated_at FROM branch_responsibilities WHERE branch_id=?",
       branchId,
     );
     return {
+      coverage: {
+        totalCustomers: count.total,
+        limit: branchCustomerLimit,
+        workflowLimited,
+      },
       branchId,
       businessDate: bankingDate(observedAt),
       observedAt,
       relationships,
       responsibilities,
-      truncated: customers.length > 100,
+      truncated: customers.length > branchCustomerLimit,
     } satisfies BranchDay;
   });
 export const assignResponsibility = (

@@ -37,3 +37,17 @@ GL list, savings product/account enquiry); deployed compatibility requires separ
 Test local branch isolation, ownership conflicts, unsupported evidence, dates/currency,
 core read failures, role separation and existing command recovery/concurrency tests.
 Browser checks cover six views, links, search, actions, keyboard and mobile overflow.
+
+## Live-core acceptance increment
+
+Production observation after PR116: 101 registered relationships; the previous 100-row
+read excluded one and took about 41 seconds. Bulk branch-scoped workflow reads and bounded
+parallel core enquiries must cover the present directory, expose capacity/coverage and
+remain inside the browser request budget. No cached or arithmetic ledger substitutes.
+
+Fineract1.15 savings-filtered journals can include loan counterpart rows. Preserve strict
+account isolation; return independently validated savings rows while explicitly withholding
+unsupported entity rows and marking the journal set incomplete for reconciliation. Journal
+pagination must distinguish provider rows, excluded rows and remaining pages. Never match
+an operation through a guessed transaction prefix or amount. Core business-date enquiry
+currently returns no configured date; keep the application IST date explicit.

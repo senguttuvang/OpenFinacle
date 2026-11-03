@@ -17,12 +17,15 @@ export function AccountingExplorer({
 }) {
   const [evidence, setEvidence] = useState<AccountingEvidence | null>(null);
   const [error, setError] = useState("");
+  const [offset, setOffset] = useState(0);
   const [gl, setGl] = useState("");
   useEffect(() => {
     let active = true;
+    setEvidence(null);
+    setError("");
     Effect.runPromise(
       api<AccountingEvidence>(
-        `/branch/accounting?customerId=${encodeURIComponent(r.customer.id)}`,
+        `/branch/accounting?customerId=${encodeURIComponent(r.customer.id)}&offset=${offset}`,
       ),
     )
       .then((value) => {
@@ -34,7 +37,7 @@ export function AccountingExplorer({
     return () => {
       active = false;
     };
-  }, [r.customer.id]);
+  }, [r.customer.id, offset]);
   const journals = evidence?.journals;
   const rows =
     journals?.pageItems.filter((j) => !gl || String(j.glAccountId) === gl) ??
@@ -105,12 +108,36 @@ export function AccountingExplorer({
       </label>
       {journals && (
         <p>
-          {journals.pageItems.length} of {journals.totalFilteredRecords} core
-          journal rows loaded.{" "}
-          {journals.totalFilteredRecords > journals.pageItems.length
-            ? "Partial evidence: first 200 only. Reconciliation remains incomplete."
-            : "No settlement or reconciliation certificate is supplied by this enquiry."}
+          {journals.pageItems.length} validated savings rows from{" "}
+          {evidence?.coverage.sourceRows ?? journals.pageItems.length} provider
+          rows on this page · {journals.totalFilteredRecords} total provider
+          rows. {evidence?.coverage.excludedRows ?? 0} counterpart/unidentified
+          rows withheld. This is not a balanced journal or settlement
+          certificate.
         </p>
+      )}
+      {evidence && (
+        <nav className="branch-day-actions" aria-label="Journal pages">
+          <button
+            type="button"
+            disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - 200))}
+          >
+            Previous journal page
+          </button>
+          <span>
+            {evidence.coverage.sourceRows
+              ? `Provider rows ${offset + 1}–${offset + evidence.coverage.sourceRows}`
+              : "No provider rows on this page"}
+          </span>
+          <button
+            type="button"
+            disabled={!evidence.coverage.hasMore}
+            onClick={() => setOffset(offset + 200)}
+          >
+            Next journal page
+          </button>
+        </nav>
       )}
       <div className="table-scroll">
         <table className="branch-table">
