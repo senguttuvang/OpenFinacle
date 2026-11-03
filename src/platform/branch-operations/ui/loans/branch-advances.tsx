@@ -4,12 +4,15 @@ import { formatMoney } from "../../../banking-workspace/domain/banking";
 import type { BranchDay } from "../../domain/branch-day";
 import { LoanExposure, loanExposureTotals } from "../../domain/loans";
 import { LoanTableScroll } from "./loan-table-scroll";
+import { LoanWorklist } from "./loan-worklist";
 import { useBranchLoanRead } from "./use-loan-enquiry";
 export function BranchAdvances({
   day,
   openLoan,
+  daily = false,
 }: {
   day: BranchDay;
+  daily?: boolean;
   openLoan: (customer: string, loan: number) => void;
 }) {
   const [enabled, setEnabled] = useState(false);
@@ -22,8 +25,19 @@ export function BranchAdvances({
   );
   const totals = value ? loanExposureTotals(value) : null;
   return (
-    <section className="panel" aria-label="Registered client loan exposure">
-      <h3>Advances · registered client loan enquiry</h3>
+    <section
+      className="panel"
+      aria-label={
+        daily
+          ? "Daily loan exception worklist"
+          : "Registered client loan exposure"
+      }
+    >
+      <h3>
+        {daily
+          ? "Daily loan worklist · native overdue evidence"
+          : "Advances · registered client loan enquiry"}
+      </h3>
       <p>
         Read native loan principal and total outstanding for registered clients
         in servicing branch {day.branchId}. Account-owning and originating
@@ -42,8 +56,12 @@ export function BranchAdvances({
           }}
         >
           {enabled
-            ? "Refresh branch loan exposure"
-            : "Read branch loan exposure"}
+            ? daily
+              ? "Refresh daily loan worklist"
+              : "Refresh branch loan exposure"
+            : daily
+              ? "Read daily loan worklist"
+              : "Read branch loan exposure"}
         </button>
       )}
       {loading && (
@@ -74,7 +92,7 @@ export function BranchAdvances({
               {e.message}
             </p>
           ))}
-          {totals === null ? (
+          {daily ? null : totals === null ? (
             <p role="alert">
               Loan product totals withheld: registered-client, loan-page or
               financial evidence is incomplete.
@@ -117,56 +135,13 @@ export function BranchAdvances({
               </p>
             </>
           )}
-          <h4>Underlying Core loans</h4>
-          <LoanTableScroll label="Registered client Core loan table">
-            <table className="branch-table">
-              <thead>
-                <tr>
-                  <th>Registered customer / loan</th>
-                  <th>Product / state</th>
-                  <th>Principal / total outstanding · INR</th>
-                  <th>Enquiry</th>
-                </tr>
-              </thead>
-              <tbody>
-                {value.rows.map(({ customerId, customerName, loan }) => (
-                  <tr key={loan.id}>
-                    <td>
-                      {customerName}
-                      <small>
-                        {loan.accountNo} · Core loan {loan.id}
-                      </small>
-                    </td>
-                    <td>
-                      {loan.loanProductName ??
-                        `Core product ${loan.loanProductId}`}
-                      <small>
-                        {loan.status.value ?? `Core state ${loan.status.id}`}
-                      </small>
-                    </td>
-                    <td>
-                      {loan.summary ? (
-                        <>
-                          {formatMoney(loan.summary.principalOutstanding)} /{" "}
-                          {formatMoney(loan.summary.totalOutstanding)}
-                        </>
-                      ) : (
-                        "Summary not returned"
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => openLoan(customerId, loan.id)}
-                      >
-                        Inspect Core loan {loan.id}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </LoanTableScroll>
+          {daily && totals === null && (
+            <p role="alert">
+              Loan worklist coverage is incomplete. Missing or invalid evidence
+              prevents any branch-wide absence-of-arrears conclusion.
+            </p>
+          )}
+          <LoanWorklist exposure={value} openLoan={openLoan} daily={daily} />
         </>
       )}
     </section>

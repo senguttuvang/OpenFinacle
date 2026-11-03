@@ -23,6 +23,7 @@ import {
 } from "../domain/work-filters";
 import type { BranchMutation } from "./branch-day-actions";
 
+import { BranchAdvances } from "./loans/branch-advances";
 import { ProcessingEnquiry } from "./processing-evidence";
 
 type OpenCommand = (
@@ -296,12 +297,14 @@ export function DailyControl({
   mutate,
   openCommand,
   openCustomer,
+  openLoan,
 }: {
   day: BranchDay;
   busy: boolean;
   mutate: BranchMutation;
   openCommand: OpenCommand;
   openCustomer: (id: string) => void;
+  openLoan: (customer: string, loan: number) => void;
 }) {
   const serviceItems = branchServiceWork(day);
   const items = day.relationships.flatMap((r) =>
@@ -344,6 +347,7 @@ export function DailyControl({
         branchId={day.branchId}
         reviewFixture={day.reviewFixture}
       />
+      <BranchAdvances day={day} openLoan={openLoan} daily />
       <h4>Service work and delivery exceptions</h4>
       <p>
         Saved application workflow only. Completed requests can still have
