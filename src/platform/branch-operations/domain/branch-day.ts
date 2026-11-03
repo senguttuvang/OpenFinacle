@@ -30,7 +30,11 @@ export interface BranchRelationship {
   account: BranchAccount | null;
   error: string | null;
   commands: BankingCommand[];
-  requests: ServiceRequest[];
+  requests: (ServiceRequest & {
+    delivery_status?: string;
+    updated_by?: string;
+    updated_at?: string;
+  })[];
   audit: Audit[];
   observedAt: number;
 }

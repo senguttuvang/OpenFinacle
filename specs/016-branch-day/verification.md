@@ -80,3 +80,7 @@ Integration checks exercise ownership rejection before core reads, mismatched cl
 ## Branch service-history enquiry
 
 The branch service-case endpoint first resolves the staff-owned branch customer and then delegates to the existing case service using that customer's scope. It returns a read-only projection with no actions. The account screen loads the selected saved request, version, outcome, last actor, ordered events and delivery state; refresh failures remove previous evidence. Review fixtures cannot load native case timelines. Integration checks cover customer role rejection, foreign branch/customer identifiers and no mutation actions. Browser checks cover keyboard refresh, failed refresh and mobile text enlargement. Case completion remains distinct from physical delivery and core financial effects.
+
+## Daily service exceptions
+
+The daily-control queue uses saved service requests across the loaded branch. Open/unknown workflow states and fulfilled requests with unverified delivery are listed with an owned-customer drill-down. Known none/delivered/cancelled delivery states do not create outstanding delivery rows. Missing delivery evidence remains explicit. Actor labels report history, not ownership grants. The same terminal-state predicate drives the open-case count. State tests cover unknown and terminal workflow/delivery combinations; the browser journey verifies delivery disclosure, exclusion of no-delivery completions, customer drill-down and mobile text enlargement.
