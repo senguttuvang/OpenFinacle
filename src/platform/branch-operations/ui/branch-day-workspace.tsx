@@ -37,6 +37,7 @@ export function BranchDayWorkspace({
   const [tab, setTab] = useState<Tab>("Overview");
   const [customerId, setCustomerId] = useState("");
   const [commandId, setCommandId] = useState("");
+  const [instructionCustomer, setInstructionCustomer] = useState("");
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -109,7 +110,8 @@ export function BranchDayWorkspace({
     setCommandId("");
     setTab("Account");
   };
-  const openCommand = (id: string, customer: string) => {
+  const openCommand = (id: string, customer: string, filterCustomer = "") => {
+    setInstructionCustomer(filterCustomer);
     setCustomerId(customer);
     setCommandId(id);
     setTab("Transactions & approvals");
@@ -204,7 +206,10 @@ export function BranchDayWorkspace({
             aria-current={tab === item ? "page" : undefined}
             onClick={() => {
               setTab(item);
-              if (item === "Transactions & approvals") setCommandId("");
+              if (item === "Transactions & approvals") {
+                setCommandId("");
+                setInstructionCustomer("");
+              }
             }}
           >
             {item}
@@ -249,7 +254,11 @@ export function BranchDayWorkspace({
             />
           )}
           {tab === "Customers" && (
-            <CustomerDirectory day={day} openCustomer={openCustomer} />
+            <CustomerDirectory
+              day={day}
+              openCustomer={openCustomer}
+              openCommand={openCommand}
+            />
           )}
           {tab === "Account" &&
             (relationship ? (
@@ -274,6 +283,7 @@ export function BranchDayWorkspace({
               day={day}
               customerId={customerId}
               commandId={commandId}
+              initialCustomerId={instructionCustomer}
               openCommand={openCommand}
               role={data.role}
               busy={busy}

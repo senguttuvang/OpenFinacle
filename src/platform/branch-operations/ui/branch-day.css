@@ -112,3 +112,12 @@
   margin-top: 0.3rem;
   color: var(--muted, #52627a);
 }
+
+.app-shell .branch-day .branch-day-filters > label {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+.app-shell .branch-day .branch-day-filters select {
+  width: 100%;
+  min-width: 0;
+}
