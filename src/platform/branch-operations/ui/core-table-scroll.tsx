@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function LoanTableScroll({
+export function CoreTableScroll({
   label,
   children,
 }: {

@@ -7,7 +7,7 @@ import {
   loanWorkOptions,
 } from "../../domain/loan-work";
 import type { LoanExposure } from "../../domain/loans";
-import { LoanTableScroll } from "./loan-table-scroll";
+import { CoreTableScroll } from "../core-table-scroll";
 
 export function LoanWorklist({
   exposure,
@@ -116,7 +116,7 @@ export function LoanWorklist({
         totals. An empty filtered worklist does not prove absence of branch
         arrears, collections, settlement work or close blockers.
       </p>
-      <LoanTableScroll label="Registered client Core loan table">
+      <CoreTableScroll label="Registered client Core loan table">
         <table className="branch-table">
           <thead>
             <tr>
@@ -169,7 +169,7 @@ export function LoanWorklist({
             ))}
           </tbody>
         </table>
-      </LoanTableScroll>
+      </CoreTableScroll>
       {!rows.length && (
         <p>
           No loaded loans match these filters. Missing evidence remains unknown.
