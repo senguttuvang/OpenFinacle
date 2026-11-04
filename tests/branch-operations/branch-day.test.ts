@@ -196,6 +196,8 @@ test("daily totals exclude reversed and other-day entries without interpreting i
       id: 1,
       amount: 15.01,
       date,
+      reversed: false,
+      entryType: "CREDIT",
       transactionType: { value: "Deposit", deposit: true },
     },
     {
@@ -209,6 +211,8 @@ test("daily totals exclude reversed and other-day entries without interpreting i
       id: 3,
       amount: 20,
       date: [2020, 1, 1],
+      reversed: false,
+      entryType: "CREDIT",
       transactionType: { value: "Deposit", deposit: true },
     },
   ];

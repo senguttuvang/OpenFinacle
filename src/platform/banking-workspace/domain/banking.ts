@@ -78,9 +78,13 @@ export interface Account {
 }
 interface CoreTransaction {
   id: number;
+  accountId?: number;
+  accountNo?: string;
+  currency?: { code: string; decimalPlaces: number };
   date: number[];
   amount: number;
   runningBalance?: number;
+  entryType?: "CREDIT" | "DEBIT" | null;
   reversed?: boolean;
   transactionType: { value: string; deposit?: boolean; withdrawal?: boolean };
   paymentDetailData?: { receiptNumber?: string };

@@ -1,15 +1,26 @@
 import { Schema } from "effect";
 import { coreDate } from "./branch-day";
+import { InrMoney } from "./inr-money";
 export const CoreDateEvidence = Schema.Array(Schema.Number).pipe(
   Schema.filter((date) => coreDate(date) !== "Unknown"),
 );
 
 const finite = Schema.Number.pipe(Schema.finite());
+const id = Schema.Number.pipe(
+  Schema.int(),
+  Schema.positive(),
+  Schema.filter(Number.isSafeInteger),
+);
+const count = Schema.Number.pipe(
+  Schema.int(),
+  Schema.nonNegative(),
+  Schema.filter(Number.isSafeInteger),
+);
 export const BranchAccountEvidence = Schema.Struct({
   nominalAnnualInterestRate: Schema.optional(finite),
-  savingsProductId: Schema.optional(Schema.Number),
+  savingsProductId: Schema.optional(id),
   savingsProductName: Schema.optional(Schema.String),
-  clientOfficeId: Schema.optional(Schema.Number),
+  clientOfficeId: Schema.optional(id),
   clientOfficeName: Schema.optional(Schema.String),
   subStatus: Schema.optional(
     Schema.Struct({
@@ -34,9 +45,9 @@ export const BranchAccountEvidence = Schema.Struct({
   allowOverdraft: Schema.optional(Schema.Boolean),
   enforceMinRequiredBalance: Schema.optional(Schema.Boolean),
   withHoldTax: Schema.optional(Schema.Boolean),
-  id: Schema.Number,
+  id,
   accountNo: Schema.String,
-  clientId: Schema.Number,
+  clientId: id,
   clientName: Schema.String,
   status: Schema.Struct({
     id: Schema.Number,
@@ -47,19 +58,27 @@ export const BranchAccountEvidence = Schema.Struct({
   ),
   summary: Schema.optional(
     Schema.Struct({
-      accountBalance: finite,
-      totalInterestPosted: Schema.optional(finite),
-      totalFeeCharge: Schema.optional(finite),
-      totalPenaltyCharge: Schema.optional(finite),
-      availableBalance: Schema.optional(finite),
+      accountBalance: InrMoney,
+      totalInterestPosted: Schema.optional(InrMoney),
+      totalFeeCharge: Schema.optional(InrMoney),
+      totalPenaltyCharge: Schema.optional(InrMoney),
+      availableBalance: Schema.optional(InrMoney),
     }),
   ),
   transactions: Schema.optional(
     Schema.Array(
       Schema.Struct({
-        id: Schema.Number,
+        id,
+        accountId: Schema.optional(id),
+        accountNo: Schema.optional(Schema.String),
+        currency: Schema.optional(
+          Schema.Struct({ code: Schema.String, decimalPlaces: Schema.Number }),
+        ),
         date: CoreDateEvidence,
-        amount: finite,
+        amount: InrMoney.pipe(Schema.nonNegative()),
+        entryType: Schema.optional(
+          Schema.NullOr(Schema.Literal("CREDIT", "DEBIT")),
+        ),
         reversed: Schema.optional(Schema.Boolean),
         transactionType: Schema.Struct({
           value: Schema.optional(Schema.String),
@@ -67,9 +86,24 @@ export const BranchAccountEvidence = Schema.Struct({
           withdrawal: Schema.optional(Schema.Boolean),
         }),
       }),
+    ).pipe(
+      Schema.filter(
+        (rows) => new Set(rows.map((r) => r.id)).size === rows.length,
+      ),
     ),
   ),
-});
+}).pipe(
+  Schema.filter((account) =>
+    (account.transactions ?? []).every(
+      (row) =>
+        (row.accountId === undefined || row.accountId === account.id) &&
+        (row.accountNo === undefined || row.accountNo === account.accountNo) &&
+        (row.currency === undefined ||
+          (row.currency.code === account.currency?.code &&
+            row.currency.decimalPlaces === account.currency?.decimalPlaces)),
+    ),
+  ),
+);
 const command = Schema.Struct({
   id: Schema.String,
   bank_id: Schema.String,
@@ -91,7 +125,7 @@ const command = Schema.Struct({
     "uncertain",
     "rejected",
   ),
-  amount_minor: finite,
+  amount_minor: count,
   description: Schema.String,
   maker: Schema.Literal("customer", "officer", "approver"),
   approver: Schema.NullOr(Schema.String),
@@ -127,7 +161,8 @@ export const BranchDayEnvelope = Schema.Struct({
         bank_id: Schema.String,
         reference: Schema.String,
         display_name: Schema.String,
-        account_id: Schema.Number,
+        account_id: id,
+        client_id: id,
         account_no: Schema.String,
         origin: Schema.String,
       }),
@@ -157,4 +192,20 @@ export const BranchDayEnvelope = Schema.Struct({
       ),
     }),
   ),
-});
+}).pipe(
+  Schema.filter(
+    (v) =>
+      new Set(v.relationships.map((r) => r.customer.id)).size ===
+        v.relationships.length &&
+      new Set(v.relationships.map((r) => r.customer.account_id)).size ===
+        v.relationships.length &&
+      v.relationships.every(
+        (r) =>
+          r.customer.branch_id === v.branchId &&
+          (!r.account ||
+            (r.account.id === r.customer.account_id &&
+              r.account.clientId === r.customer.client_id &&
+              r.account.accountNo === r.customer.account_no)),
+      ),
+  ),
+);

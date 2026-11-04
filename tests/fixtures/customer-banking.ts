@@ -20,6 +20,7 @@ interface Transaction {
   date: number[];
   amount: number;
   reversed: boolean;
+  entryType?: "CREDIT" | "DEBIT";
   transactionType: { id: number; value: string };
   paymentDetailData?: { receiptNumber: string; paymentType: { id: number } };
   transfer?: {
@@ -274,6 +275,7 @@ export const customerHarness = (filename = ":memory:") => {
                 date,
                 amount,
                 reversed: false,
+                entryType: "DEBIT",
                 transactionType: { id: 2, value: "Withdrawal" },
                 transfer,
               });
@@ -284,6 +286,7 @@ export const customerHarness = (filename = ":memory:") => {
                 date,
                 amount,
                 reversed: false,
+                entryType: "CREDIT",
                 transactionType: { id: 1, value: "Deposit" },
                 transfer,
               });
@@ -332,6 +335,7 @@ export const customerHarness = (filename = ":memory:") => {
                   date: String(input.transactionDate).split("-").map(Number),
                   amount,
                   reversed: false,
+                  entryType: direction === 1 ? "CREDIT" : "DEBIT",
                   transactionType: {
                     id: direction === 1 ? 1 : 2,
                     value: direction === 1 ? "Deposit" : "Withdrawal",
