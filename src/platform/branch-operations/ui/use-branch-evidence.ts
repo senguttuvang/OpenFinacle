@@ -1,12 +1,13 @@
 "use client";
 import { Effect, Schema } from "effect";
 import { useEffect, useState } from "react";
-import { api } from "../../../banking-workspace/ui/api";
-export function useBranchLoanRead<A extends { branchId: string }, I>(
+import { api } from "../../banking-workspace/ui/api";
+export function useBranchEvidence<A extends { branchId: string }, I>(
   path: string,
   schema: Schema.Schema<A, I>,
   branchId: string,
   enabled: boolean,
+  unavailableMessage = "Loan evidence is unavailable or invalid. Refresh to read again.",
 ) {
   const [value, setValue] = useState<A | null>(null);
   const [error, setError] = useState("");
@@ -33,10 +34,7 @@ export function useBranchLoanRead<A extends { branchId: string }, I>(
         if (active) setValue(data);
       })
       .catch(() => {
-        if (active)
-          setError(
-            "Loan evidence is unavailable or invalid. Refresh to read again.",
-          );
+        if (active) setError(unavailableMessage);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -44,6 +42,6 @@ export function useBranchLoanRead<A extends { branchId: string }, I>(
     return () => {
       active = false;
     };
-  }, [path, schema, branchId, enabled, revision]);
+  }, [path, schema, branchId, enabled, revision, unavailableMessage]);
   return { value, error, loading, refresh: () => setRevision((n) => n + 1) };
 }

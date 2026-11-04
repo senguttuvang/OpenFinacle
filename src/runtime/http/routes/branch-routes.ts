@@ -13,6 +13,7 @@ import {
   readBranchDay,
 } from "../../../platform/branch-operations/application/branch-day";
 import { readProcessing } from "../../../platform/branch-operations/application/processing";
+import { readRegisteredGl } from "../../../platform/branch-operations/application/registered-gl";
 import { relationshipEnquiry } from "../../../platform/branch-operations/application/relationship";
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
@@ -23,6 +24,15 @@ export const branchRoutes = (request: Request, session: Session) =>
     const url = new URL(request.url);
     if (url.pathname === "/api/branch" && request.method === "GET")
       return Response.json(yield* readBranchDay(session));
+    if (url.pathname === "/api/branch/gl-journals" && request.method === "GET")
+      return Response.json(
+        yield* readRegisteredGl(
+          session,
+          url.searchParams.get("customerId") ?? "",
+          Number(url.searchParams.get("id")),
+          Number(url.searchParams.get("offset") ?? "0"),
+        ),
+      );
     if (url.pathname === "/api/branch/relationship" && request.method === "GET")
       return Response.json(
         yield* relationshipEnquiry(

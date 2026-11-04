@@ -160,7 +160,8 @@
       "src/platform/branch-operations/application/relationship.ts",
       "src/platform/branch-operations/application/processing.ts",
       "src/platform/branch-operations/application/loans.ts",
-      "src/platform/branch-operations/application/loan-accounting.ts"
+      "src/platform/branch-operations/application/loan-accounting.ts",
+      "src/platform/branch-operations/application/registered-gl.ts"
     ],
     "service-requests": [
       "src/platform/service-requests/application/service-cases.ts",

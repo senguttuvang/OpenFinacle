@@ -7,8 +7,8 @@ import {
   matchedLoanReceipt,
   matchedLoanTransaction,
 } from "../../domain/loan-accounting";
-import { LoanTableScroll } from "./loan-table-scroll";
-import { useBranchLoanRead } from "./use-loan-enquiry";
+import { CoreTableScroll } from "../core-table-scroll";
+import { useBranchEvidence } from "../use-branch-evidence";
 export function LoanAccountingExplorer({
   relationship,
   loanId,
@@ -21,7 +21,7 @@ export function LoanAccountingExplorer({
   const [offset, setOffset] = useState(0),
     [gl, setGl] = useState(""),
     [transactionId, setTransactionId] = useState(0);
-  const { value, error, loading, refresh } = useBranchLoanRead(
+  const { value, error, loading, refresh } = useBranchEvidence(
     `/branch/loan-accounting?customerId=${encodeURIComponent(relationship.customer.id)}&id=${loanId}&offset=${offset}`,
     LoanAccountingEvidence,
     relationship.customer.branch_id,
@@ -160,7 +160,7 @@ export function LoanAccountingExplorer({
             </button>
           </nav>
           {evidence.journals ? (
-            <LoanTableScroll label="Owned loan journal table">
+            <CoreTableScroll label="Owned loan journal table">
               <table className="branch-table">
                 <thead>
                   <tr>
@@ -215,7 +215,7 @@ export function LoanAccountingExplorer({
                   })}
                 </tbody>
               </table>
-            </LoanTableScroll>
+            </CoreTableScroll>
           ) : (
             <p>Loan journal evidence unavailable.</p>
           )}

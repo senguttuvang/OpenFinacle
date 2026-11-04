@@ -8,6 +8,7 @@ import type { View } from "../../navigation/ui/navigation";
 import type { CaseDetail } from "../../service-requests/domain/service-cases";
 import { type BranchDay, branchTotals } from "../domain/branch-day";
 import { BranchDayEnvelope } from "../domain/core-account";
+import { RegisteredGlExplorer } from "./accounting/registered-gl-explorer";
 import { AccountingExplorer } from "./accounting-explorer";
 import type { BranchMutation } from "./branch-day-actions";
 import {
@@ -39,6 +40,7 @@ export function BranchDayWorkspace({
   const [tab, setTab] = useState<Tab>("Overview");
   const [customerId, setCustomerId] = useState("");
   const [loanId, setLoanId] = useState(0);
+  const [glId, setGlId] = useState(0);
   const [accountingMode, setAccountingMode] = useState("savings");
   const [commandId, setCommandId] = useState("");
   const [instructionCustomer, setInstructionCustomer] = useState("");
@@ -112,6 +114,7 @@ export function BranchDayWorkspace({
   const openCustomer = (id: string) => {
     setCustomerId(id);
     setLoanId(0);
+    setGlId(0);
     setAccountingMode("savings");
     setCommandId("");
     setTab("Account");
@@ -119,10 +122,15 @@ export function BranchDayWorkspace({
   const openCommand = (id: string, customer: string, filterCustomer = "") => {
     setInstructionCustomer(filterCustomer);
     setLoanId(0);
+    setGlId(0);
     setAccountingMode("savings");
     setCustomerId(customer);
     setCommandId(id);
     setTab("Transactions & approvals");
+  };
+  const openLoan = (customer: string, loan: number) => {
+    openCustomer(customer);
+    setLoanId(loan);
   };
   const mutate: BranchMutation = async (
     path: string,
@@ -254,14 +262,7 @@ export function BranchDayWorkspace({
           )}
           {tab === "Overview" && (
             <>
-              <BranchAdvances
-                day={day}
-                openLoan={(customer, loan) => {
-                  setCustomerId(customer);
-                  setLoanId(loan);
-                  setTab("Account");
-                }}
-              />
+              <BranchAdvances day={day} openLoan={openLoan} />
               <BranchSummary
                 day={day}
                 totals={branchTotals(day)}
@@ -330,6 +331,14 @@ export function BranchDayWorkspace({
                     >
                       Registered savings journals
                     </button>
+                    {glId > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAccountingMode("registered-gl")}
+                      >
+                        Registered branch GL {glId} journals
+                      </button>
+                    )}
                     {loanId > 0 && (
                       <button
                         type="button"
@@ -340,7 +349,17 @@ export function BranchDayWorkspace({
                     )}
                   </div>
                 </section>
-                {accountingMode === "loan" && loanId > 0 ? (
+                {accountingMode === "registered-gl" && glId > 0 ? (
+                  <RegisteredGlExplorer
+                    key={`${customerId}-${glId}-${revision}`}
+                    relationship={relationship}
+                    glId={glId}
+                    reviewFixture={day.reviewFixture}
+                    openCustomer={openCustomer}
+                    openLoan={openLoan}
+                    openCommand={openCommand}
+                  />
+                ) : accountingMode === "loan" && loanId > 0 ? (
                   <LoanAccountingExplorer
                     key={`${customerId}-${loanId}-${revision}`}
                     relationship={relationship}
@@ -354,6 +373,10 @@ export function BranchDayWorkspace({
                     reviewFixture={day.reviewFixture}
                     businessDate={day.businessDate}
                     openCommand={openCommand}
+                    openRegisteredGl={(next) => {
+                      setGlId(next);
+                      setAccountingMode("registered-gl");
+                    }}
                   />
                 )}
               </>
@@ -367,11 +390,7 @@ export function BranchDayWorkspace({
               mutate={mutate}
               openCommand={openCommand}
               openCustomer={openCustomer}
-              openLoan={(customer, loan) => {
-                setCustomerId(customer);
-                setLoanId(loan);
-                setTab("Account");
-              }}
+              openLoan={openLoan}
             />
           )}
         </>

@@ -3,8 +3,8 @@ import { Fragment } from "react";
 import { formatMoney } from "../../../banking-workspace/domain/banking";
 import { coreDate } from "../../domain/branch-day";
 import { LoanEnquiry } from "../../domain/loans";
-import { LoanTableScroll } from "./loan-table-scroll";
-import { useBranchLoanRead } from "./use-loan-enquiry";
+import { CoreTableScroll } from "../core-table-scroll";
+import { useBranchEvidence } from "../use-branch-evidence";
 
 const money = (value: number | undefined) =>
   value === undefined ? "Not returned" : formatMoney(value);
@@ -21,7 +21,7 @@ export function BranchLoanDetail({
   reviewFixture?: boolean;
   accounting: () => void;
 }) {
-  const { value, error, loading, refresh } = useBranchLoanRead(
+  const { value, error, loading, refresh } = useBranchEvidence(
     `/branch/loan?customerId=${encodeURIComponent(customerId)}&id=${loanId}`,
     LoanEnquiry,
     branchId,
@@ -110,7 +110,7 @@ export function BranchLoanDetail({
           ) : periods.length === 0 ? (
             <p>No repayment period rows returned by Core.</p>
           ) : (
-            <LoanTableScroll label="Core loan repayment schedule table">
+            <CoreTableScroll label="Core loan repayment schedule table">
               <table className="branch-table">
                 <thead>
                   <tr>
@@ -151,7 +151,7 @@ export function BranchLoanDetail({
                   ))}
                 </tbody>
               </table>
-            </LoanTableScroll>
+            </CoreTableScroll>
           )}
           <h5>Core recorded loan transactions</h5>
           {!loan.transactions ? (
@@ -159,7 +159,7 @@ export function BranchLoanDetail({
           ) : loan.transactions.length === 0 ? (
             <p>No transaction rows returned by Core.</p>
           ) : (
-            <LoanTableScroll label="Core recorded loan transactions table">
+            <CoreTableScroll label="Core recorded loan transactions table">
               <table className="branch-table">
                 <thead>
                   <tr>
@@ -191,7 +191,7 @@ export function BranchLoanDetail({
                   ))}
                 </tbody>
               </table>
-            </LoanTableScroll>
+            </CoreTableScroll>
           )}
         </>
       )}

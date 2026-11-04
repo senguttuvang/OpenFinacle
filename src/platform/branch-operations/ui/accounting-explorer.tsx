@@ -4,16 +4,19 @@ import { useEffect, useState } from "react";
 import { api } from "../../banking-workspace/ui/api";
 import { AccountingEvidence } from "../domain/accounting";
 import { type BranchRelationship, coreDate } from "../domain/branch-day";
+import { CoreTableScroll } from "./core-table-scroll";
 export function AccountingExplorer({
   relationship: r,
   reviewFixture,
   businessDate,
   openCommand,
+  openRegisteredGl,
 }: {
   relationship: BranchRelationship;
   reviewFixture?: boolean;
   businessDate: string;
   openCommand: (id: string, customer: string) => void;
+  openRegisteredGl: (gl: number) => void;
 }) {
   const [evidence, setEvidence] = useState<AccountingEvidence | null>(null);
   const [error, setError] = useState("");
@@ -109,6 +112,15 @@ export function AccountingExplorer({
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        disabled={
+          reviewFixture || !Number.isSafeInteger(Number(gl)) || Number(gl) <= 0
+        }
+        onClick={() => openRegisteredGl(Number(gl))}
+      >
+        Enquire GL across registered branch relationships
+      </button>
       {journals && (
         <p>
           {journals.pageItems.length} validated savings rows from{" "}
@@ -142,7 +154,7 @@ export function AccountingExplorer({
           </button>
         </nav>
       )}
-      <div className="table-scroll">
+      <CoreTableScroll label="Owned savings journal table">
         <table className="branch-table">
           <thead>
             <tr>
@@ -200,7 +212,7 @@ export function AccountingExplorer({
             })}
           </tbody>
         </table>
-      </div>
+      </CoreTableScroll>
       {journals && !rows.length && (
         <p>
           No journal rows returned for this filter. This does not prove zero GL
