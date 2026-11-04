@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatMoney, type Role } from "../../banking-workspace/domain/banking";
 import type { CaseDetail } from "../../service-requests/domain/service-cases";
 import {
@@ -8,12 +8,20 @@ import {
   coreDate,
 } from "../domain/branch-day";
 import {
+  cashReversalTrace,
+  ownedInstruction,
+} from "../domain/instructions/reversal-links";
+import {
   branchInstructionRows,
   filterInstructions,
 } from "../domain/work-filters";
 import type { BranchMutation } from "./branch-day-actions";
 import { BranchServiceHistory } from "./branch-service-history";
 import { CoreAccountTerms } from "./core-account-terms";
+import {
+  CashReversalLinks,
+  InstructionAmount,
+} from "./instructions/reversal-links";
 import { BranchLoanDetail } from "./loans/branch-loan-detail";
 import { coreAmount, RelationshipDetails } from "./relationship-details";
 import { BranchSavingsStatement } from "./statements/branch-savings-statement";
@@ -331,7 +339,19 @@ export function InstructionDetail({
   const rows = filterInstructions(day, query, state, owner, customerFilter);
   const total = branchInstructionRows(day).length;
   const r = day.relationships.find((item) => item.customer.id === customerId);
-  const command = r?.commands.find((c) => c.id === commandId);
+  const command = r ? ownedInstruction(r, commandId) : null;
+  const reversal = useMemo(
+    () =>
+      command && r
+        ? cashReversalTrace(r, command, day.coverage.workflowLimited)
+        : null,
+    [command, r, day.coverage.workflowLimited],
+  );
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+  const selectedInstructionId = command?.id;
+  useEffect(() => {
+    if (selectedInstructionId) detailHeading.current?.focus();
+  }, [selectedInstructionId]);
   return (
     <section className="panel">
       <h3>Transaction enquiry & approval inbox</h3>
@@ -433,9 +453,15 @@ export function InstructionDetail({
             detail remains visible below.
           </p>
         )}
+      {commandId && !command && (
+        <p role="alert">
+          The selected instruction is not uniquely corroborated by this
+          registered bank/account. Detail is withheld.
+        </p>
+      )}
       {command && r ? (
         <article className="branch-day-item">
-          <h4>
+          <h4 ref={detailHeading} tabIndex={-1}>
             {r.customer.display_name} · {command.id}
           </h4>
           <p>
@@ -451,12 +477,18 @@ export function InstructionDetail({
               {command.kind} / {command.status}
             </dd>
             <dt>Instruction amount</dt>
-            <dd>{formatMoney(command.amount_minor / 100)}</dd>
+            <dd>
+              <InstructionAmount command={command} />
+            </dd>
             <dt>Maker / checker</dt>
             <dd>
               {command.maker} / {command.approver ?? "No decision recorded"}
             </dd>
-            <dt>Core reference</dt>
+            <dt>
+              {command.kind === "reverse"
+                ? "Core response reference"
+                : "Core reference"}
+            </dt>
             <dd>{command.core_id ?? "No confirmed financial reference"}</dd>
             <dt>Created</dt>
             <dd>{command.created_at} UTC</dd>
@@ -466,6 +498,15 @@ export function InstructionDetail({
                 "Inspect status and core references before repeating an instruction."}
             </dd>
           </dl>
+          {reversal && (
+            <CashReversalLinks
+              command={command}
+              relationship={r}
+              trace={reversal}
+              openCommand={openCommand}
+              reviewFixture={day.reviewFixture}
+            />
+          )}
           <details>
             <summary>Original saved payload</summary>
             <pre>{command.payload}</pre>
@@ -511,7 +552,12 @@ export function InstructionDetail({
               ["deposit", "withdrawal"].includes(command.kind) && (
                 <button
                   type="button"
-                  disabled={busy || role !== "officer"}
+                  disabled={
+                    busy ||
+                    role !== "officer" ||
+                    day.reviewFixture ||
+                    !reversal?.canRequest
+                  }
                   onClick={() =>
                     void mutate(
                       "/branch/instruction",
