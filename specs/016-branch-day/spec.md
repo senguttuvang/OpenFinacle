@@ -1,5 +1,11 @@
 # Connected branch day
 
+## Service-work responsibility increment
+
+OPS-08/CUS-12: saved service cases and delivery exceptions need explicit responsibility rather than treating their last actor as an owner. Add branch/customer/case-scoped workflow labels (teller, checker, manager, accountant or explicitly unassigned), a required reason and immutable ordered assignment history. Both existing staff demo roles can assign labels; labels grant no permission or independent staff identity, do not change case transitions/delivery and do not create Core/financial effects. Historical assignments remain inspectable after case completion without reopening the case.
+
+Use an additive append-only event table, optimistic expected versions and a stable original request key bound to the exact case, actor, owner and reason. Concurrent distinct keys at one version admit one event; original replay returns its confirmed event separately from the latest saved state. Reject changed-key payload/actor reuse, foreign branch/customer/case, invalid evidence and no-op owner changes. Bound histories to200 events with explicit incomplete coverage and withhold further changes when incomplete. UI enquiries are lazy; daily control and selected customer service history share the same workflow. Persist pending original requests before dispatch, never automatically replay on reload, and retain an uncertain request until explicit inspection/retry confirms its exact original event or a definite server rejection. Scope/role changes must withhold stale evidence. Require role/isolation/concurrency/replay/SQL immutability/reload/accessibility tests, full exact-source gates, a fresh restore-proven protected migration backup and native state-preserving production acceptance. Existing cases, histories, balances and transactions remain intact.
+
 Authorised scope: six connected staff screens for a small Indian bank demonstration.
 Execution: of-1m2.7.1, child of OPS roadmap of-1m2.7. Reuses FND-01..10,
 CUS-01/03/04/12, DEP-13, OPS-01..10, TAX-04/06; does not close production IDs.

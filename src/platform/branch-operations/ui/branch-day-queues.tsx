@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { formatMoney } from "../../banking-workspace/domain/banking";
+import { formatMoney, type Role } from "../../banking-workspace/domain/banking";
 import {
   serviceReference,
   serviceStatus,
@@ -26,6 +26,7 @@ import type { BranchMutation } from "./branch-day-actions";
 
 import { BranchAdvances } from "./loans/branch-advances";
 import { ProcessingEnquiry } from "./processing-evidence";
+import { CaseResponsibility } from "./service-work/case-responsibility";
 
 type OpenCommand = (
   id: string,
@@ -289,6 +290,7 @@ export function CustomerDirectory({
 }
 export function DailyControl({
   day,
+  role,
   busy,
   mutate,
   openCommand,
@@ -296,6 +298,7 @@ export function DailyControl({
   openLoan,
 }: {
   day: BranchDay;
+  role: Role;
   busy: boolean;
   mutate: BranchMutation;
   openCommand: OpenCommand;
@@ -377,6 +380,13 @@ export function DailyControl({
             Created {request.created_at} UTC · Last actor:{" "}
             {request.updated_by || "Not returned"}
           </small>
+          <CaseResponsibility
+            branchId={day.branchId}
+            customerId={customer.id}
+            requestId={request.id}
+            role={role}
+            reviewFixture={day.reviewFixture}
+          />
         </article>
       ))}
       {!serviceItems.length && (

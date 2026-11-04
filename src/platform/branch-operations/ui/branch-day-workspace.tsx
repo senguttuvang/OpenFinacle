@@ -398,6 +398,7 @@ export function BranchDayWorkspace({
               </section>
               <DailyControl
                 day={day}
+                role={data.role}
                 busy={busy}
                 mutate={mutate}
                 openCommand={openCommand}

@@ -1,6 +1,7 @@
 "use client";
 import { Effect } from "effect";
 import { useEffect, useRef, useState } from "react";
+import type { Role } from "../../banking-workspace/domain/banking";
 import type { CaseDetail } from "../../service-requests/domain/service-cases";
 import { serviceDefinition } from "../../service-requests/domain/services";
 import { serviceCaseApi } from "../../service-requests/ui/service-case-api";
@@ -12,14 +13,17 @@ import {
 import type { ServicePerform } from "../../service-requests/ui/service-request-form";
 import "../../service-requests/ui/service-centre.css";
 import type { BranchRelationship } from "../domain/branch-day";
+import { CaseResponsibility } from "./service-work/case-responsibility";
 
 export function BranchServiceHistory({
   relationship,
   reviewFixture = false,
+  role,
   caseChanged,
 }: {
   relationship: BranchRelationship;
   reviewFixture?: boolean;
+  role: Role;
   caseChanged: (next: CaseDetail) => void;
 }) {
   const [selected, setSelected] = useState("");
@@ -124,6 +128,12 @@ export function BranchServiceHistory({
           {notice && <p role="status">{notice}</p>}
           {detail && (
             <>
+              <CaseResponsibility
+                branchId={relationship.customer.branch_id}
+                customerId={customerId}
+                requestId={detail.request.id}
+                role={role}
+              />
               <p>Delivery: {serviceStatus(detail.request.delivery_status)}</p>
               <p>
                 Recorded outcome:{" "}

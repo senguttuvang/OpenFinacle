@@ -283,6 +283,7 @@ export function BranchAccountDetail({
         </button>
       </form>
       <BranchServiceHistory
+        role={role}
         key={role}
         relationship={r}
         reviewFixture={reviewFixture}
