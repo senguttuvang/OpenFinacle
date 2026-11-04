@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { ProfileDetail } from "../../customers/domain/profile";
 import { CoreDateEvidence } from "./core-account";
+import { nativeMinor } from "./inr-money";
 
 const finite = Schema.Number.pipe(Schema.finite());
 const option = Schema.Struct({ id: Schema.Number, value: Schema.String });
@@ -8,6 +9,17 @@ const currency = Schema.Struct({
   code: Schema.String.pipe(Schema.pattern(/^[A-Z]{3}$/)),
   decimalPlaces: Schema.optional(Schema.Number),
 });
+const exactAmounts = (
+  source: { code: string; decimalPlaces?: number } | undefined,
+  amounts: (number | undefined)[],
+) =>
+  amounts.every(
+    (amount) =>
+      amount === undefined ||
+      (source !== undefined &&
+        (source.code !== "INR" || source.decimalPlaces === 2) &&
+        nativeMinor(amount, source.decimalPlaces) !== null),
+  );
 export const CoreClientEvidence = Schema.Struct({
   id: Schema.Number,
   accountNo: Schema.String,
@@ -29,7 +41,15 @@ const portfolioAccount = Schema.Struct({
   accountBalance: Schema.optional(finite),
   availableBalance: Schema.optional(finite),
   loanBalance: Schema.optional(finite),
-});
+}).pipe(
+  Schema.filter((row) =>
+    exactAmounts(row.currency, [
+      row.accountBalance,
+      row.availableBalance,
+      row.loanBalance,
+    ]),
+  ),
+);
 export const CorePortfolioEvidence = Schema.Struct({
   savingsAccounts: Schema.optional(Schema.Array(portfolioAccount)),
   loanAccounts: Schema.optional(Schema.Array(portfolioAccount)),
@@ -54,7 +74,15 @@ export const CoreChargesEvidence = Schema.Array(
     amountOutstanding: Schema.optional(finite),
     paid: Schema.optional(Schema.Boolean),
     waived: Schema.optional(Schema.Boolean),
-  }),
+  }).pipe(
+    Schema.filter((row) =>
+      exactAmounts(row.currency, [
+        row.amount,
+        row.amountPaid,
+        row.amountOutstanding,
+      ]),
+    ),
+  ),
 );
 export const RelationshipEnquiry = Schema.Struct({
   observedAt: finite,
