@@ -20,6 +20,7 @@ import { parseJsonRequest } from "../request-json";
 import { branchCaseRoutes } from "./branch-case-routes";
 import { branchCashCountRoutes } from "./branch-cash-count-routes";
 import { branchLoanRoutes } from "./branch-loan-routes";
+import { branchStatementRoutes } from "./branch-statement-routes";
 export const branchRoutes = (request: Request, session: Session) =>
   Effect.gen(function* () {
     const url = new URL(request.url);
@@ -50,6 +51,8 @@ export const branchRoutes = (request: Request, session: Session) =>
       );
     const cashResponse = yield* branchCashCountRoutes(request, session);
     if (cashResponse) return cashResponse;
+    const statementResponse = yield* branchStatementRoutes(request, session);
+    if (statementResponse) return statementResponse;
     const loanResponse = yield* branchLoanRoutes(request, session);
     if (loanResponse) return loanResponse;
     const caseResponse = yield* branchCaseRoutes(request, session);

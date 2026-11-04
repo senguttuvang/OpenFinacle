@@ -16,6 +16,7 @@ import { BranchServiceHistory } from "./branch-service-history";
 import { CoreAccountTerms } from "./core-account-terms";
 import { BranchLoanDetail } from "./loans/branch-loan-detail";
 import { coreAmount, RelationshipDetails } from "./relationship-details";
+import { BranchSavingsStatement } from "./statements/branch-savings-statement";
 import { useRelationshipEnquiry } from "./use-relationship-enquiry";
 export function BranchAccountDetail({
   relationship: r,
@@ -58,9 +59,10 @@ export function BranchAccountDetail({
         {r.customer.reference} · {r.customer.account_no}
       </p>
       <p>
-        Servicing branch: {r.customer.branch_id} · Account-owning core office:{" "}
+        Servicing branch: {r.customer.branch_id} · Native client office:{" "}
         {account?.clientOfficeName ?? account?.clientOfficeId ?? "Not returned"}{" "}
-        · Originating office: inspect journals.
+        · Account-owning office is not independently verified here. Originating
+        office: inspect journals.
       </p>
       <p>
         Source: {reviewFixture ? "STATIC REVIEW FIXTURE" : "Fineract"} ·{" "}
@@ -179,6 +181,11 @@ export function BranchAccountDetail({
           )}
         </>
       )}
+      <BranchSavingsStatement
+        key={`${r.customer.branch_id}-${r.customer.id}-${r.customer.account_id}-${r.customer.client_id}-${r.customer.account_no}-${role}`}
+        relationship={r}
+        reviewFixture={reviewFixture}
+      />
       <RelationshipDetails
         state={enquiry}
         reviewFixture={reviewFixture}
