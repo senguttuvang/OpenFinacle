@@ -24,6 +24,10 @@ export function StatementsScreen({ context }: { context: WorkspaceContext }) {
                   ? `Account ${account.accountNo} · Transactions from Apache Fineract`
                   : "Your statement will be available after opening an account."}
               </p>
+              <p>
+                Running balances are shown only when returned by Core.
+                Unavailable balances are not reconstructed from transactions.
+              </p>
             </div>
             {account && (
               <a className="secondary button" href="/api/statement">
@@ -52,7 +56,7 @@ export function StatementsScreen({ context }: { context: WorkspaceContext }) {
                   <th>Date</th>
                   <th>Reference</th>
                   <th>Amount</th>
-                  <th>Balance</th>
+                  <th>Native running balance</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -87,7 +91,12 @@ export function StatementsScreen({ context }: { context: WorkspaceContext }) {
                         {t.transactionType.deposit ? "+" : "−"}
                         {formatMoney(t.amount)}
                       </td>
-                      <td>{formatMoney(t.runningBalance ?? 0)}</td>
+                      <td>
+                        {typeof t.runningBalance === "number" &&
+                        Number.isFinite(t.runningBalance)
+                          ? formatMoney(t.runningBalance)
+                          : "Unavailable"}
+                      </td>
                       <td>
                         <Pill status={t.reversed ? "reversed" : "posted"} />
                       </td>
