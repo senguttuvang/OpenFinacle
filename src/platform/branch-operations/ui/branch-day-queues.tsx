@@ -322,8 +322,8 @@ export function DailyControl({
       </p>
       <ul>
         <li>
-          Physical teller counts and vault handover: unsupported; no cash
-          variance certified.
+          Physical count verification and vault handover: unsupported. Saved
+          synthetic count declarations above do not certify cash variance.
         </li>
         <li>
           External settlement matching and reconciliation evidence: unavailable.

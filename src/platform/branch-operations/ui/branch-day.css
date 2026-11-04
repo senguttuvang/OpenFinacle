@@ -122,3 +122,16 @@
   width: 100%;
   min-width: 0;
 }
+
+.app-shell .cash-count-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.5rem 1rem;
+}
+.app-shell .branch-day fieldset {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--rule, #dae2ef);
+  border-radius: 0.5rem;
+  padding: 0.8rem;
+}

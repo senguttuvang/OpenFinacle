@@ -17,6 +17,7 @@ import {
   DailyControl,
 } from "./branch-day-queues";
 import { BranchAccountDetail, InstructionDetail } from "./branch-day-records";
+import { CashCountRegister } from "./daily-control/cash-count-register";
 import { BranchAdvances } from "./loans/branch-advances";
 import { LoanAccountingExplorer } from "./loans/loan-accounting";
 
@@ -384,14 +385,26 @@ export function BranchDayWorkspace({
               <p>Choose a customer first.</p>
             ))}
           {tab === "Daily control" && (
-            <DailyControl
-              day={day}
-              busy={busy}
-              mutate={mutate}
-              openCommand={openCommand}
-              openCustomer={openCustomer}
-              openLoan={openLoan}
-            />
+            <>
+              <section className="panel">
+                <CashCountRegister
+                  key={`${day.branchId}-${data.role}`}
+                  customerId={day.relationships[0]?.customer.id ?? ""}
+                  branchId={day.branchId}
+                  role={data.role}
+                  businessDate={day.businessDate}
+                  reviewFixture={day.reviewFixture ?? false}
+                />
+              </section>
+              <DailyControl
+                day={day}
+                busy={busy}
+                mutate={mutate}
+                openCommand={openCommand}
+                openCustomer={openCustomer}
+                openLoan={openLoan}
+              />
+            </>
           )}
         </>
       )}
