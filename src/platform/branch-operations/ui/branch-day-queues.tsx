@@ -7,6 +7,7 @@ import {
 } from "../../service-requests/ui/service-case-detail";
 import {
   type BranchDay,
+  branchDepositProducts,
   type branchTotals,
   unresolvedStatuses,
 } from "../domain/branch-day";
@@ -49,18 +50,7 @@ export function BranchSummary({
       .filter((c) => unresolvedStatuses.has(c.status))
       .map((command) => ({ command, customer: r.customer })),
   );
-  const products = new Map<string, number>();
-  for (const { account } of day.relationships)
-    if (account?.summary && account.currency?.code === "INR") {
-      const name =
-        account.savingsProductName ??
-        `Core savings product ${account.savingsProductId ?? "unknown"}`;
-      products.set(
-        name,
-        (products.get(name) ?? 0) +
-          Math.round(account.summary.accountBalance * 100),
-      );
-    }
+  const products = branchDepositProducts(day);
   return (
     <>
       <section className="branch-metrics" aria-label="Registered savings scope">
@@ -97,19 +87,25 @@ export function BranchSummary({
         <h3>Deposits by product</h3>
         <p>
           Registered savings accounts only. Credits/debits include internal
-          movements; they are not external branch inflow/outflow or physical
-          cash proof.
+          movements, native interest and fees. Native credit/debit entry types
+          classify them; missing direction/reversal evidence withholds totals.
+          They are not external branch inflow/outflow or physical cash proof.
         </p>
-        {totals.complete ? (
-          [...products].map(([name, amount]) => (
-            <p key={name}>
-              {name}: <strong>{formatMoney(amount / 100)}</strong>
+        {totals.complete && products.complete ? (
+          products.products.map(({ id, name, balanceMinor }) => (
+            <p key={id}>
+              {name} · Core product {id}:{" "}
+              <strong>
+                {balanceMinor === null
+                  ? "Incomplete"
+                  : formatMoney(balanceMinor / 100)}
+              </strong>
             </p>
           ))
         ) : (
           <p>
             Totals withheld until every registered account has complete INR
-            evidence.
+            evidence, a native product ID and safe monetary subtotals.
           </p>
         )}
         <p>
