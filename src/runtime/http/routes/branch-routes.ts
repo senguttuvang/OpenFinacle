@@ -18,6 +18,7 @@ import { relationshipEnquiry } from "../../../platform/branch-operations/applica
 import { commandSchema } from "../request-context";
 import { parseJsonRequest } from "../request-json";
 import { branchCaseRoutes } from "./branch-case-routes";
+import { branchCashCountRoutes } from "./branch-cash-count-routes";
 import { branchLoanRoutes } from "./branch-loan-routes";
 export const branchRoutes = (request: Request, session: Session) =>
   Effect.gen(function* () {
@@ -47,6 +48,8 @@ export const branchRoutes = (request: Request, session: Session) =>
           url.searchParams.get("customerId") ?? "",
         ),
       );
+    const cashResponse = yield* branchCashCountRoutes(request, session);
+    if (cashResponse) return cashResponse;
     const loanResponse = yield* branchLoanRoutes(request, session);
     if (loanResponse) return loanResponse;
     const caseResponse = yield* branchCaseRoutes(request, session);
