@@ -1,16 +1,21 @@
 "use client";
 import { formatMoney } from "../../banking-workspace/domain/banking";
 import { coreDate } from "../domain/branch-day";
+import { nativeMinor } from "../domain/inr-money";
 import type { RelationshipState } from "./use-relationship-enquiry";
 export const coreAmount = (
   value: number | undefined,
-  currency: { code: string } | undefined,
+  currency: { code: string; decimalPlaces?: number } | undefined,
 ) =>
   value === undefined || !currency
     ? "Not returned by core"
-    : currency.code === "INR"
-      ? formatMoney(value)
-      : `${value.toLocaleString("en-IN", { maximumFractionDigits: 20 })} ${currency.code}`;
+    : !/^[A-Z]{3}$/.test(currency.code) ||
+        (currency.code === "INR" && currency.decimalPlaces !== 2) ||
+        nativeMinor(value, currency.decimalPlaces) === null
+      ? "Unavailable · invalid native monetary evidence"
+      : currency.code === "INR"
+        ? formatMoney(value)
+        : `${value.toLocaleString("en-IN", { maximumFractionDigits: currency.decimalPlaces })} ${currency.code}`;
 export function RelationshipDetails({
   state,
   reviewFixture = false,

@@ -40,6 +40,14 @@ const setup = async () => {
     accountBalance: 1000,
     availableBalance: 0,
   };
+  const charge = {
+    id: 7,
+    name: "Recorded fee",
+    currency: { code: "INR", decimalPlaces: 2 },
+    amount: 12,
+    amountOutstanding: 3,
+    paid: false,
+  };
   const layer = Layer.succeed(Core, {
     request: <T>(method: string, path: string) => {
       if (method !== "GET")
@@ -54,16 +62,7 @@ const setup = async () => {
           { id: 3, name: "Sample metadata", fileName: "demo.pdf", size: 8 },
         ];
       else if (path === `savingsaccounts/${customer.account_id}/charges`)
-        result = [
-          {
-            id: 7,
-            name: "Recorded fee",
-            currency: { code: "INR" },
-            amount: 12,
-            amountOutstanding: 3,
-            paid: false,
-          },
-        ];
+        result = [charge];
       else return Effect.die("Unexpected enquiry path");
       return Effect.succeed(result as T);
     },
@@ -82,6 +81,7 @@ const setup = async () => {
     calls,
     client,
     savings,
+    charge,
     layer,
     read,
   };
@@ -200,4 +200,42 @@ test("portfolio account mismatch fails closed while absent optional evidence can
   expect(evidence.portfolio).toBeNull();
   expect(evidence.selectedSavings).toBeNull();
   expect(evidence.errors.some((e) => e.source === "Core client")).toBe(true);
+});
+
+test("invalid portfolio monetary evidence withholds that source while preserving other Customer360 sources", async () => {
+  const f = await setup();
+  f.savings.accountBalance = 1.001;
+  const value = await f.read();
+  expect(value.portfolio).toBeNull();
+  expect(value.selectedSavings).toBeNull();
+  expect(value.errors).toContainEqual({
+    source: "Core portfolio",
+    message: "Core portfolio is unavailable or incomplete.",
+  });
+  expect(value.client?.id).toBe(f.customer.client_id);
+  expect(value.coreDocuments?.[0].id).toBe(3);
+  expect(value.charges?.[0].amount).toBe(12);
+  expect(value.profile).not.toBeNull();
+  f.savings.accountBalance = -12.34;
+  const valid = await f.read();
+  expect(valid.selectedSavings?.accountBalance).toBe(-12.34);
+  expect(valid.selectedSavings?.availableBalance).toBe(0);
+});
+test("invalid native charge amount/precision withholds charges without erasing the valid portfolio or zero available balance", async () => {
+  const f = await setup();
+  f.charge.amountOutstanding = 3.001;
+  const value = await f.read();
+  expect(value.charges).toBeNull();
+  expect(value.errors).toContainEqual({
+    source: "Core charges",
+    message: "Core charges is unavailable or incomplete.",
+  });
+  expect(value.selectedSavings?.availableBalance).toBe(0);
+  expect(value.client?.id).toBe(f.customer.client_id);
+  expect(value.coreDocuments?.[0].id).toBe(3);
+  f.charge.amountOutstanding = 0;
+  f.charge.currency.decimalPlaces = 3;
+  expect((await f.read()).charges).toBeNull();
+  f.charge.currency.decimalPlaces = 2;
+  expect((await f.read()).charges?.[0].amountOutstanding).toBe(0);
 });
