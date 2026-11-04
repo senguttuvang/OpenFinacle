@@ -101,7 +101,7 @@ export const readRegisteredGl = (
         "Native client or GL identity differs. Evidence withheld.",
       );
     const page = yield* read(
-      `journalentries?officeId=${client.officeId}&glAccountId=${glId}&limit=200&offset=${offset}&orderBy=id&sortOrder=DESC&transactionDetails=true`,
+      `journalentries?officeId=${client.officeId}&glAccountId=${glId}&limit=200&offset=${offset}&orderBy=id&sortOrder=DESC&transactionDetails=true&runningBalance=true`,
       InrJournalPage,
     );
     if (

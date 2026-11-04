@@ -241,7 +241,7 @@ test("accounting reads real API shapes, retains explicit transaction reference a
         transactionDate: [2026, 11, 3],
         entryType: { id: 1, value: "CREDIT" },
         amount: 125.25,
-        currency: { code: "INR" },
+        currency: { code: "INR", decimalPlaces: 2 },
         entityId: foreign ? 999999 : account.id,
         entityType: { id: 2, value: "SAVING" },
         transactionDetails: { transactionId: 901 },
@@ -270,7 +270,7 @@ test("accounting reads real API shapes, retains explicit transaction reference a
     );
   const result = await read();
   expect(paths).toContain(
-    `journalentries?savingsId=${account.id}&limit=200&offset=0&transactionDetails=true`,
+    `journalentries?savingsId=${account.id}&limit=200&offset=0&transactionDetails=true&runningBalance=true`,
   );
   expect(result.journals?.pageItems[0].transactionDetails?.transactionId).toBe(
     901,

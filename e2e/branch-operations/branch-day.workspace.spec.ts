@@ -174,7 +174,7 @@ test("accounting pages preserve selected relationship scope and expose provider 
               transactionDate: [2026, 11, 3],
               entryType: { id: 1, value: "CREDIT" },
               amount: 1,
-              currency: { code: "INR" },
+              currency: { code: "INR", decimalPlaces: 2 },
               entityId: day.relationships[0].customer.account_id,
               entityType: { id: 2, value: "SAVING" },
             })),
@@ -194,6 +194,14 @@ test("accounting pages preserve selected relationship scope and expose provider 
     .getByRole("button", { name: "Accounting", exact: true })
     .click();
   await expect(workspace.locator("tbody tr")).toHaveCount(200);
+  await expect(
+    workspace
+      .getByText("Native running-balance flag: Not returned", { exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(workspace).toContainText(
+    "Stored running-balance amounts are withheld",
+  );
   await expect(
     workspace.getByRole("button", { name: "Previous journal page" }),
   ).toBeDisabled();

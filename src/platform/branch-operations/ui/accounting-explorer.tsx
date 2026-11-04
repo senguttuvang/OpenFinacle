@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { api } from "../../banking-workspace/ui/api";
 import { AccountingEvidence } from "../domain/accounting";
 import { type BranchRelationship, coreDate } from "../domain/branch-day";
+import {
+  JournalComputation,
+  JournalComputationNote,
+} from "./accounting/journal-computation";
 import { CoreTableScroll } from "./core-table-scroll";
 export function AccountingExplorer({
   relationship: r,
@@ -194,6 +198,7 @@ export function AccountingExplorer({
                     {j.entryType.value} · {j.currency.code} ·{" "}
                     {j.amount.toLocaleString("en-IN")}{" "}
                     {j.reversed ? "· Reversed" : ""}
+                    <JournalComputation computed={j.runningBalanceComputed} />
                   </td>
                   <td>
                     {command ? (
@@ -213,6 +218,7 @@ export function AccountingExplorer({
           </tbody>
         </table>
       </CoreTableScroll>
+      <JournalComputationNote />
       {journals && !rows.length && (
         <p>
           No journal rows returned for this filter. This does not prove zero GL

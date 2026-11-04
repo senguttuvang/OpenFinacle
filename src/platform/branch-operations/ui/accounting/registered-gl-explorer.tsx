@@ -5,6 +5,10 @@ import { type BranchRelationship, coreDate } from "../../domain/branch-day";
 import { RegisteredGlEvidence } from "../../domain/registered-gl";
 import { CoreTableScroll } from "../core-table-scroll";
 import { useBranchEvidence } from "../use-branch-evidence";
+import {
+  JournalComputation,
+  JournalComputationNote,
+} from "./journal-computation";
 export function RegisteredGlExplorer({
   relationship,
   glId,
@@ -209,6 +213,9 @@ export function RegisteredGlExplorer({
                     <td>
                       {r.journal.entryType.value} ·{" "}
                       {formatMoney(r.journal.amount)}
+                      <JournalComputation
+                        computed={r.journal.runningBalanceComputed}
+                      />
                       <small>
                         Core reversal flag:{" "}
                         {r.journal.reversed === undefined
@@ -244,6 +251,7 @@ export function RegisteredGlExplorer({
               </tbody>
             </table>
           </CoreTableScroll>
+          <JournalComputationNote />
           {!rows.length && (
             <p>
               No verified owned journals match this provider page/search. This

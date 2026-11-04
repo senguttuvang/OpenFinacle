@@ -29,13 +29,16 @@ for (const width of [1440, 390])
       glAccountCode: "OF1001",
       transactionId: `native-group-${id}`,
       transactionDate: [2026, 11, 4],
-      entryType: { id: 1, value: "Credit" },
+      entryType: { id: 1, value: "CREDIT" },
       amount: 1.25,
-      currency: { code: "INR" },
+      currency: { code: "INR", decimalPlaces: 2 },
       entityId: entity,
       entityType: { id: family === "Savings" ? 2 : 1, value: family },
       transactionDetails: { transactionId: 901 },
       manualEntry: false,
+      runningBalanceComputed: id === 800 ? false : id === 799 ? true : null,
+      officeRunningBalance: 777777.99,
+      organizationRunningBalance: 888888.88,
     });
     const rows = [
       {
@@ -225,6 +228,17 @@ for (const width of [1440, 390])
       name: "Registered relationship GL journal table",
     });
     await expect(table.locator("tbody tr")).toHaveCount(3);
+    for (const label of ["Not computed", "Computed", "Not returned"])
+      await expect(
+        table.getByText(`Native running-balance flag: ${label}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
+    await expect(enquiry).toContainText(
+      "Stored running-balance amounts are withheld",
+    );
+    await expect(enquiry).not.toContainText("7,77,777.99");
+    await expect(enquiry).not.toContainText("8,88,888.88");
     await expect(enquiry).toContainText(
       "197 unregistered/manual/unidentified/unverifiable rows excluded",
     );
@@ -238,9 +252,21 @@ for (const width of [1440, 390])
       .getByRole("button", { name: "Clear GL journal search", exact: true })
       .click();
     await expect(table.locator("tbody tr")).toHaveCount(3);
-    await page.locator(".branch-day").evaluate((el) => {
-      (el as HTMLElement).style.fontSize = "200%";
+    const flag = table.getByText("Native running-balance flag: Not computed", {
+      exact: true,
     });
+    const beforeFont = await flag.evaluate((el) =>
+      parseFloat(getComputedStyle(el).fontSize),
+    );
+    await page.evaluate(() => {
+      const root = document.documentElement;
+      root.style.fontSize =
+        String(parseFloat(getComputedStyle(root).fontSize) * 2) + "px";
+    });
+    const afterFont = await flag.evaluate((el) =>
+      parseFloat(getComputedStyle(el).fontSize),
+    );
+    expect(afterFont).toBeCloseTo(beforeFont * 2, 1);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
