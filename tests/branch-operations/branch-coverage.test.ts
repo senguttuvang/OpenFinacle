@@ -93,7 +93,7 @@ test("mixed native counterpart row is excluded without hiding owned savings jour
         transactionDate: [2026, 11, 3],
         entryType: { id: 1, value: "CREDIT" },
         amount: 12,
-        currency: { code: "INR" },
+        currency: { code: "INR", decimalPlaces: 2 },
         entityId: account.id,
         entityType: { id: 2, value: "SAVING" },
         transactionDetails: { transactionId: 286 },
@@ -124,7 +124,7 @@ test("mixed native counterpart row is excluded without hiding owned savings jour
     readAccounting(officer, recipientId, 200).pipe(Effect.provide(fixture)),
   );
   expect(paths).toContain(
-    `journalentries?savingsId=${account.id}&limit=200&offset=200&transactionDetails=true`,
+    `journalentries?savingsId=${account.id}&limit=200&offset=200&transactionDetails=true&runningBalance=true`,
   );
   expect(evidence.journals?.pageItems).toHaveLength(1);
   expect(evidence.journals?.pageItems[0].entityType?.id).toBe(2);

@@ -55,9 +55,9 @@ const setup = async () => {
     glAccountCode: "1201",
     transactionId: "L999-not-parsed",
     transactionDate: [2026, 11, 4],
-    entryType: { id: 1, value: "DEBIT" },
+    entryType: { id: 2, value: "DEBIT" },
     amount: 1000,
-    currency: { code: "INR" },
+    currency: { code: "INR", decimalPlaces: 2 },
     entityId: 7,
     entityType: { id: 1, value: "LOAN" },
     transactionDetails: { transactionId: 81 },
@@ -145,7 +145,11 @@ test("owned loan GL/journal enquiry keeps explicit transaction references and ne
   expect(
     matchedLoanTransaction(absent, absent.journals?.pageItems[0] ?? f.journal),
   ).toBeNull();
-  expect(f.calls.some((p) => p.includes("transactionDetails=true"))).toBe(true);
+  expect(
+    f.calls.some((p) =>
+      p.includes("transactionDetails=true&runningBalance=true"),
+    ),
+  ).toBe(true);
 });
 test("foreign loan rows are withheld and linked savings counterparts are excluded with partial evidence", async () => {
   const f = await setup();
@@ -181,7 +185,7 @@ test("staff/branch and offset guards precede Core reads; journal pagination rema
   expect((await f.read()).coverage.hasMore).toBe(true);
   await f.read(200);
   expect(f.calls).toContain(
-    "journalentries?loanId=7&limit=200&offset=200&transactionDetails=true",
+    "journalentries?loanId=7&limit=200&offset=200&transactionDetails=true&runningBalance=true",
   );
 });
 test("receipt matching requires an unambiguous native transaction of the corresponding operation type", async () => {
@@ -223,4 +227,26 @@ test("receipt matching requires an unambiguous native transaction of the corresp
       81,
     ),
   ).toBeNull();
+});
+
+test("loan journal computation metadata remains separate from its posted transaction and book balances", async () => {
+  const f = await setup();
+  Object.assign(f.journal, {
+    runningBalanceComputed: true,
+    officeRunningBalance: 777,
+    organizationRunningBalance: 888,
+  });
+  const value = await f.read();
+  const row = value.journals?.pageItems[0];
+  expect(row?.runningBalanceComputed).toBe(true);
+  expect(row && "officeRunningBalance" in row).toBe(false);
+  expect(row && "organizationRunningBalance" in row).toBe(false);
+  expect(row?.transactionDetails?.transactionId).toBe(81);
+  expect(
+    f.calls
+      .filter((c) => c.startsWith("journalentries?"))
+      .every((c) => c.includes("runningBalance=true")),
+  ).toBe(true);
+  Object.assign(f.journal, { runningBalanceComputed: "true" });
+  expect((await f.read()).journals).toBeNull();
 });

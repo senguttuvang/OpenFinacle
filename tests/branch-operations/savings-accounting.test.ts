@@ -24,7 +24,7 @@ async function setup() {
     transactionDate: [2026, 11, 4],
     entryType: { id: 1, value: "CREDIT" },
     amount: 125.25,
-    currency: { code: "INR" },
+    currency: { code: "INR", decimalPlaces: 2 },
     entityId: customer.account_id,
     entityType: { id: 2, value: "SAVING" },
     transactionDetails: { transactionId: 387 },
@@ -174,4 +174,42 @@ test("chart and product GL references reject ambiguous or invalid identities", a
       },
     }),
   ).toBe(false);
+});
+
+test("savings journal reads retain native computation evidence but never expose stored running balances", async () => {
+  const s = await setup();
+  for (const runningBalanceComputed of [false, true, null, undefined]) {
+    s.page({
+      totalFilteredRecords: 1,
+      pageItems: [
+        {
+          ...s.row,
+          runningBalanceComputed,
+          officeRunningBalance: 0,
+          organizationRunningBalance: 100000000000000000000,
+        },
+      ],
+    });
+    const value = await s.read();
+    const row = value.journals?.pageItems[0];
+    expect(row).toBeDefined();
+    expect(row?.runningBalanceComputed).toBe(runningBalanceComputed);
+    expect(row && "officeRunningBalance" in row).toBe(false);
+    expect(row && "organizationRunningBalance" in row).toBe(false);
+  }
+  expect(
+    s.calls
+      .filter((c) => c.includes("journalentries?"))
+      .every((c) => c.includes("runningBalance=true")),
+  ).toBe(true);
+  expect(s.calls.every((c) => c.startsWith("GET "))).toBe(true);
+  for (const patch of [
+    { currency: { code: "INR" } },
+    { currency: { code: "INR", decimalPlaces: 3 } },
+    { entryType: { id: 1, value: "DEBIT" } },
+    { runningBalanceComputed: "false" },
+  ]) {
+    s.page({ totalFilteredRecords: 1, pageItems: [{ ...s.row, ...patch }] });
+    expect((await s.read()).journals).toBeNull();
+  }
 });

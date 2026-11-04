@@ -7,6 +7,10 @@ import {
   matchedLoanReceipt,
   matchedLoanTransaction,
 } from "../../domain/loan-accounting";
+import {
+  JournalComputation,
+  JournalComputationNote,
+} from "../accounting/journal-computation";
 import { CoreTableScroll } from "../core-table-scroll";
 import { useBranchEvidence } from "../use-branch-evidence";
 export function LoanAccountingExplorer({
@@ -189,6 +193,9 @@ export function LoanAccountingExplorer({
                         </td>
                         <td>
                           {j.entryType.value} · {formatMoney(j.amount)}
+                          <JournalComputation
+                            computed={j.runningBalanceComputed}
+                          />
                           <small>
                             Core reversal flag:{" "}
                             {j.reversed === undefined
@@ -225,6 +232,7 @@ export function LoanAccountingExplorer({
               a zero GL balance or reconciliation.
             </p>
           )}
+          <JournalComputationNote />
           {transaction && (
             <article
               className="branch-day-item"

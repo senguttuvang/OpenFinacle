@@ -85,7 +85,7 @@ export const readAccounting = (
       GlChart.pipe(Schema.maxItems(2000)),
     );
     let journals = yield* read(
-      `journalentries?savingsId=${customer.account_id}&limit=200&offset=${offset}&transactionDetails=true`,
+      `journalentries?savingsId=${customer.account_id}&limit=200&offset=${offset}&transactionDetails=true&runningBalance=true`,
       InrJournalPage,
     );
     if (journals) {

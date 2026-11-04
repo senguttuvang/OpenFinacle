@@ -85,7 +85,8 @@ for (const width of [1440, 390]) {
       glAccountCode: gl === 2 ? "1201" : "1001",
       transactionId: "Opaque-provider-group",
       transactionDate: [2026, 11, 4],
-      entryType: { id: 1, value: "DEBIT" },
+      entryType: { id: 2, value: "DEBIT" },
+      runningBalanceComputed: id % 2 === 0,
       amount: 1000,
       currency,
       entityId: 7,
@@ -316,6 +317,25 @@ for (const width of [1440, 390]) {
     const scroll = accounting.getByRole("region", {
       name: "Owned loan journal table",
     });
+    await accounting
+      .getByRole("combobox", {
+        name: "Loan chart / control account",
+        exact: true,
+      })
+      .selectOption("");
+    await expect(
+      scroll.getByText("Native running-balance flag: Not computed", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      scroll.getByText("Native running-balance flag: Computed", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(accounting).toContainText(
+      "Stored running-balance amounts are withheld",
+    );
     await scroll.focus();
     await expect(scroll).toBeFocused();
     await accounting

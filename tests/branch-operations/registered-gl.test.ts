@@ -51,9 +51,9 @@ async function setup() {
     glAccountCode: "OF1001",
     transactionId: "provider-not-an-ID",
     transactionDate: [2026, 11, 4],
-    entryType: { id: 1, value: "Credit" },
+    entryType: { id: 1, value: "CREDIT" },
     amount: 1.25,
-    currency: { code: "INR" },
+    currency: { code: "INR", decimalPlaces: 2 },
     entityId: selected.customer.account_id,
     entityType: { id: 2, value: "SAVING" },
     transactionDetails: { transactionId: posted.core_id },
@@ -399,4 +399,36 @@ test("incomplete saved workflow coverage withholds all original instruction link
   expect(v.rows[0].originalCommandId).toBeNull();
   expect(v.coverage.workflowLimited).toBe(true);
   expect(v.errors.join(" ")).toContain("Original instruction links withheld");
+});
+
+test("registered GL retains owned native computation flags without exposing stored book amounts", async () => {
+  const f = await setup();
+  f.page({
+    totalFilteredRecords: 1,
+    pageItems: [
+      {
+        ...f.row,
+        runningBalanceComputed: false,
+        officeRunningBalance: 0,
+        organizationRunningBalance: 0,
+      },
+    ],
+  });
+  const value = await f.read();
+  expect(value.rows).toHaveLength(1);
+  expect(value.rows[0].journal.runningBalanceComputed).toBe(false);
+  expect("officeRunningBalance" in value.rows[0].journal).toBe(false);
+  expect("organizationRunningBalance" in value.rows[0].journal).toBe(false);
+  expect(
+    f.calls
+      .filter((c) => c.path.startsWith("journalentries?"))
+      .every(
+        (c) => c.method === "GET" && c.path.includes("runningBalance=true"),
+      ),
+  ).toBe(true);
+  f.page({
+    totalFilteredRecords: 1,
+    pageItems: [{ ...f.row, currency: { code: "INR", decimalPlaces: 3 } }],
+  });
+  await expect(f.read()).rejects.toThrow("Native GL evidence");
 });

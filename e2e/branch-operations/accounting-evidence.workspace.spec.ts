@@ -5,6 +5,9 @@ import { savedWorkspace } from "../fixtures/workspace";
 for (const malformed of [
   "foreign journal currency",
   "invalid error collection",
+  "unsupported INR precision",
+  "malformed computation flag",
+  "contradictory entry label",
 ]) {
   test(`savings accounting clears ${malformed} before rendering financial evidence`, async ({
     page,
@@ -41,10 +44,20 @@ for (const malformed of [
               glAccountCode: "INVALID",
               transactionId: "untrusted-provider-label",
               transactionDate: [2026, 11, 4],
-              entryType: { id: 1, value: "Credit" },
+              entryType: {
+                id: 1,
+                value:
+                  malformed === "contradictory entry label"
+                    ? "DEBIT"
+                    : "CREDIT",
+              },
               amount: 125.25,
+              runningBalanceComputed:
+                malformed === "malformed computation flag" ? "false" : false,
               currency: {
                 code: malformed === "foreign journal currency" ? "USD" : "INR",
+                decimalPlaces:
+                  malformed === "unsupported INR precision" ? 3 : 2,
               },
               entityId: day.relationships[0].customer.account_id,
               entityType: { id: 2, value: "SAVING" },

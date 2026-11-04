@@ -56,7 +56,7 @@ export const readLoanAccounting = (
         ),
         read(
           "Core loan journals",
-          `journalentries?loanId=${loanId}&limit=200&offset=${offset}&transactionDetails=true`,
+          `journalentries?loanId=${loanId}&limit=200&offset=${offset}&transactionDetails=true&runningBalance=true`,
           LoanJournalPage,
         ),
         readLoanPostingEvidence(

@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { CoreDateEvidence } from "./core-account";
+import { inrMinor } from "./inr-money";
 
 const id = Schema.Number.pipe(
   Schema.int(),
@@ -38,7 +39,11 @@ export const JournalEntry = Schema.Struct({
   transactionDate: CoreDateEvidence,
   entryType: Schema.Struct({ id: Schema.Number, value: Schema.String }),
   amount: Schema.Number,
-  currency: Schema.Struct({ code: Schema.String }),
+  currency: Schema.Struct({
+    code: Schema.String,
+    decimalPlaces: Schema.optional(Schema.Number),
+  }),
+  runningBalanceComputed: Schema.optional(Schema.NullOr(Schema.Boolean)),
   entityId: Schema.optional(Schema.Number),
   entityType: Schema.optional(
     Schema.Struct({ id: Schema.Number, value: Schema.String }),
@@ -66,11 +71,11 @@ export const isInrJournalEntry = (row: typeof JournalEntry.Type) =>
     (Number.isSafeInteger(row.transactionDetails.transactionId) &&
       row.transactionDetails.transactionId > 0)) &&
   row.currency.code === "INR" &&
-  Number.isFinite(row.amount) &&
+  row.currency.decimalPlaces === 2 &&
   row.amount >= 0 &&
-  Number.isSafeInteger(Math.round(row.amount * 100)) &&
-  row.amount === Math.round(row.amount * 100) / 100 &&
-  [1, 2].includes(row.entryType.id);
+  inrMinor(row.amount) !== null &&
+  ((row.entryType.id === 1 && row.entryType.value === "CREDIT") ||
+    (row.entryType.id === 2 && row.entryType.value === "DEBIT"));
 export const InrJournalPage = JournalPage.pipe(
   Schema.filter(
     (page) =>
