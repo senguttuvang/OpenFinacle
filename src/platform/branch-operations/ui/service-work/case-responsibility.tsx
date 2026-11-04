@@ -98,8 +98,8 @@ function ResponsibilityPanel(scope: Props) {
               </p>
               {!detail.historyComplete && (
                 <p role="alert">
-              Only the first 200 assignment events are shown. Latest state is
-                  separate; further changes are withheld.
+                  Only the first 200 assignment events are shown. Latest state
+                  is separate; further changes are withheld.
                 </p>
               )}
               <ol>
