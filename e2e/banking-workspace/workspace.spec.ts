@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { branchDayFixture } from "../../src/demo/branch/branch-day-fixture";
 import type {
   CardCommand,
   CardDetail,
@@ -295,107 +296,84 @@ test("card controls review, recover a lost response after reload and share staff
   ).toBe(true);
 });
 
-test("branch queues reflect records, filter before display and stay usable on mobile", async ({
+test("branch entry uses multi-customer records, filters queues and stays usable on mobile", async ({
   page,
 }) => {
   const data = savedWorkspace();
   data.role = "officer";
-  data.commands = ["pending", "uncertain"].map((status, index) => ({
-    id: `instruction-${index}`,
-    bank_id: data.bank.id,
-    key: `key-${index}`,
-    kind: "deposit",
-    status: status as "pending" | "uncertain",
-    amount_minor: 250000,
-    description: index
-      ? "Cash receipt requires reconciliation"
-      : "Cash deposit for review",
-    maker: "officer",
-    approver: null,
-    core_id: null,
-    account_id: 1,
-    payload: "{}",
-    error: null,
-    created_at: "2026-10-17 09:00:00",
-  }));
-  data.requests = [
+  const day = branchDayFixture();
+  day.relationships[1].commands[0].status = "uncertain";
+  day.relationships[0].requests = [
     {
       id: "service-001",
-      bank_id: data.bank.id,
+      bank_id: day.relationships[0].customer.bank_id,
       kind: "chequebook",
       detail: "Sample chequebook request",
       status: "open",
-      created_at: "2026-10-17",
+      created_at: "2026-11-03",
     },
   ];
   const mutations: string[] = [];
   await page.route("**/api/**", (route) => {
-    if (route.request().method() !== "GET")
-      mutations.push(new URL(route.request().url()).pathname);
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() !== "GET") mutations.push(path);
     return route.fulfill({
       json:
-        new URL(route.request().url()).pathname === "/api/dashboard"
-          ? data
-          : {},
+        path === "/api/dashboard" ? data : path === "/api/branch" ? day : {},
     });
   });
   await page.goto("/demo");
+  const workspace = page.locator(".branch-day"),
+    nav = workspace.getByRole("navigation", { name: "Branch day screens" });
   await expect(
-    page.getByRole("button", { name: /Awaiting authorization/ }),
-  ).toContainText("01");
-  await expect(page.getByRole("button", { name: /Exceptions/ })).toContainText(
-    "01",
-  );
-  await expect(
-    page.getByRole("button", { name: /Needs attention/ }),
-  ).toContainText("3");
-  await expect(page.getByText(/An outcome needs reconciliation/)).toBeVisible();
-  await page.getByLabel("Search work queue").fill("receipt");
-  await expect(page.locator(".branch-table tbody tr")).toHaveCount(1);
-  await page.getByLabel("Search work queue").fill("no such item");
-  await expect(
-    page.getByRole("heading", { name: "No matching work items" }),
+    workspace.getByRole("heading", { name: "One branch day", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Clear search", exact: true }).click();
-  await expect(page.locator(".branch-table tbody tr")).toHaveCount(3);
+  await nav
+    .getByRole("button", { name: "Transactions & approvals", exact: true })
+    .click();
+  const original = (id: string) =>
+    workspace.getByRole("button", { name: new RegExp(` · ${id}$`) });
+  await expect(original("instruction-0")).toContainText(
+    "Mira Krishnan · deposit · pending",
+  );
+  await expect(original("instruction-1")).toContainText(
+    "Northstar Trading · deposit · uncertain",
+  );
+  const search = workspace.getByLabel(
+    "Search instructions, customer or Core reference",
+  );
+  await search.fill("Northstar");
+  await expect(original("instruction-0")).toHaveCount(0);
+  await expect(original("instruction-1")).toBeVisible();
+  await search.fill("no such item");
+  await expect(
+    workspace.getByText(
+      "No matching instructions in loaded records. Reset filters to inspect other work.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await workspace
+    .getByRole("button", { name: "Reset instruction filters", exact: true })
+    .click();
+  await expect(original("instruction-0")).toBeVisible();
+  await expect(original("instruction-1")).toBeVisible();
   await page.screenshot({
     path: "test-results/branch-workspace-desktop.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("heading", { name: "Work queue" })).toBeVisible();
-  const layout = await page.evaluate(() => ({
-    viewport: innerWidth,
-    width: document.documentElement.scrollWidth,
-    containers: [
-      ...document.querySelectorAll(
-        ".branch-queue,.table-scroll,.branch-primary,body,nextjs-portal",
-      ),
-    ].map((element) => ({
-      name: `${element.tagName}.${element.className}`,
-      overflow: getComputedStyle(element).overflow,
-      width: element.getBoundingClientRect().width,
-      scroll: element.scrollWidth,
-      position: getComputedStyle(element).position,
-    })),
-    overflowing: [
-      ...document.querySelectorAll(
-        "body,main,section,aside,nav,header,footer,div,fieldset,button,table,span,p",
-      ),
-    ]
-      .filter(
-        (element) => element.getBoundingClientRect().right > innerWidth + 1,
-      )
-      .map((element) => ({
-        className: element.className,
-        width: Math.round(element.getBoundingClientRect().width),
-        right: Math.round(element.getBoundingClientRect().right),
-      }))
-      .slice(-15),
-  }));
-  expect(layout.width, JSON.stringify(layout)).toBeLessThanOrEqual(
-    layout.viewport,
-  );
+  await nav.getByRole("button", { name: "Daily control", exact: true }).click();
+  await expect(
+    workspace.getByText("Sample chequebook request", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    workspace.getByText("Close readiness · blocked", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
   await page.screenshot({
     path: "test-results/branch-workspace-mobile.png",
     fullPage: true,
